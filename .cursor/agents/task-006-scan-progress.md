@@ -23,6 +23,7 @@ You **own**:
 You **may extend**:
 
 - `src/renderer/App.tsx` — persistent progress region only
+- `src/renderer/features/overview/OverviewView.tsx` — import `ScanSessionControls` from `scan-progress/` only (Start Scan button)
 
 ## Do not touch
 
