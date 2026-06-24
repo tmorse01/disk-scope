@@ -1,5 +1,11 @@
+import { styles as typescaleStyles } from '@material/web/typography/md-typescale-styles.js';
 import './index.css';
-import './app-root';
+import './theme/material-theme.css';
+import './app-root.js';
+
+const typescaleStyle = document.createElement('style');
+typescaleStyle.textContent = typescaleStyles.cssText;
+document.head.appendChild(typescaleStyle);
 
 const appRoot = document.getElementById('app');
 

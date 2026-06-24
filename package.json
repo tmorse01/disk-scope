@@ -37,6 +37,7 @@
     ]
   },
   "dependencies": {
+    "@material/web": "^2.4.1",
     "electron-squirrel-startup": "^1.0.1",
     "lit": "^3.2.1"
   },

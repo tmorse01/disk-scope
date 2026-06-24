@@ -12,4 +12,11 @@ body {
 
 body {
   min-height: 100vh;
+  background: var(--ds-color-background, #fef7ff);
+  color: var(--ds-color-on-background, #1d1b20);
+  font-family: var(--ds-font-family, Roboto, system-ui, sans-serif);
+}
+
+#app {
+  min-height: 100vh;
 }

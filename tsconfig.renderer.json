@@ -7,7 +7,9 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "noEmit": false,
     "outDir": ".tsbuild/renderer",
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false
   },
   "include": ["src/renderer/**/*.ts", "src/shared/**/*.ts"]
 }
