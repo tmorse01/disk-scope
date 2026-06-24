@@ -12,7 +12,8 @@ import {
   isAppRoute,
   type AppRoute,
 } from './routes';
-import { NAV_RAIL_WIDTH, SCAN_STATUS_HEIGHT, TOP_APP_BAR_HEIGHT } from './theme/mui-theme';
+import { ScanProgressRegion } from './features/scan-progress/ScanProgressRegion';
+import { NAV_RAIL_WIDTH, TOP_APP_BAR_HEIGHT } from './theme/mui-theme';
 
 export function App() {
   const [activeRoute, setActiveRoute] = useState<AppRoute>(DEFAULT_ROUTE);
@@ -146,35 +147,7 @@ export function App() {
         </Box>
       </Box>
 
-      <Box
-        component="footer"
-        aria-label="Scan status"
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-          minHeight: SCAN_STATUS_HEIGHT,
-          px: 3,
-          py: 1,
-          bgcolor: 'background.paper',
-          borderTop: 1,
-          borderColor: 'divider',
-          color: 'text.secondary',
-          fontSize: '0.875rem',
-          fontWeight: 500,
-        }}
-      >
-        <MaterialIcon
-          name="progress_activity"
-          style={{ color: 'var(--mui-palette-primary-main)', fontSize: 20 }}
-        />
-        <Typography component="span" variant="body2" sx={{ fontWeight: 500 }}>
-          No scan in progress
-        </Typography>
-        <Typography component="span" variant="body2" color="text.primary">
-          Scan progress will appear here during active scans.
-        </Typography>
-      </Box>
+      <ScanProgressRegion />
     </Box>
   );
 }

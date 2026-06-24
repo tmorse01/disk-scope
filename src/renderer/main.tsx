@@ -4,7 +4,10 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import './index.css';
+import { initScanStoreListeners } from './stores/scan-store';
 import { muiTheme } from './theme/mui-theme';
+
+initScanStoreListeners();
 
 const appRoot = document.getElementById('app');
 

@@ -1,25 +1,67 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ScanCompleteEvent, ScanProgressEvent } from '../../src/shared/types';
 
 const selectDirectory = vi.fn<[], Promise<{ path: string } | null>>();
+const startScan = vi.fn();
+const cancelScan = vi.fn();
+const onScanProgress = vi.fn();
+const onScanComplete = vi.fn();
+const onScanError = vi.fn();
+
+type ProgressHandler = (event: ScanProgressEvent) => void;
+type CompleteHandler = (event: ScanCompleteEvent) => void;
+
+let _progressHandler: ProgressHandler | undefined;
+let completeHandler: CompleteHandler | undefined;
+
+function mockDiskScope() {
+  onScanProgress.mockImplementation((handler: ProgressHandler) => {
+    _progressHandler = handler;
+    return () => {
+      _progressHandler = undefined;
+    };
+  });
+  onScanComplete.mockImplementation((handler: CompleteHandler) => {
+    completeHandler = handler;
+    return () => {
+      completeHandler = undefined;
+    };
+  });
+  onScanError.mockImplementation(() => () => undefined);
+
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: {
+      diskScope: {
+        selectDirectory,
+        startScan,
+        cancelScan,
+        onScanProgress,
+        onScanComplete,
+        onScanError,
+      },
+    },
+  });
+}
 
 describe('scan store picker flow', () => {
   beforeEach(async () => {
     vi.resetModules();
     selectDirectory.mockReset();
+    startScan.mockReset();
+    cancelScan.mockReset();
+    onScanProgress.mockReset();
+    onScanComplete.mockReset();
+    onScanError.mockReset();
+    _progressHandler = undefined;
+    completeHandler = undefined;
+    mockDiskScope();
 
-    Object.defineProperty(globalThis, 'window', {
-      configurable: true,
-      value: {
-        diskScope: {
-          selectDirectory,
-        },
-      },
-    });
-
-    const { scanStore } = await import('../../src/renderer/stores/scan-store');
+    const { scanStore, resetScanSessionForTest } = await import('../../src/renderer/stores/scan-store');
     scanStore.status = 'idle';
     scanStore.selectedPath = null;
     scanStore.pickerError = null;
+    resetScanSessionForTest();
   });
 
   it('stores the selected path and returns to idle', async () => {
@@ -78,5 +120,135 @@ describe('scan store picker flow', () => {
     expect(scanStore.selectedPath).toBeNull();
     expect(scanStore.status).toBe('idle');
     expect(scanStore.pickerError).toBe('IPC unavailable');
+  });
+});
+
+describe('scan store scan lifecycle', () => {
+  beforeEach(async () => {
+    vi.resetModules();
+    selectDirectory.mockReset();
+    startScan.mockReset();
+    cancelScan.mockReset();
+    onScanProgress.mockReset();
+    onScanComplete.mockReset();
+    onScanError.mockReset();
+    _progressHandler = undefined;
+    completeHandler = undefined;
+    mockDiskScope();
+
+    const { scanStore, resetScanSessionForTest } = await import('../../src/renderer/stores/scan-store');
+    scanStore.selectedPath = 'C:\\Demo';
+    resetScanSessionForTest();
+    scanStore.selectedPath = 'C:\\Demo';
+  });
+
+  it('starts a scan and stores the scan id', async () => {
+    startScan.mockResolvedValue('scan-1');
+
+    const { startScanFromStore, scanStore } = await import('../../src/renderer/stores/scan-store');
+
+    await startScanFromStore();
+
+    expect(startScan).toHaveBeenCalledWith({ rootPath: 'C:\\Demo' });
+    expect(scanStore.status).toBe('scanning');
+    expect(scanStore.scanId).toBe('scan-1');
+  });
+
+  it('merges progress updates into the store', async () => {
+    startScan.mockResolvedValue('scan-1');
+
+    const { startScanFromStore, applyScanProgressForTest, scanStore } = await import(
+      '../../src/renderer/stores/scan-store'
+    );
+
+    await startScanFromStore();
+
+    applyScanProgressForTest({
+      scanId: 'scan-1',
+      filesScanned: 12,
+      directoriesScanned: 3,
+      bytesDiscovered: 4096,
+      currentPath: 'C:\\Demo\\src',
+      errorCount: 1,
+      elapsedMs: 500,
+    });
+
+    expect(scanStore.progress).toEqual({
+      filesScanned: 12,
+      directoriesScanned: 3,
+      bytesDiscovered: 4096,
+      currentPath: 'C:\\Demo\\src',
+      errorCount: 1,
+      elapsedMs: 500,
+    });
+  });
+
+  it('transitions to completed when scan completes', async () => {
+    startScan.mockResolvedValue('scan-1');
+
+    const { startScanFromStore, initScanStoreListeners, scanStore } = await import(
+      '../../src/renderer/stores/scan-store'
+    );
+
+    await startScanFromStore();
+    initScanStoreListeners();
+
+    completeHandler?.({
+      scanId: 'scan-1',
+      result: {
+        scanId: 'scan-1',
+        rootPath: 'C:\\Demo',
+        startedAt: '2026-01-01T00:00:00.000Z',
+        completedAt: '2026-01-01T00:00:05.000Z',
+        totalSizeBytes: 8192,
+        fileCount: 20,
+        directoryCount: 4,
+        errorCount: 0,
+        rootNodeId: 'root',
+        directoriesById: {},
+        largestFiles: [],
+        extensionSummaries: [],
+        cleanupCandidates: [],
+        errors: [],
+      },
+    });
+
+    expect(scanStore.status).toBe('completed');
+    expect(scanStore.result?.fileCount).toBe(20);
+  });
+
+  it('marks cancelled when user cancels before completion', async () => {
+    startScan.mockResolvedValue('scan-1');
+    cancelScan.mockResolvedValue(undefined);
+
+    const { startScanFromStore, cancelScanFromStore, initScanStoreListeners, scanStore } =
+      await import('../../src/renderer/stores/scan-store');
+
+    await startScanFromStore();
+    initScanStoreListeners();
+    await cancelScanFromStore();
+
+    completeHandler?.({
+      scanId: 'scan-1',
+      result: {
+        scanId: 'scan-1',
+        rootPath: 'C:\\Demo',
+        startedAt: '2026-01-01T00:00:00.000Z',
+        completedAt: '2026-01-01T00:00:02.000Z',
+        totalSizeBytes: 1024,
+        fileCount: 5,
+        directoryCount: 1,
+        errorCount: 0,
+        rootNodeId: 'root',
+        directoriesById: {},
+        largestFiles: [],
+        extensionSummaries: [],
+        cleanupCandidates: [],
+        errors: [],
+      },
+    });
+
+    expect(cancelScan).toHaveBeenCalledWith('scan-1');
+    expect(scanStore.status).toBe('cancelled');
   });
 });
