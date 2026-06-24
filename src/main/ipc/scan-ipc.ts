@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import { IPC_CHANNELS } from '../../shared/ipc-channels';
 import { pickDirectory } from '../services/directory-picker';
+import { cancelScan, startScan } from '../services/scan-coordinator';
 import { copyPathToClipboard, revealPathInExplorer } from '../services/file-actions';
 import {
   validateExportOptions,
@@ -20,12 +21,12 @@ export function registerScanIpc(): void {
 
   ipcMain.handle(IPC_CHANNELS.START_SCAN, async (_event, options: unknown) => {
     const validated = validateStartScanOptions(options);
-    notImplemented(`startScan for ${validated.rootPath}`);
+    return startScan(validated.rootPath);
   });
 
   ipcMain.handle(IPC_CHANNELS.CANCEL_SCAN, async (_event, scanId: unknown) => {
     const validated = validateScanSessionId(scanId);
-    notImplemented(`cancelScan for ${validated}`);
+    cancelScan(validated);
   });
 
   ipcMain.handle(IPC_CHANNELS.REVEAL_PATH, async (_event, path: unknown) => {

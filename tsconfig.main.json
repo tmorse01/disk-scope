@@ -8,5 +8,10 @@
     "outDir": ".tsbuild/main",
     "types": ["node"]
   },
-  "include": ["src/main/**/*.ts", "src/shared/**/*.ts", "forge.env.d.ts"]
+  "include": [
+    "src/main/**/*.ts",
+    "src/shared/**/*.ts",
+    "src/scanner/scan-types.ts",
+    "forge.env.d.ts"
+  ]
 }

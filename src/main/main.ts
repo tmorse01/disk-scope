@@ -2,12 +2,17 @@ import { app, BrowserWindow } from 'electron';
 import started from 'electron-squirrel-startup';
 import { createMainWindow } from './browser-window';
 import { registerScanIpc } from './ipc/scan-ipc';
+import { terminateAllScans } from './services/scan-coordinator';
 
 if (started) {
   app.quit();
 }
 
 registerScanIpc();
+
+app.on('before-quit', () => {
+  terminateAllScans();
+});
 
 app.on('ready', () => {
   createMainWindow();
