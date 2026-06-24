@@ -1,8 +1,15 @@
 import { test } from '@playwright/test';
 
 /**
- * Placeholder — first E2E tests ship with scan workflow tasks.
+ * Placeholder — full Electron E2E via Playwright `_electron.launch()` is a follow-up
+ * after the React migration. Example:
+ *
+ *   const app = await electron.launch({ args: ['.vite/build/main.js'] });
+ *   const window = await app.firstWindow();
+ *   await expect(window.getByText('DiskScope')).toBeVisible();
+ *
+ * For layout-only checks without Electron, use `pnpm dev:renderer-preview`.
  */
 test.skip('app launches', () => {
-  // TODO(task-006): launch Electron and verify shell renders
+  // TODO: wire launch args to Forge dev/build output
 });

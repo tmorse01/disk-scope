@@ -5,11 +5,10 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
     "noEmit": false,
     "outDir": ".tsbuild/renderer",
-    "types": ["vite/client"],
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false
+    "types": ["vite/client"]
   },
-  "include": ["src/renderer/**/*.ts", "src/shared/**/*.ts"]
+  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx", "src/shared/**/*.ts"]
 }

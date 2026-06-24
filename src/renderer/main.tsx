@@ -1,0 +1,20 @@
+import CssBaseline from '@mui/material/CssBaseline';
+import { ThemeProvider } from '@mui/material/styles';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { App } from './App';
+import './index.css';
+import { muiTheme } from './theme/mui-theme';
+
+const appRoot = document.getElementById('app');
+
+if (appRoot) {
+  createRoot(appRoot).render(
+    <StrictMode>
+      <ThemeProvider theme={muiTheme} defaultMode="system">
+        <CssBaseline />
+        <App />
+      </ThemeProvider>
+    </StrictMode>,
+  );
+}

@@ -4,6 +4,8 @@
 
 Show clear scan progress while scanning: counts, bytes, current path, errors, elapsed time, and cancel.
 
+Renderer UI: **React + MUI + Material Symbols** — see [`docs/tech-stack-and-ux.md`](../tech-stack-and-ux.md).
+
 ## Dependencies (must be complete first)
 
 - Task 004 (selected target)
@@ -11,9 +13,9 @@ Show clear scan progress while scanning: counts, bytes, current path, errors, el
 
 ## Files likely to change
 
-- `src/renderer/features/scan-progress/` (new)
+- `src/renderer/features/scan-progress/` (new, `.tsx`)
 - `src/renderer/stores/scan-store.ts`
-- `src/renderer/app-root.ts` (persistent progress region)
+- `src/renderer/App.tsx` (persistent progress region)
 - `tests/renderer/` (store tests)
 
 ## Implementation plan

@@ -2,6 +2,19 @@
 
 Coding agents working on DiskScope must follow this contract.
 
+## Tech stack (renderer)
+
+**Read [`docs/tech-stack-and-ux.md`](docs/tech-stack-and-ux.md) before any UI work.**
+
+Summary:
+
+- **TypeScript + React** (`.tsx`) for all renderer UI — not Lit, not vanilla TypeScript DOM.
+- **Material Design 3** via **MUI (`@mui/material`)** with a centralized theme.
+- **Material Symbols** icons from [Google Fonts](https://fonts.google.com/icons) — Outlined style by default; use the shared `MaterialIcon` pattern or `@mui/icons-material`.
+- Wave 1 shipped a Lit shell; **migrate touched surfaces to React** rather than extending Lit.
+
+Main process, scanner, preload, and shared types remain plain TypeScript (no React).
+
 ## Before coding
 
 Write a short plan:
@@ -50,7 +63,8 @@ Before marking a task done:
 - Keep scope narrow to the assigned task file in `docs/tasks/`
 - Do not add permanent delete or destructive filesystem features unless explicitly assigned
 - Do not expose broad filesystem APIs to the renderer
-- Do not scatter raw `@material/web` in feature code — use `Ds*` wrappers (Task 003)
+- **Renderer UI must be React + MUI** — follow `docs/tech-stack-and-ux.md`; do not add Lit or `@material/web` for new code
+- Use **Material Symbols** for icons — see [fonts.google.com/icons](https://fonts.google.com/icons)
 - Do not duplicate types — use `src/shared/types.ts`
 - Avoid new dependencies without justification
 - Prefer small cohesive changes over broad refactors
@@ -63,7 +77,7 @@ Before marking a task done:
 | Main / IPC | 002, 004, 011 | `src/main/` |
 | Preload API | 002, 004–011 | `src/preload/` |
 | Scanner | 005, 009, 010 | `src/scanner/` |
-| UI shell | 003 | `src/renderer/theme/`, `src/renderer/components/`, layout |
+| UI shell | 003 | `src/renderer/theme/`, `src/renderer/components/`, `App.tsx`, layout |
 | Scan picker | 004 | `src/renderer/features/scan-picker/` |
 | Scan progress | 006 | `src/renderer/features/scan-progress/`, `scan-store` |
 | Largest folders | 007 | `src/renderer/features/largest-folders/` |

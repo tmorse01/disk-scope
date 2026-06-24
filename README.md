@@ -29,11 +29,13 @@ src/
   main/       Electron main process, IPC, OS services
   preload/    contextBridge API exposed as window.diskScope
   scanner/    Worker-thread scan engine (Task 005+)
-  renderer/   Lit UI
+  renderer/   React UI (TypeScript + MUI + Material Symbols)
   shared/     Types and utilities shared across processes
 tests/        Unit, fixture, and E2E tests
-docs/         Product scope and agent task files
+docs/         Product scope, tech stack, and agent task files
 ```
+
+See [`docs/tech-stack-and-ux.md`](docs/tech-stack-and-ux.md) for renderer conventions, Material icons, and UX patterns.
 
 ## Security
 

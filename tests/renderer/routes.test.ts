@@ -3,6 +3,7 @@ import {
   APP_ROUTES,
   DEFAULT_ROUTE,
   getRouteById,
+  getRouteComponent,
   isAppRoute,
 } from '../../src/renderer/routes.js';
 
@@ -22,10 +23,10 @@ describe('routes', () => {
     expect(isAppRoute('unknown')).toBe(false);
   });
 
-  it('maps each route to a view tag name', () => {
+  it('maps each route to a React component', () => {
     for (const route of APP_ROUTES) {
-      expect(route.tagName).toMatch(/-view$/);
-      expect(getRouteById(route.id).tagName).toBe(route.tagName);
+      expect(typeof route.component).toBe('function');
+      expect(getRouteComponent(route.id)).toBe(route.component);
     }
   });
 });

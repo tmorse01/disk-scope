@@ -15,7 +15,8 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "dev:renderer-preview": "vite --config vite.renderer.preview.config.ts"
   },
   "keywords": [
     "electron",
@@ -37,9 +38,12 @@
     ]
   },
   "dependencies": {
-    "@material/web": "^2.4.1",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^9.1.2",
     "electron-squirrel-startup": "^1.0.1",
-    "lit": "^3.2.1"
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.11.2",
@@ -53,14 +57,21 @@
     "@electron/fuses": "^1.8.0",
     "@eslint/js": "^9.21.0",
     "@playwright/test": "^1.51.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/electron-squirrel-startup": "^1.0.2",
     "@types/lodash": "^4.17.24",
     "@types/node": "^22.13.10",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
     "electron": "42.5.0",
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.0.2",
     "eslint-plugin-import": "^2.31.0",
     "globals": "^16.0.0",
+    "jsdom": "^29.1.1",
     "lodash": "^4.18.1",
     "prettier": "^3.5.3",
     "typescript": "~5.8.2",

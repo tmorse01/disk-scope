@@ -12,6 +12,8 @@ The primary job is simple:
 
 This is not a generic system optimizer. It is not trying to replace OS storage settings, CCleaner, or enterprise disk auditing tools. The MVP should stay focused on local disk visibility, drilldown, and safe cleanup targeting.
 
+**UI and renderer conventions:** [`docs/tech-stack-and-ux.md`](tech-stack-and-ux.md) (TypeScript + React, MUI, Material Symbols).
+
 ## 2. Product Positioning
 
 ### Core wedge
@@ -98,30 +100,40 @@ Expected scripts:
 
 ### Renderer framework
 
-Use **Lit + Material Web components** for the MVP.
+Use **TypeScript + React** for the MVP renderer.
 
 Reasoning:
 
-- The user preference is specifically toward Google Material 3 components and theme.
-- `@material/web` maps directly to Material 3 as web components.
-- Lit works naturally with web components and keeps the renderer light.
-- Avoid React-wrapper complexity around custom elements for the first version.
+- User preference: React over Lit or vanilla TypeScript DOM for UI.
+- Material Design 3 maps cleanly to **MUI (`@mui/material`)** in React.
+- Electron Forge + Vite already support a React renderer entry.
+- Hooks and functional components keep feature code readable as the app grows.
+
+Conventions (see [`docs/tech-stack-and-ux.md`](tech-stack-and-ux.md)):
+
+- All UI in `.tsx` under `src/renderer/features/` and `src/renderer/components/`.
+- MUI for components; centralized theme in `src/renderer/theme/`.
+- **Material Symbols** icons from [Google Fonts](https://fonts.google.com/icons) (Outlined default).
+- Optional thin app wrappers (e.g. `DsButton`) around MUI for shared defaults — do not scatter unconfigured MUI primitives everywhere.
+
+Migration:
+
+- Wave 1 merged a Lit + `@material/web` shell. New work and refactors **use React**; migrate touched Lit surfaces rather than extending them.
 
 Risk decision:
 
-- `@material/web` should be isolated behind app-owned UI components because the official project is currently in maintenance mode.
-- Do not scatter raw Material Web components everywhere.
-- Create local wrappers like `DsButton`, `DsTextField`, `DsDialog`, `DsTopAppBar`, and `DsNavRail` so the UI library can be swapped later if needed.
+- Do not introduce Lit, `@material/web`, or web components for new renderer code.
+- Keep `@mui/material` usage consistent via theme tokens — no hardcoded one-off colors in features.
 
 ### Styling and theme
 
-Use Material 3 design tokens through CSS custom properties.
+Use Material 3 design tokens through MUI theme and CSS custom properties where needed.
 
 Theme requirements:
 
 - Light mode first
 - Dark mode supported early, even if basic
-- App-owned theme file: `src/renderer/theme/material-theme.css`
+- App-owned theme: `src/renderer/theme/` (MUI `createTheme` + optional `material-theme.css` tokens)
 - No hardcoded one-off colors in components
 - Use semantic tokens for background, surface, primary, warning, danger, and success states
 
@@ -718,14 +730,17 @@ Acceptance criteria:
 
 ### Task 3: Material 3 app shell
 
-**Goal:** Build the basic UI shell using Lit and Material Web wrappers.
+**Goal:** Build the basic UI shell using **TypeScript + React**, MUI, and Material Symbols.
+
+See [`docs/tech-stack-and-ux.md`](tech-stack-and-ux.md) for full UI conventions.
 
 Deliverables:
 
-- Material theme CSS
-- App layout shell
+- MUI theme
+- React app layout shell (`App.tsx`)
 - Top app bar
-- Navigation tabs/rail
+- Navigation rail
+- Material Symbols icon setup
 - Empty states for all MVP sections
 - UI wrapper components
 

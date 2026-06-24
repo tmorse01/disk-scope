@@ -21,6 +21,12 @@ type ScanStoreListener = (state: ScanStoreState) => void;
 
 const listeners = new Set<ScanStoreListener>();
 
+let storeVersion = 0;
+
+export function getScanStoreVersion(): number {
+  return storeVersion;
+}
+
 export function subscribeScanStore(listener: ScanStoreListener): () => void {
   listeners.add(listener);
   listener(scanStore);
@@ -31,6 +37,7 @@ export function subscribeScanStore(listener: ScanStoreListener): () => void {
 }
 
 function notifyScanStore(): void {
+  storeVersion += 1;
   for (const listener of listeners) {
     listener(scanStore);
   }

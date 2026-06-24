@@ -4,6 +4,8 @@
 
 Let the user select a scan target safely via native folder picker with cancel support and selected path display.
 
+Renderer UI: **React + MUI** — see [`docs/tech-stack-and-ux.md`](../tech-stack-and-ux.md).
+
 ## Dependencies (must be complete first)
 
 - Foundation (Tasks 001–002) complete
@@ -14,7 +16,7 @@ Let the user select a scan target safely via native folder picker with cancel su
 - `src/main/services/directory-picker.ts`
 - `src/main/ipc/scan-ipc.ts`
 - `src/preload/disk-scope-api.ts`
-- `src/renderer/features/scan-picker/` (new)
+- `src/renderer/features/scan-picker/` (new, `.tsx`)
 - `src/renderer/stores/scan-store.ts` (selected path state)
 
 ## Implementation plan

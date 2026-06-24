@@ -1,3 +1,12 @@
+import type { ComponentType } from 'react';
+import { CleanupCandidatesView } from './features/cleanup-candidates/CleanupCandidatesView';
+import { ExclusionsView } from './features/exclusions/ExclusionsView';
+import { FileTypesView } from './features/file-types/FileTypesView';
+import { LargestFilesView } from './features/largest-files/LargestFilesView';
+import { LargestFoldersView } from './features/largest-folders/LargestFoldersView';
+import { OverviewView } from './features/overview/OverviewView';
+import { SettingsView } from './features/settings/SettingsView';
+
 export type AppRoute =
   | 'overview'
   | 'largest-folders'
@@ -11,7 +20,7 @@ export interface NavRoute {
   id: AppRoute;
   label: string;
   icon: string;
-  tagName: string;
+  component: ComponentType;
 }
 
 export const APP_ROUTES: NavRoute[] = [
@@ -19,43 +28,43 @@ export const APP_ROUTES: NavRoute[] = [
     id: 'overview',
     label: 'Overview',
     icon: 'dashboard',
-    tagName: 'overview-view',
+    component: OverviewView,
   },
   {
     id: 'largest-folders',
     label: 'Largest Folders',
     icon: 'folder',
-    tagName: 'largest-folders-view',
+    component: LargestFoldersView,
   },
   {
     id: 'largest-files',
     label: 'Largest Files',
     icon: 'description',
-    tagName: 'largest-files-view',
+    component: LargestFilesView,
   },
   {
     id: 'file-types',
     label: 'File Types',
     icon: 'category',
-    tagName: 'file-types-view',
+    component: FileTypesView,
   },
   {
     id: 'cleanup-candidates',
     label: 'Cleanup',
     icon: 'cleaning_services',
-    tagName: 'cleanup-candidates-view',
+    component: CleanupCandidatesView,
   },
   {
     id: 'exclusions',
     label: 'Exclusions',
     icon: 'block',
-    tagName: 'exclusions-view',
+    component: ExclusionsView,
   },
   {
     id: 'settings',
     label: 'Settings',
     icon: 'settings',
-    tagName: 'settings-view',
+    component: SettingsView,
   },
 ];
 
@@ -71,4 +80,8 @@ export function getRouteById(id: AppRoute): NavRoute {
     throw new Error(`Unknown route: ${id}`);
   }
   return route;
+}
+
+export function getRouteComponent(id: AppRoute): ComponentType {
+  return getRouteById(id).component;
 }

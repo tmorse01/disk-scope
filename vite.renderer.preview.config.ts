@@ -9,4 +9,9 @@ export default defineConfig({
       '@shared': path.resolve(__dirname, 'src/shared'),
     },
   },
+  root: '.',
+  server: {
+    port: 5173,
+    open: '/preview.html',
+  },
 });
