@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": ".tsbuild/scanner",
+    "types": ["node"]
+  },
+  "include": ["src/scanner/**/*.ts", "src/shared/**/*.ts"]
+}

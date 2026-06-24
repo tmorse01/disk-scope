@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": ".tsbuild/preload",
+    "types": ["node"]
+  },
+  "include": ["src/preload/**/*.ts", "src/shared/**/*.ts", "forge.env.d.ts"]
+}

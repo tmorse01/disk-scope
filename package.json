@@ -1,0 +1,71 @@
+{
+  "name": "diskscope",
+  "productName": "DiskScope",
+  "version": "0.1.0",
+  "description": "Cleanup-focused disk usage analyzer for developers and power users",
+  "main": ".vite/build/main.js",
+  "private": true,
+  "scripts": {
+    "dev": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "keywords": [
+    "electron",
+    "disk-usage",
+    "cleanup"
+  ],
+  "author": {
+    "name": "tmorse01",
+    "email": "74744091+tmorse01@users.noreply.github.com"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "electron-winstaller"
+    ]
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1",
+    "lit": "^3.2.1"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.2",
+    "@electron-forge/maker-deb": "^7.11.2",
+    "@electron-forge/maker-rpm": "^7.11.2",
+    "@electron-forge/maker-squirrel": "^7.11.2",
+    "@electron-forge/maker-zip": "^7.11.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.11.2",
+    "@electron-forge/plugin-fuses": "^7.11.2",
+    "@electron-forge/plugin-vite": "^7.11.2",
+    "@electron/fuses": "^1.8.0",
+    "@eslint/js": "^9.21.0",
+    "@playwright/test": "^1.51.0",
+    "@types/electron-squirrel-startup": "^1.0.2",
+    "@types/lodash": "^4.17.24",
+    "@types/node": "^22.13.10",
+    "electron": "42.5.0",
+    "eslint": "^9.21.0",
+    "eslint-config-prettier": "^10.0.2",
+    "eslint-plugin-import": "^2.31.0",
+    "globals": "^16.0.0",
+    "lodash": "^4.18.1",
+    "prettier": "^3.5.3",
+    "typescript": "~5.8.2",
+    "typescript-eslint": "^8.26.1",
+    "vite": "^5.4.21",
+    "vitest": "^3.0.9"
+  },
+  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319"
+}

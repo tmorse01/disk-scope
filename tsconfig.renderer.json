@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": false,
+    "outDir": ".tsbuild/renderer",
+    "types": ["vite/client"]
+  },
+  "include": ["src/renderer/**/*.ts", "src/shared/**/*.ts"]
+}
