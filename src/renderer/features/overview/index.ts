@@ -1,6 +1,7 @@
 import { css, html, LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import '../../components/ds-card.js';
+import '../scan-picker/index.js';
 
 @customElement('overview-view')
 export class OverviewView extends LitElement {
@@ -27,6 +28,10 @@ export class OverviewView extends LitElement {
       color: var(--md-sys-color-on-surface-variant);
       font: 400 0.875rem/1.25rem var(--ds-font-family, Roboto, sans-serif);
     }
+
+    scan-target-picker {
+      margin-top: 1rem;
+    }
   `;
 
   @property() message = 'Run a scan to see disk usage summary and top metrics.';
@@ -37,6 +42,7 @@ export class OverviewView extends LitElement {
         <div class="empty">
           <h2>Overview</h2>
           <p>${this.message}</p>
+          <scan-target-picker></scan-target-picker>
         </div>
       </ds-card>
     `;

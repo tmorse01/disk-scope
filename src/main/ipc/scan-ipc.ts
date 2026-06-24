@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { BrowserWindow, ipcMain } from 'electron';
 import { IPC_CHANNELS } from '../../shared/ipc-channels';
 import { pickDirectory } from '../services/directory-picker';
 import { cancelScan, startScan } from '../services/scan-coordinator';
@@ -15,8 +15,10 @@ function notImplemented(message: string): never {
 }
 
 export function registerScanIpc(): void {
-  ipcMain.handle(IPC_CHANNELS.SELECT_DIRECTORY, async () => {
-    return pickDirectory();
+  ipcMain.handle(IPC_CHANNELS.SELECT_DIRECTORY, async (event) => {
+    const parentWindow =
+      BrowserWindow.fromWebContents(event.sender) ?? BrowserWindow.getFocusedWindow();
+    return pickDirectory(parentWindow);
   });
 
   ipcMain.handle(IPC_CHANNELS.START_SCAN, async (_event, options: unknown) => {
