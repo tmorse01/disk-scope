@@ -31,6 +31,11 @@ const config: ForgeConfig = {
           config: 'vite.preload.config.ts',
           target: 'preload',
         },
+        {
+          entry: 'src/scanner/scan-worker.ts',
+          config: 'vite.scanner.config.ts',
+          target: 'main',
+        },
       ],
       renderer: [
         {
