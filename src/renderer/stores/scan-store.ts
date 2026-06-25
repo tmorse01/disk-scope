@@ -21,7 +21,7 @@ export type ScanProgressSnapshot = {
  */
 export type ScanStoreState = {
   status: ScanStatus;
-  selectedPath: string | null;
+  selectedPaths: string[];
   pickerError: string | null;
   scanId: ScanSessionId | null;
   scanError: string | null;
@@ -31,13 +31,17 @@ export type ScanStoreState = {
 
 export const scanStore: ScanStoreState = {
   status: 'idle',
-  selectedPath: null,
+  selectedPaths: [],
   pickerError: null,
   scanId: null,
   scanError: null,
   progress: null,
   result: null,
 };
+
+export function getPrimarySelectedPath(): string | null {
+  return scanStore.selectedPaths[0] ?? null;
+}
 
 type ScanStoreListener = (state: ScanStoreState) => void;
 
@@ -164,10 +168,28 @@ export function initScanStoreListeners(): void {
   window.diskScope.onScanError(handleScanError);
 }
 
-export function setSelectedPath(selected: SelectedPath | null): void {
-  scanStore.selectedPath = selected?.path ?? null;
+export function addSelectedPath(path: string): void {
+  const normalized = path.trim();
+  if (!normalized || scanStore.selectedPaths.includes(normalized)) {
+    return;
+  }
+  scanStore.selectedPaths = [...scanStore.selectedPaths, normalized];
   scanStore.pickerError = null;
   notifyScanStore();
+}
+
+export function removeSelectedPath(path: string): void {
+  scanStore.selectedPaths = scanStore.selectedPaths.filter((entry) => entry !== path);
+  notifyScanStore();
+}
+
+export function setSelectedPath(selected: SelectedPath | null): void {
+  if (selected?.path) {
+    addSelectedPath(selected.path);
+  } else {
+    scanStore.pickerError = null;
+    notifyScanStore();
+  }
 }
 
 export function clearPickerError(): void {
@@ -192,7 +214,6 @@ export async function pickScanTarget(): Promise<void> {
     scanStore.status = 'idle';
     notifyScanStore();
   } catch (error) {
-    scanStore.selectedPath = null;
     scanStore.pickerError =
       error instanceof Error ? error.message : 'Failed to open folder picker.';
     scanStore.status = 'idle';
@@ -207,11 +228,13 @@ export async function startScanFromStore(): Promise<void> {
     return;
   }
 
-  if (!scanStore.selectedPath) {
+  if (scanStore.selectedPaths.length === 0) {
     scanStore.scanError = 'Select a folder before starting a scan.';
     notifyScanStore();
     return;
   }
+
+  const rootPath = scanStore.selectedPaths[0];
 
   if (scanStore.status === 'scanning') {
     return;
@@ -229,7 +252,7 @@ export async function startScanFromStore(): Promise<void> {
   notifyScanStore();
 
   try {
-    const scanId = await window.diskScope.startScan({ rootPath: scanStore.selectedPath });
+    const scanId = await window.diskScope.startScan({ rootPath });
     scanStore.scanId = scanId;
     notifyScanStore();
   } catch (error) {

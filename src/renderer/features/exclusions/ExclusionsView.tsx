@@ -1,8 +1,6 @@
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import FormControl from '@mui/material/FormControl';
 import IconButton from '@mui/material/IconButton';
@@ -13,12 +11,14 @@ import ListItemText from '@mui/material/ListItemText';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import type { ExclusionKind } from '../../../shared/types';
+import { DsCard } from '../../components/DsCard';
+import { DsPageHeader } from '../../components/DsStatusChip';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { addExclusion, removeExclusion } from '../../stores/preferences-store';
 import { usePreferencesStore } from '../../hooks/usePreferencesStore';
+import { radii } from '../../theme/tokens';
 
 function exclusionKindLabel(kind: ExclusionKind): string {
   return kind === 'path' ? 'Exact path' : 'Folder name';
@@ -63,18 +63,13 @@ export function ExclusionsView() {
   };
 
   return (
-    <Card variant="outlined">
-      <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, py: 2 }}>
-        <Box>
-          <Typography variant="h5" component="h2" sx={{ fontWeight: 500 }}>
-            Exclusions
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Skip exact paths or folder name patterns during scans. Active exclusions apply to the
-            next scan.
-          </Typography>
-        </Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <DsPageHeader
+        title="Exclusions"
+        subtitle="Skip exact paths or folder name patterns during scans. Active exclusions apply to the next scan."
+      />
 
+      <DsCard>
         <Box
           component="form"
           onSubmit={(event) => {
@@ -90,6 +85,7 @@ export function ExclusionsView() {
               value={kind}
               label="Type"
               onChange={(event) => setKind(event.target.value as ExclusionKind)}
+              sx={{ borderRadius: `${radii.md}px` }}
             >
               <MenuItem value="folder-name">Folder name pattern</MenuItem>
               <MenuItem value="path">Exact path</MenuItem>
@@ -109,32 +105,31 @@ export function ExclusionsView() {
                 ? 'Use * and ? wildcards. Matches any folder name in the scan tree.'
                 : 'Exclude this folder and everything inside it.'
             }
-            sx={{ flex: 1, minWidth: 240 }}
+            sx={{ flex: 1, minWidth: 240, '& .MuiOutlinedInput-root': { borderRadius: `${radii.md}px` } }}
           />
 
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             {kind === 'path' ? (
-              <Button
-                type="button"
-                variant="outlined"
-                onClick={() => void handlePickPath()}
-                sx={{ textTransform: 'none' }}
-              >
+              <Button type="button" variant="outlined" onClick={() => void handlePickPath()}>
                 Browse
               </Button>
             ) : null}
-            <Button type="submit" variant="contained" sx={{ textTransform: 'none' }}>
+            <Button type="submit" variant="contained">
               Add exclusion
             </Button>
           </Box>
         </Box>
 
-        {formError ? <Alert severity="error">{formError}</Alert> : null}
+        {formError ? (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {formError}
+          </Alert>
+        ) : null}
+      </DsCard>
 
+      <DsCard noPadding>
         {exclusions.length === 0 ? (
-          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-            No exclusions configured.
-          </Typography>
+          <Box sx={{ p: 3, color: 'text.secondary', fontStyle: 'italic' }}>No exclusions configured.</Box>
         ) : (
           <List dense disablePadding aria-label="Configured exclusions">
             {exclusions.map((exclusion) => (
@@ -149,27 +144,23 @@ export function ExclusionsView() {
                     <MaterialIcon name="delete" />
                   </IconButton>
                 }
-                sx={{
-                  px: 0,
-                  borderBottom: 1,
-                  borderColor: 'divider',
-                }}
+                sx={{ px: 3, borderBottom: 1, borderColor: 'divider' }}
               >
                 <ListItemText
                   primary={exclusion.value}
                   secondary={exclusionKindLabel(exclusion.kind)}
-                  slotProps={{ primary: { sx: { wordBreak: 'break-all' } } }}
+                  slotProps={{ primary: { sx: { wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '13px' } } }}
                 />
                 <Chip
                   label={exclusion.kind === 'path' ? 'Path' : 'Pattern'}
                   size="small"
-                  sx={{ mr: 1 }}
+                  sx={{ mr: 1, borderRadius: `${radii.full}px` }}
                 />
               </ListItem>
             ))}
           </List>
         )}
-      </CardContent>
-    </Card>
+      </DsCard>
+    </Box>
   );
 }

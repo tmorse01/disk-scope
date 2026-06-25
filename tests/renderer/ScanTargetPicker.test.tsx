@@ -19,14 +19,14 @@ function renderPicker() {
 describe('ScanTargetPicker', () => {
   beforeEach(() => {
     scanStore.status = 'idle';
-    scanStore.selectedPath = null;
+    scanStore.selectedPaths = [];
     scanStore.pickerError = null;
     delete (window as Partial<Window>).diskScope;
   });
 
   it('shows placeholder when no folder is selected', () => {
     renderPicker();
-    expect(screen.getByText('No folder selected yet.')).toBeInTheDocument();
+    expect(screen.getByText('No targets selected yet.')).toBeInTheDocument();
   });
 
   it('shows selected path when store updates', () => {
@@ -34,10 +34,11 @@ describe('ScanTargetPicker', () => {
     act(() => {
       setSelectedPath({ path: 'C:\\Users\\Demo\\Projects' });
     });
-    expect(screen.getByTestId('selected-path')).toHaveTextContent('C:\\Users\\Demo\\Projects');
+    expect(screen.getByText('Projects')).toBeInTheDocument();
+    expect(screen.getByTitle('C:\\Users\\Demo\\Projects')).toBeInTheDocument();
   });
 
-  it('calls selectDirectory when Select folder is clicked', async () => {
+  it('calls selectDirectory when Add folder or drive is clicked', async () => {
     const user = userEvent.setup();
     const selectDirectory = vi.fn().mockResolvedValue({ path: 'D:\\Data' });
     window.diskScope = {
@@ -53,11 +54,11 @@ describe('ScanTargetPicker', () => {
     };
 
     renderPicker();
-    await user.click(screen.getByRole('button', { name: 'Select folder' }));
+    await user.click(screen.getByRole('button', { name: /Add folder or drive/i }));
 
     await waitFor(() => {
       expect(selectDirectory).toHaveBeenCalledOnce();
-      expect(screen.getByTestId('selected-path')).toHaveTextContent('D:\\Data');
+      expect(screen.getByText('Data')).toBeInTheDocument();
     });
   });
 });

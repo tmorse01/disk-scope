@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DiskScope - System Utility</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;family=Geist:wght@400;500;600;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "inverse-primary": "#adc7ff",
+                    "secondary-container": "#dde0e6",
+                    "inverse-surface": "#2e3132",
+                    "primary-fixed-dim": "#adc7ff",
+                    "on-surface-variant": "#414754",
+                    "secondary-fixed": "#dfe3e8",
+                    "on-background": "#191c1d",
+                    "tertiary-fixed-dim": "#b2c5ff",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-error": "#ffffff",
+                    "secondary-fixed-dim": "#c3c7cc",
+                    "tertiary-container": "#3670e9",
+                    "surface": "#f8f9fa",
+                    "error-container": "#ffdad6",
+                    "surface-bright": "#f8f9fa",
+                    "tertiary-fixed": "#dae2ff",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#edeeef",
+                    "surface-variant": "#e1e3e4",
+                    "primary-fixed": "#d8e2ff",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed-variant": "#43474c",
+                    "surface-container-low": "#f3f4f5",
+                    "primary": "#005bbf",
+                    "on-primary": "#ffffff",
+                    "surface-container-high": "#e7e8e9",
+                    "secondary": "#5b5f64",
+                    "background": "#f8f9fa",
+                    "outline": "#727785",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary-fixed": "#181c20",
+                    "outline-variant": "#c1c6d6",
+                    "on-surface": "#191c1d",
+                    "on-primary-fixed": "#001a41",
+                    "on-secondary": "#ffffff",
+                    "primary-container": "#1a73e8",
+                    "on-primary-fixed-variant": "#004493",
+                    "surface-dim": "#d9dadb",
+                    "on-tertiary-fixed-variant": "#0040a1",
+                    "on-tertiary-container": "#ffffff",
+                    "on-secondary-container": "#5f6368",
+                    "inverse-on-surface": "#f0f1f2",
+                    "tertiary": "#0656cf",
+                    "surface-tint": "#005bc0",
+                    "on-primary-container": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed": "#001847"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "24px",
+                    "sidebar-width": "280px",
+                    "sidebar-rail": "80px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "unit": "4px"
+            },
+            "fontFamily": {
+                    "body-md": ["Geist"],
+                    "headline-md": ["Geist"],
+                    "title-lg": ["Geist"],
+                    "label-sm": ["JetBrains Mono"],
+                    "data-tabular": ["JetBrains Mono"],
+                    "display-lg": ["Geist"]
+            },
+            "fontSize": {
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-md": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                    "title-lg": ["22px", {"lineHeight": "28px", "fontWeight": "500"}],
+                    "label-sm": ["11px", {"lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500"}],
+                    "data-tabular": ["13px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "display-lg": ["57px", {"lineHeight": "64px", "letterSpacing": "-0.25px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Geist', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c6d6; border-radius: 10px; }
+        .glass-effect { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+    </style>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<!-- SideNavBar -->
+<aside class="flex flex-col h-screen fixed left-0 top-0 z-40 bg-surface-container-low dark:bg-surface-container-lowest docked h-full w-sidebar-rail lg:w-sidebar-width left-0 top-0">
+<div class="p-6 flex items-center gap-3">
+<div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-on-primary shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">hard_drive</span>
+</div>
+<div class="hidden lg:block overflow-hidden">
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed whitespace-nowrap">DiskScope</h1>
+<p class="text-on-surface-variant font-body-md text-body-md">System Utility</p>
+</div>
+</div>
+<nav class="flex-1 px-4 py-6 space-y-2">
+<a class="flex items-center gap-4 group hover:bg-surface-container-high dark:hover:bg-on-surface-variant transition-colors text-on-surface-variant dark:text-outline-variant px-4 py-2 rounded-full" href="#">
+<span class="material-symbols-outlined">hard_drive</span>
+<span class="hidden lg:block font-body-md text-body-md">Home</span>
+</a>
+<a class="flex items-center gap-4 group bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="hidden lg:block font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-4 group hover:bg-surface-container-high dark:hover:bg-on-surface-variant transition-colors text-on-surface-variant dark:text-outline-variant px-4 py-2 rounded-full" href="#">
+<span class="material-symbols-outlined">mop</span>
+<span class="hidden lg:block font-body-md text-body-md">Cleanup</span>
+</a>
+<a class="flex items-center gap-4 group hover:bg-surface-container-high dark:hover:bg-on-surface-variant transition-colors text-on-surface-variant dark:text-outline-variant px-4 py-2 rounded-full" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="hidden lg:block font-body-md text-body-md">Settings</span>
+</a>
+</nav>
+<div class="p-4 mt-auto">
+<button class="w-full flex items-center justify-center gap-2 bg-primary text-on-primary py-3 rounded-xl font-body-md font-semibold hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined">add</span>
+<span class="hidden lg:block">Scan New Drive</span>
+</button>
+<div class="mt-6 flex items-center gap-3 px-2">
+<div class="w-10 h-10 rounded-full bg-outline-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional studio portrait of a high-tech enthusiast or software developer, with soft blue ambient lighting reflecting a modern workplace aesthetic. The background is a blurred server room with cool-toned indicators, emphasizing technical expertise and system management context. The visual style is crisp and clean, aligning with Material 3 design principles." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDScTI6eLirVSpOdnx53J9oo0lwgNrX2KPJlQpnLgDmV4qB4yGm5WKXooRIsFaggMvqdek_TMxvNlfg2q_ujcifDVpSmGE_51UFBcQl_xP23mvXclFlxebSEnJ9Pd5bISl1wSwkGqCkmBqJMh2vmxgOYpFvEBLLi-t7WfQSdsoVz2wWvp_j0hxnuOfZYqtGAMrBB2mizVQeKtxkCX9KIA6tPo_iC03J2_iZWf0Ffekso_hjJa6hVdUN"/>
+</div>
+<div class="hidden lg:block">
+<p class="font-body-md font-bold">Admin User</p>
+<p class="text-label-sm text-on-surface-variant uppercase tracking-wider">System Root</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-sidebar-rail lg:ml-sidebar-width min-h-screen">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full px-gutter h-16 bg-surface/80 dark:bg-inverse-surface/80 docked full-width top-0 sticky backdrop-blur-md border-b border-outline-variant dark:border-on-surface-variant z-30">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="font-title-lg text-title-lg text-primary font-bold">C:</span>
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+<span class="text-on-surface-variant">Users</span>
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+<span class="text-on-surface-variant">Project</span>
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+<span class="text-primary font-bold border-b-2 border-primary pb-1">node_modules</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 hover:bg-surface-container-high rounded-full transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+<button class="p-2 hover:bg-surface-container-high rounded-full transition-colors">
+<span class="material-symbols-outlined">sort_by_alpha</span>
+</button>
+<div class="h-6 w-[1px] bg-outline-variant mx-2"></div>
+<button class="px-4 py-2 font-body-md text-on-surface-variant hover:text-primary transition-colors">Reveal in Explorer</button>
+<button class="px-5 py-2 bg-primary-container text-on-primary-container rounded-full font-body-md font-semibold hover:shadow-md transition-all active:opacity-80">Refresh</button>
+</div>
+</header>
+<div class="p-gutter max-w-[1600px] mx-auto space-y-8">
+<!-- Hero Grid -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Usage Card -->
+<div class="lg:col-span-8 bg-surface-container-lowest rounded-3xl p-8 border border-outline-variant/30 flex flex-col justify-between overflow-hidden relative">
+<div class="relative z-10">
+<div class="flex justify-between items-start mb-8">
+<div>
+<h2 class="text-label-sm font-label-sm text-primary uppercase tracking-[2px] mb-2">Primary Storage</h2>
+<p class="font-display-lg text-display-lg font-semibold text-on-surface leading-none tracking-tight">450 <span class="text-headline-md text-on-surface-variant font-normal">/ 512 GB</span></p>
+</div>
+<div class="text-right">
+<span class="px-4 py-1.5 bg-error-container text-on-error-container rounded-full text-label-sm font-bold uppercase">Critical Level</span>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between text-body-md text-on-surface-variant">
+<span>Used (87%)</span>
+<span>62 GB Available</span>
+</div>
+<div class="w-full h-8 bg-surface-container-highest rounded-full overflow-hidden flex">
+<div class="h-full bg-primary" style="width: 60%"></div>
+<div class="h-full bg-tertiary" style="width: 15%"></div>
+<div class="h-full bg-error" style="width: 12%"></div>
+</div>
+</div>
+</div>
+<div class="mt-8 flex gap-6 z-10">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-primary"></span>
+<span class="text-body-md text-on-surface-variant">Media &amp; Projects</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-tertiary"></span>
+<span class="text-body-md text-on-surface-variant">System Files</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-error"></span>
+<span class="text-body-md text-on-surface-variant">Other</span>
+</div>
+</div>
+<!-- Decorative background graphic -->
+<div class="absolute -right-16 -bottom-16 w-64 h-64 opacity-[0.03] pointer-events-none">
+<span class="material-symbols-outlined" style="font-size: 256px;">hard_drive</span>
+</div>
+</div>
+<!-- Breakdown / Pie Chart Placeholder -->
+<div class="lg:col-span-4 bg-surface-container-lowest rounded-3xl p-8 border border-outline-variant/30 flex flex-col items-center justify-center text-center">
+<h3 class="text-title-lg font-title-lg mb-6 w-full text-left">Type Breakdown</h3>
+<div class="relative w-48 h-48 mb-8">
+<!-- SVG Ring chart simulation -->
+<svg class="w-full h-full -rotate-90" viewbox="0 0 36 36">
+<circle class="text-surface-container-high" cx="18" cy="18" fill="transparent" r="16" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary" cx="18" cy="18" fill="transparent" r="16" stroke="currentColor" stroke-dasharray="87, 100" stroke-linecap="round" stroke-width="4"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-headline-md font-bold">87%</span>
+<span class="text-label-sm text-on-surface-variant uppercase">Full</span>
+</div>
+</div>
+<div class="w-full space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">video_library</span>
+<span class="text-body-md">Media</span>
+</div>
+<span class="font-data-tabular">220 GB</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary text-sm">terminal</span>
+<span class="text-body-md">Dev Tools</span>
+</div>
+<span class="font-data-tabular">134 GB</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error text-sm">folder_zip</span>
+<span class="text-body-md">Others</span>
+</div>
+<span class="font-data-tabular">96 GB</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Cleanup Candidates -->
+<section>
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-title-lg font-title-lg flex items-center gap-3">
+                        Cleanup Candidates
+                        <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container text-label-sm rounded-full">3 found</span>
+</h2>
+<button class="text-primary font-body-md hover:underline">Scan all folders</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="group bg-surface-container-low p-6 rounded-2xl hover:bg-surface-container-high transition-all border border-transparent hover:border-outline-variant active:scale-[0.98]">
+<div class="flex justify-between mb-4">
+<span class="material-symbols-outlined text-3xl text-secondary" style="font-variation-settings: 'FILL' 1;">folder_open</span>
+<span class="px-3 py-1 bg-green-100 text-green-800 text-label-sm rounded-full font-bold">Safe to Move</span>
+</div>
+<p class="font-body-md font-bold mb-1 truncate">node_modules</p>
+<p class="text-headline-md font-headline-md text-primary mb-4">12.4 GB</p>
+<button class="w-full py-2 bg-on-surface text-surface rounded-xl font-body-md opacity-0 group-hover:opacity-100 transition-opacity">Analyze</button>
+</div>
+<div class="group bg-surface-container-low p-6 rounded-2xl hover:bg-surface-container-high transition-all border border-transparent hover:border-outline-variant active:scale-[0.98]">
+<div class="flex justify-between mb-4">
+<span class="material-symbols-outlined text-3xl text-secondary" style="font-variation-settings: 'FILL' 1;">package</span>
+<span class="px-3 py-1 bg-green-100 text-green-800 text-label-sm rounded-full font-bold">Safe to Move</span>
+</div>
+<p class="font-body-md font-bold mb-1 truncate">.pnpm-store</p>
+<p class="text-headline-md font-headline-md text-primary mb-4">8.1 GB</p>
+<button class="w-full py-2 bg-on-surface text-surface rounded-xl font-body-md opacity-0 group-hover:opacity-100 transition-opacity">Analyze</button>
+</div>
+<div class="group bg-surface-container-low p-6 rounded-2xl hover:bg-surface-container-high transition-all border border-transparent hover:border-outline-variant active:scale-[0.98]">
+<div class="flex justify-between mb-4">
+<span class="material-symbols-outlined text-3xl text-secondary" style="font-variation-settings: 'FILL' 1;">delete_sweep</span>
+<span class="px-3 py-1 bg-green-100 text-green-800 text-label-sm rounded-full font-bold">Safe to Move</span>
+</div>
+<p class="font-body-md font-bold mb-1 truncate">Trash / Recycled</p>
+<p class="text-headline-md font-headline-md text-primary mb-4">4.2 GB</p>
+<button class="w-full py-2 bg-on-surface text-surface rounded-xl font-body-md opacity-0 group-hover:opacity-100 transition-opacity">Analyze</button>
+</div>
+<div class="bg-primary/5 p-6 rounded-2xl border-2 border-dashed border-primary/20 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-primary mb-2">auto_fix_high</span>
+<p class="font-body-md font-semibold text-primary">Intelligent Scan</p>
+<p class="text-label-sm text-on-surface-variant mt-1">Deep search for junk</p>
+</div>
+</div>
+</section>
+<!-- Tables Section -->
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- Largest Folders -->
+<div class="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl overflow-hidden">
+<div class="p-6 border-b border-outline-variant/20 flex justify-between items-center">
+<h3 class="text-title-lg font-title-lg">Largest Folders</h3>
+<span class="material-symbols-outlined text-on-surface-variant">folder_zip</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left font-body-md">
+<thead class="bg-surface-container-low text-on-surface-variant font-label-sm uppercase tracking-wider">
+<tr>
+<th class="px-6 py-4">Folder Name</th>
+<th class="px-6 py-4 text-right">Size</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<tr class="hover:bg-surface-container-high transition-colors cursor-pointer group">
+<td class="px-6 py-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant/60 group-hover:text-primary">folder</span>
+<span class="truncate">C:\Users\Admin\Videos\Renders</span>
+</td>
+<td class="px-6 py-4 text-right font-data-tabular">84.2 GB</td>
+</tr>
+<tr class="hover:bg-surface-container-high transition-colors cursor-pointer group">
+<td class="px-6 py-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant/60 group-hover:text-primary">folder</span>
+<span class="truncate">C:\Games\Cyberpunk_2077</span>
+</td>
+<td class="px-6 py-4 text-right font-data-tabular">68.5 GB</td>
+</tr>
+<tr class="hover:bg-surface-container-high transition-colors cursor-pointer group">
+<td class="px-6 py-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant/60 group-hover:text-primary">folder</span>
+<span class="truncate">C:\Docker\volumes</span>
+</td>
+<td class="px-6 py-4 text-right font-data-tabular">42.1 GB</td>
+</tr>
+<tr class="hover:bg-surface-container-high transition-colors cursor-pointer group">
+<td class="px-6 py-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant/60 group-hover:text-primary">folder</span>
+<span class="truncate">C:\Users\Admin\Downloads</span>
+</td>
+<td class="px-6 py-4 text-right font-data-tabular">28.9 GB</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Largest Files -->
+<div class="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl overflow-hidden">
+<div class="p-6 border-b border-outline-variant/20 flex justify-between items-center">
+<h3 class="text-title-lg font-title-lg">Largest Files</h3>
+<span class="material-symbols-outlined text-on-surface-variant">description</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left font-body-md">
+<thead class="bg-surface-container-low text-on-surface-variant font-label-sm uppercase tracking-wider">
+<tr>
+<th class="px-6 py-4">File Name</th>
+<th class="px-6 py-4 text-right">Size</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<tr class="hover:bg-surface-container-high transition-colors cursor-pointer group">
+<td class="px-6 py-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-error group-hover:scale-110 transition-transform">movie</span>
+<span class="truncate">final_cut_4k.mp4</span>
+</td>
+<td class="px-6 py-4 text-right font-data-tabular">12.8 GB</td>
+</tr>
+<tr class="hover:bg-surface-container-high transition-colors cursor-pointer group">
+<td class="px-6 py-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary group-hover:scale-110 transition-transform">database</span>
+<span class="truncate">backup_2023_Q4.sql</span>
+</td>
+<td class="px-6 py-4 text-right font-data-tabular">8.2 GB</td>
+</tr>
+<tr class="hover:bg-surface-container-high transition-colors cursor-pointer group">
+<td class="px-6 py-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant/60 group-hover:scale-110 transition-transform">box_edit</span>
+<span class="truncate">virtual_env.iso</span>
+</td>
+<td class="px-6 py-4 text-right font-data-tabular">5.4 GB</td>
+</tr>
+<tr class="hover:bg-surface-container-high transition-colors cursor-pointer group">
+<td class="px-6 py-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant/60 group-hover:scale-110 transition-transform">image</span>
+<span class="truncate">raw_shoot_uncompressed.zip</span>
+</td>
+<td class="px-6 py-4 text-right font-data-tabular">4.1 GB</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- FAB for quick action -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary rounded-2xl shadow-xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</button>
+<script>
+        // Micro-interactions and subtle hover effects
+        document.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('mouseenter', () => {
+                row.querySelector('.material-symbols-outlined').style.fontVariationSettings = "'FILL' 1";
+            });
+            row.addEventListener('mouseleave', () => {
+                row.querySelector('.material-symbols-outlined').style.fontVariationSettings = "'FILL' 0";
+            });
+        });
+
+        // Dynamic greeting or status update logic could go here
+        console.log("DiskScope Initialized. Monitoring storage health...");
+    </script>
+</body></html>

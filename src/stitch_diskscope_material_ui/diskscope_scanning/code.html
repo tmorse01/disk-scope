@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DiskScope - Active Scan</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=JetBrains+Mono:wght@100..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        @keyframes scan-line {
+            0% { transform: translateY(-100%); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(100%); opacity: 0; }
+        }
+        .scanning-animation {
+            animation: scan-line 2s ease-in-out infinite;
+        }
+        .folder-enter {
+            animation: slideInUp 0.4s ease-out forwards;
+        }
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "inverse-primary": "#adc7ff",
+                    "secondary-container": "#dde0e6",
+                    "inverse-surface": "#2e3132",
+                    "primary-fixed-dim": "#adc7ff",
+                    "on-surface-variant": "#414754",
+                    "secondary-fixed": "#dfe3e8",
+                    "on-background": "#191c1d",
+                    "tertiary-fixed-dim": "#b2c5ff",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-error": "#ffffff",
+                    "secondary-fixed-dim": "#c3c7cc",
+                    "tertiary-container": "#3670e9",
+                    "surface": "#f8f9fa",
+                    "error-container": "#ffdad6",
+                    "surface-bright": "#f8f9fa",
+                    "tertiary-fixed": "#dae2ff",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#edeeef",
+                    "surface-variant": "#e1e3e4",
+                    "primary-fixed": "#d8e2ff",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed-variant": "#43474c",
+                    "surface-container-low": "#f3f4f5",
+                    "primary": "#005bbf",
+                    "on-primary": "#ffffff",
+                    "surface-container-high": "#e7e8e9",
+                    "secondary": "#5b5f64",
+                    "background": "#f8f9fa",
+                    "outline": "#727785",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary-fixed": "#181c20",
+                    "outline-variant": "#c1c6d6",
+                    "on-surface": "#191c1d",
+                    "on-primary-fixed": "#001a41",
+                    "on-secondary": "#ffffff",
+                    "primary-container": "#1a73e8",
+                    "on-primary-fixed-variant": "#004493",
+                    "surface-dim": "#d9dadb",
+                    "on-tertiary-fixed-variant": "#0040a1",
+                    "on-tertiary-container": "#ffffff",
+                    "on-secondary-container": "#5f6368",
+                    "inverse-on-surface": "#f0f1f2",
+                    "tertiary": "#0656cf",
+                    "surface-tint": "#005bc0",
+                    "on-primary-container": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed": "#001847"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "24px",
+                    "sidebar-width": "280px",
+                    "sidebar-rail": "80px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "unit": "4px"
+            },
+            "fontFamily": {
+                    "body-md": ["Geist"],
+                    "headline-md": ["Geist"],
+                    "title-lg": ["Geist"],
+                    "label-sm": ["JetBrains Mono"],
+                    "data-tabular": ["JetBrains Mono"],
+                    "display-lg": ["Geist"]
+            },
+            "fontSize": {
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-md": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                    "title-lg": ["22px", {"lineHeight": "28px", "fontWeight": "500"}],
+                    "label-sm": ["11px", {"lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500"}],
+                    "data-tabular": ["13px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "display-lg": ["57px", {"lineHeight": "64px", "letterSpacing": "-0.25px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-hidden">
+<!-- Sidebar (Shared Component) -->
+<aside class="flex flex-col h-screen fixed left-0 top-0 z-40 bg-surface-container-low dark:bg-surface-container-lowest h-full w-sidebar-rail lg:w-sidebar-width border-r border-outline-variant">
+<div class="p-6 flex items-center gap-3">
+<div class="w-10 h-10 bg-primary-container rounded-xl flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">hard_drive</span>
+</div>
+<div class="hidden lg:block">
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed leading-none">DiskScope</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">System Utility</p>
+</div>
+</div>
+<nav class="flex-1 px-4 py-6 space-y-2">
+<!-- Active state manually determined as "Home" for the scan start, but transitioning to Scan action -->
+<a class="flex items-center gap-4 text-on-surface-variant dark:text-outline-variant px-4 py-3 rounded-full hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="hidden lg:block font-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-4 bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full px-4 py-3" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">mop</span>
+<span class="hidden lg:block font-body-md">Cleanup</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant dark:text-outline-variant px-4 py-3 rounded-full hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="hidden lg:block font-body-md">Settings</span>
+</a>
+</nav>
+<div class="p-4 border-t border-outline-variant">
+<button class="w-full bg-primary text-on-primary font-body-md py-3 rounded-full flex items-center justify-center gap-2 active:scale-95 duration-150">
+<span class="material-symbols-outlined">add</span>
+<span class="hidden lg:block">Scan New Drive</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-sidebar-rail lg:ml-sidebar-width h-screen flex flex-col bg-surface">
+<!-- Top Navigation Bar (Shared Component) -->
+<header class="flex justify-between items-center w-full px-gutter h-16 sticky top-0 bg-surface/80 backdrop-blur-md border-b border-outline-variant z-30">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="font-title-lg text-title-lg text-on-surface-variant">C:</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="font-title-lg text-title-lg text-on-surface-variant">Users</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="font-title-lg text-title-lg text-primary font-bold border-b-2 border-primary pb-1">Scanning...</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 mr-4">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">sort_by_alpha</span>
+</button>
+</div>
+<div class="flex items-center gap-3 pl-4 border-l border-outline-variant">
+<img class="w-8 h-8 rounded-full border border-outline-variant" data-alt="Professional studio portrait of a technology systems administrator with a clean-cut appearance, wearing a dark professional sweater against a neutral grey studio background. The lighting is soft and corporate, perfectly matching the Material 3 design system's clean aesthetic with professional clarity and focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuACPAhtO1e0Lk3mLp5njNppwcU8NAiQzzVAlBtHQvshNi3TIHhUk_lr9-R7EtANJOrKdL428qc7h3baa14yRedT8GXcLhhbdkdP3L2aRodi5pwwkCCE3UT7mMawcLqY3JJQ2feMS3ba6gbxaiVSJvxwf3lqSJVv5ICYH70URrx-XqzwAs3_wEm-dIUI4oUGg26gMMhSWo4LO2YWZSk9KXS75MVsXA9kTMBjcrqm4jk2cWr-xKuqWcCW"/>
+</div>
+</div>
+</header>
+<!-- Scan Workspace -->
+<div class="flex-1 overflow-hidden p-gutter grid grid-cols-12 gap-gutter">
+<!-- Center Progress Column -->
+<div class="col-span-12 lg:col-span-7 flex flex-col items-center justify-center space-y-12">
+<!-- Circular Progress Section -->
+<div class="relative flex items-center justify-center">
+<!-- Progress Background -->
+<svg class="w-64 h-64 lg:w-80 lg:h-80">
+<circle class="text-surface-container-high" cx="50%" cy="50%" fill="transparent" r="45%" stroke="currentColor" stroke-width="12"></circle>
+<circle class="progress-ring__circle text-primary stroke-round" cx="50%" cy="50%" fill="transparent" id="progress-circle" r="45%" stroke="currentColor" stroke-dasharray="880" stroke-dashoffset="440" stroke-width="12"></circle>
+</svg>
+<!-- Progress Info -->
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+<span class="font-display-lg text-display-lg text-primary" id="percent-text">50%</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant tracking-widest uppercase mt-2">Analyzed</span>
+</div>
+<!-- Atmospheric Scanning Shader Overlay (Implicitly using the space for effect) -->
+<div class="absolute inset-0 pointer-events-none opacity-20">
+<div class="w-full h-full rounded-full border-2 border-primary/30 scanning-animation"></div>
+</div>
+</div>
+<!-- Status & Path Card -->
+<div class="w-full max-w-xl bg-surface-container-low p-6 rounded-2xl border border-outline-variant space-y-4 shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary animate-pulse">search</span>
+<span class="font-title-lg text-title-lg">Deep File System Scan</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant bg-surface-container-high px-2 py-1 rounded">FAST MODE</span>
+</div>
+<div class="space-y-1">
+<p class="font-label-sm text-label-sm text-outline uppercase">Current Path</p>
+<div class="font-data-tabular text-data-tabular bg-surface-container px-3 py-2 rounded-lg border border-outline-variant overflow-hidden text-ellipsis whitespace-nowrap" id="current-path">
+                            C:/Users/Project/node_modules/.pnpm/registry.npmjs.org/typescript/5.1.6/node_modules/typescript/lib/...
+                        </div>
+</div>
+<div class="flex justify-between items-center pt-2">
+<div class="flex gap-6">
+<div>
+<p class="font-label-sm text-label-sm text-outline">FILES</p>
+<p class="font-title-lg text-title-lg" id="file-count">124,502</p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-outline">TOTAL SIZE</p>
+<p class="font-title-lg text-title-lg" id="size-count">42.8 GB</p>
+</div>
+</div>
+<button class="bg-error-container text-on-error-container hover:bg-error hover:text-on-error px-6 py-3 rounded-full font-title-lg transition-all flex items-center gap-2 active:scale-95">
+<span class="material-symbols-outlined">close</span>
+                            Cancel Scan
+                        </button>
+</div>
+</div>
+</div>
+<!-- Right Sidebar: Discovered Heavy Objects -->
+<div class="col-span-12 lg:col-span-5 flex flex-col bg-surface-container-lowest rounded-3xl border border-outline-variant overflow-hidden">
+<div class="p-6 border-b border-outline-variant flex items-center justify-between">
+<h3 class="font-title-lg text-title-lg">Discovered Hotspots</h3>
+<span class="material-symbols-outlined text-on-surface-variant">warning</span>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-3" id="discovery-list">
+<!-- Recently Discovered Items -->
+<div class="folder-enter flex items-center justify-between p-4 bg-surface-container rounded-2xl border border-outline-variant hover:bg-surface-container-high transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-error-container text-on-error-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">folder_zip</span>
+</div>
+<div>
+<p class="font-body-md font-bold">Old Projects Archive</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">C:/Users/Backup/2022_Archive</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-data-tabular text-data-tabular font-bold text-error">12.4 GB</p>
+<p class="font-label-sm text-label-sm text-outline">14,203 files</p>
+</div>
+</div>
+<div class="folder-enter flex items-center justify-between p-4 bg-surface-container rounded-2xl border border-outline-variant hover:bg-surface-container-high transition-colors" style="animation-delay: 0.1s">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-primary-container text-on-primary-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">movie</span>
+</div>
+<div>
+<p class="font-body-md font-bold">Raw Video Exports</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">C:/Users/Project/Exports</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-data-tabular text-data-tabular font-bold text-primary">8.1 GB</p>
+<p class="font-label-sm text-label-sm text-outline">12 files</p>
+</div>
+</div>
+<div class="folder-enter flex items-center justify-between p-4 bg-surface-container rounded-2xl border border-outline-variant hover:bg-surface-container-high transition-colors" style="animation-delay: 0.2s">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-secondary-container text-on-secondary-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">database</span>
+</div>
+<div>
+<p class="font-body-md font-bold">Local Docker Registry</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">C:/ProgramData/Docker</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-data-tabular text-data-tabular font-bold">5.2 GB</p>
+<p class="font-label-sm text-label-sm text-outline">5,431 files</p>
+</div>
+</div>
+<!-- Placeholder for dynamic items -->
+<div class="h-24 border-2 border-dashed border-outline-variant rounded-2xl flex items-center justify-center text-outline-variant" id="dynamic-placeholder">
+<span class="font-label-sm">Analyzing next sector...</span>
+</div>
+</div>
+<div class="p-4 bg-surface-container-high">
+<div class="flex justify-between items-center mb-2">
+<span class="font-label-sm text-on-surface-variant">SCAN INTENSITY</span>
+<span class="font-label-sm text-primary">HIGH PERFORMANCE</span>
+</div>
+<div class="h-2 bg-surface rounded-full overflow-hidden">
+<div class="h-full bg-primary w-3/4"></div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Micro-interactions for simulation
+        const circle = document.getElementById('progress-circle');
+        const percentText = document.getElementById('percent-text');
+        const pathText = document.getElementById('current-path');
+        const fileText = document.getElementById('file-count');
+        
+        let progress = 50;
+        let files = 124502;
+        const circumference = 2 * Math.PI * (45 * 320 / 100); // Approximate based on SVG
+
+        const paths = [
+            "C:/Users/Documents/Work/Q3_Review_v2.docx",
+            "C:/Windows/System32/drivers/etc/hosts",
+            "C:/Users/Project/node_modules/react-dom/cjs/react-dom.development.js",
+            "C:/Users/Downloads/Large_Asset_Pack_4K.zip",
+            "C:/Users/AppData/Local/Temp/tmp9231.log",
+            "C:/Program Files/Adobe/Photoshop/Resources/BrushSet_01.abr"
+        ];
+
+        function updateProgress() {
+            progress = (progress + 0.1) % 100;
+            const offset = 880 - (progress / 100 * 880);
+            circle.style.strokeDashoffset = offset;
+            percentText.innerText = Math.floor(progress) + '%';
+            
+            // Random Path simulation
+            if(Math.random() > 0.7) {
+                pathText.innerText = paths[Math.floor(Math.random() * paths.length)];
+                files += Math.floor(Math.random() * 50);
+                fileText.innerText = files.toLocaleString();
+            }
+
+            requestAnimationFrame(updateProgress);
+        }
+
+        updateProgress();
+
+        // Add dummy discovered items occasionally
+        setInterval(() => {
+            const list = document.getElementById('discovery-list');
+            const placeholder = document.getElementById('dynamic-placeholder');
+            
+            if(list.children.length < 8) {
+                const newItem = document.createElement('div');
+                newItem.className = 'folder-enter flex items-center justify-between p-4 bg-surface-container rounded-2xl border border-outline-variant hover:bg-surface-container-high transition-colors';
+                newItem.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 bg-surface-container-highest rounded-lg flex items-center justify-center">
+                            <span class="material-symbols-outlined">draft</span>
+                        </div>
+                        <div>
+                            <p class="font-body-md font-bold">New Log Cluster</p>
+                            <p class="font-label-sm text-label-sm text-on-surface-variant">C:/System/Logs/Runtime_${Math.floor(Math.random()*1000)}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-data-tabular text-data-tabular font-bold">${(Math.random() * 2 + 1).toFixed(1)} GB</p>
+                        <p class="font-label-sm text-label-sm text-outline">892 files</p>
+                    </div>
+                `;
+                list.insertBefore(newItem, placeholder);
+            }
+        }, 5000);
+    </script>
+</body></html>

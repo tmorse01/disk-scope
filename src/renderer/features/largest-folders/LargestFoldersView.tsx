@@ -1,23 +1,25 @@
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Breadcrumbs from '@mui/material/Breadcrumbs';
 import Button from '@mui/material/Button';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
 import IconButton from '@mui/material/IconButton';
 import LinearProgress from '@mui/material/LinearProgress';
-import Link from '@mui/material/Link';
-import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
 import { useCallback, useMemo, useState } from 'react';
 import type { NodeId } from '../../../shared/types';
 import { formatBytes } from '../../../shared/format-bytes';
+import {
+  DsDataTable,
+  DsTableBodyRow,
+  DsTableHeadRow,
+  TableCell as DsTableCell,
+} from '../../components/DsDataTable';
+import { DsPageHeader } from '../../components/DsStatusChip';
+import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
+import { useShellOverrides } from '../../components/ShellContext';
 import { useScanStore } from '../../hooks/useScanStore';
 import {
   buildBreadcrumbPath,
@@ -138,211 +140,181 @@ export function LargestFoldersView() {
     void window.diskScope.copyPath(selectedNode.path);
   }, [selectedNode]);
 
+  const shellSegments = useMemo(
+    () =>
+      breadcrumb.map((node, index) => ({
+        id: node.id,
+        label: node.name,
+        onClick: index < breadcrumb.length - 1 ? () => handleFocusChange(node.id) : undefined,
+      })),
+    [breadcrumb, handleFocusChange],
+  );
+
+  const shellActions = useMemo(
+    () => (
+      <>
+        <Button
+          size="small"
+          variant="outlined"
+          disabled={!selectedNode}
+          onClick={handleReveal}
+          sx={{ textTransform: 'none', borderRadius: 999 }}
+        >
+          Reveal in Explorer
+        </Button>
+        <Button
+          size="small"
+          variant="contained"
+          disabled={!selectedNode}
+          onClick={handleCopyPath}
+          sx={{ textTransform: 'none', borderRadius: 999 }}
+        >
+          Copy path
+        </Button>
+      </>
+    ),
+    [handleCopyPath, handleReveal, selectedNode],
+  );
+
+  useShellOverrides(result ? shellSegments : [], result ? shellActions : null);
+
   if (status === 'scanning') {
     return (
-      <Card variant="outlined">
-        <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1, py: 2 }}>
-          <Typography variant="h5" component="h2" sx={{ fontWeight: 500 }}>
-            Largest Folders
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Scan in progress — folder rankings will update when the scan completes.
-          </Typography>
-        </CardContent>
-      </Card>
+      <Alert severity="info" variant="outlined">
+        Scan in progress — folder rankings will update when the scan completes.
+      </Alert>
     );
   }
 
   if (!result) {
     return (
-      <Card variant="outlined">
-        <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1, py: 2 }}>
-          <Typography variant="h5" component="h2" sx={{ fontWeight: 500 }}>
-            Largest Folders
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Run a scan from Overview to see folder rankings here.
-          </Typography>
-        </CardContent>
-      </Card>
+      <Alert severity="info" variant="outlined">
+        Run a scan from Overview to see folder rankings here.
+      </Alert>
     );
   }
 
   return (
-    <Card variant="outlined">
-      <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, py: 2 }}>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
-          <Typography variant="h5" component="h2" sx={{ fontWeight: 500, flex: 1 }}>
-            Largest Folders
-          </Typography>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<MaterialIcon name="folder_open" aria-hidden={false} />}
-            disabled={!selectedNode}
-            onClick={handleReveal}
-            sx={{ textTransform: 'none' }}
-          >
-            Reveal in Explorer
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<MaterialIcon name="content_copy" aria-hidden={false} />}
-            disabled={!selectedNode}
-            onClick={handleCopyPath}
-            sx={{ textTransform: 'none' }}
-          >
-            Copy path
-          </Button>
-        </Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <DsPageHeader
+        title="Largest Folders"
+        subtitle={`Analyzing ${result.fileCount.toLocaleString()} files under ${result.rootPath}`}
+      />
 
-        <Breadcrumbs aria-label="Folder drilldown">
-          {breadcrumb.map((node, index) => {
-            const isLast = index === breadcrumb.length - 1;
-
-            if (isLast) {
-              return (
-                <Typography key={node.id} variant="body2" color="text.primary">
-                  {node.name}
-                </Typography>
-              );
-            }
-
-            return (
-              <Link
-                key={node.id}
-                component="button"
-                type="button"
-                variant="body2"
-                underline="hover"
-                color="inherit"
-                onClick={() => handleFocusChange(node.id)}
-                sx={{ cursor: 'pointer', fontFamily: 'inherit' }}
-              >
-                {node.name}
-              </Link>
-            );
-          })}
-        </Breadcrumbs>
-
-        {rows.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
-            No subfolders in this directory.
-          </Typography>
-        ) : (
-          <TableContainer>
-            <Table size="small" aria-label="Largest folders">
-              <TableHead>
-                <TableRow>
-                  {COLUMNS.map((column) => (
-                    <TableCell key={column.id} align={column.align ?? 'left'}>
-                      {column.sortable ? (
-                        <TableSortLabel
-                          active={sortColumn === column.id}
-                          direction={sortColumn === column.id ? sortDirection : 'asc'}
-                          onClick={() => handleSort(column.id as FolderSortColumn)}
-                        >
-                          {column.label}
-                        </TableSortLabel>
-                      ) : (
-                        column.label
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.map(({ nodeId, node, depth, hasChildren, isExpanded }) => {
-                  const isSelected = selectedNodeId === nodeId;
-                  const percent = percentOfRoot(node.sizeBytes, result.totalSizeBytes);
-
-                  return (
-                    <TableRow
-                      key={nodeId}
-                      hover
-                      selected={isSelected}
-                      onClick={() => setSelectedNodeId(nodeId)}
-                      onDoubleClick={() => handleDrillDown(nodeId)}
-                      sx={{ cursor: 'pointer' }}
-                    >
-                      <TableCell>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.5,
-                            pl: depth * 2,
-                          }}
-                        >
-                          {hasChildren ? (
-                            <IconButton
-                              size="small"
-                              aria-label={isExpanded ? 'Collapse folder' : 'Expand folder'}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleToggleExpand(nodeId);
-                              }}
-                              sx={{ p: 0.25 }}
-                            >
-                              <MaterialIcon
-                                name={isExpanded ? 'expand_more' : 'chevron_right'}
-                                style={{ fontSize: 20 }}
-                              />
-                            </IconButton>
-                          ) : (
-                            <Box sx={{ width: 28, flexShrink: 0 }} />
-                          )}
-                          <MaterialIcon name="folder" style={{ fontSize: 18, flexShrink: 0 }} />
-                          <Box sx={{ minWidth: 0, flex: 1 }}>
-                            <Typography
-                              variant="body2"
-                              noWrap
-                              title={node.path}
-                              sx={{ fontWeight: isSelected ? 600 : 400 }}
-                            >
-                              {node.name}
-                            </Typography>
-                            <LinearProgress
-                              variant="determinate"
-                              value={Math.min(100, percent)}
-                              aria-hidden
-                              sx={{
-                                mt: 0.5,
-                                height: 4,
-                                borderRadius: 1,
-                                bgcolor: 'action.hover',
-                                '& .MuiLinearProgress-bar': { borderRadius: 1 },
-                              }}
-                            />
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right">{formatBytes(node.sizeBytes)}</TableCell>
-                      <TableCell align="right">
-                        {formatPercentOfRoot(node.sizeBytes, result.totalSizeBytes)}
-                      </TableCell>
-                      <TableCell align="right">{node.fileCount.toLocaleString()}</TableCell>
-                      <TableCell align="right">{node.directoryCount.toLocaleString()}</TableCell>
-                      <TableCell align="right">{formatModifiedAt(node.modifiedAt)}</TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" color="text.disabled">
-                          —
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-
-        <Typography variant="caption" color="text.secondary">
-          Double-click a row to drill into that folder. Risk labels will appear after cleanup rules
-          are enabled.
+      {rows.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">
+          No subfolders in this directory.
         </Typography>
-      </CardContent>
-    </Card>
+      ) : (
+        <DsDataTable
+          aria-label="Largest folders"
+          header={
+            <DsTableHeadRow>
+              {COLUMNS.map((column) => (
+                <DsTableCell key={column.id} align={column.align ?? 'left'}>
+                  {column.sortable ? (
+                    <TableSortLabel
+                      active={sortColumn === column.id}
+                      direction={sortColumn === column.id ? sortDirection : 'asc'}
+                      onClick={() => handleSort(column.id as FolderSortColumn)}
+                    >
+                      {column.label}
+                    </TableSortLabel>
+                  ) : (
+                    column.label
+                  )}
+                </DsTableCell>
+              ))}
+            </DsTableHeadRow>
+          }
+        >
+          <TableBody>
+            {rows.map(({ nodeId, node, depth, hasChildren, isExpanded }) => {
+              const isSelected = selectedNodeId === nodeId;
+              const percent = percentOfRoot(node.sizeBytes, result.totalSizeBytes);
+
+              return (
+                <DsTableBodyRow
+                  key={nodeId}
+                  selected={isSelected}
+                  onClick={() => setSelectedNodeId(nodeId)}
+                  onDoubleClick={() => handleDrillDown(nodeId)}
+                >
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: depth * 2 }}>
+                      {hasChildren ? (
+                        <IconButton
+                          size="small"
+                          aria-label={isExpanded ? 'Collapse folder' : 'Expand folder'}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleToggleExpand(nodeId);
+                          }}
+                          sx={{ p: 0.25 }}
+                        >
+                          <MaterialIcon
+                            name={isExpanded ? 'expand_more' : 'chevron_right'}
+                            style={{ fontSize: 20 }}
+                          />
+                        </IconButton>
+                      ) : (
+                        <Box sx={{ width: 28, flexShrink: 0 }} />
+                      )}
+                      <MaterialIcon name="folder" style={{ fontSize: 18, flexShrink: 0 }} />
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography
+                          variant="body2"
+                          noWrap
+                          title={node.path}
+                          sx={{ fontWeight: isSelected ? 600 : 400 }}
+                        >
+                          {node.name}
+                        </Typography>
+                        <LinearProgress
+                          variant="determinate"
+                          value={Math.min(100, percent)}
+                          aria-hidden
+                          sx={{
+                            mt: 0.5,
+                            height: 4,
+                            borderRadius: 999,
+                            bgcolor: 'surfaceContainer.main',
+                            '& .MuiLinearProgress-bar': { borderRadius: 999 },
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell align="right">
+                    <DsTabular sx={{ fontWeight: 600 }}>{formatBytes(node.sizeBytes)}</DsTabular>
+                  </TableCell>
+                  <TableCell align="right">
+                    <DsTabular>{formatPercentOfRoot(node.sizeBytes, result.totalSizeBytes)}</DsTabular>
+                  </TableCell>
+                  <TableCell align="right">
+                    <DsTabular>{node.fileCount.toLocaleString()}</DsTabular>
+                  </TableCell>
+                  <TableCell align="right">
+                    <DsTabular>{node.directoryCount.toLocaleString()}</DsTabular>
+                  </TableCell>
+                  <TableCell align="right">
+                    <DsTabular>{formatModifiedAt(node.modifiedAt)}</DsTabular>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography variant="body2" color="text.disabled">
+                      —
+                    </Typography>
+                  </TableCell>
+                </DsTableBodyRow>
+              );
+            })}
+          </TableBody>
+        </DsDataTable>
+      )}
+
+      <Typography variant="caption" color="text.secondary">
+        Double-click a row to drill into that folder.
+      </Typography>
+    </Box>
   );
 }

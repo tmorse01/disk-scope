@@ -9,10 +9,10 @@ import { usePreferencesStore } from '../../hooks/usePreferencesStore';
 import { useScanStore } from '../../hooks/useScanStore';
 
 export function ScanSessionControls() {
-  const { status, selectedPath, scanError } = useScanStore();
+  const { status, selectedPaths, scanError } = useScanStore();
   const { exclusions } = usePreferencesStore();
   const isScanning = status === 'scanning';
-  const canStart = Boolean(selectedPath) && !isScanning && status !== 'selecting-target';
+  const canStart = selectedPaths.length > 0 && !isScanning && status !== 'selecting-target';
   const showActiveExclusions =
     exclusions.length > 0 && !isScanning && status !== 'completed' && status !== 'cancelled';
 

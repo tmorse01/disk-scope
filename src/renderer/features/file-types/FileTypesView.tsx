@@ -1,17 +1,19 @@
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
 import { useMemo, useState } from 'react';
 import { formatBytes } from '../../../shared/format-bytes';
+import {
+  DsDataTable,
+  DsTableBodyRow,
+  DsTableHeadRow,
+  TableCell as DsTableCell,
+} from '../../components/DsDataTable';
+import { DsPageHeader } from '../../components/DsStatusChip';
+import { DsTabular } from '../../components/DsTabular';
 import { useScanStore } from '../../hooks/useScanStore';
 import {
   defaultSortDirectionForExtensionKey,
@@ -51,67 +53,62 @@ export function FileTypesView() {
   });
 
   return (
-    <Card variant="outlined">
-      <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, py: 2 }}>
-        <Box>
-          <Typography variant="h5" component="h2" sx={{ fontWeight: 500 }}>
-            File Types
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Disk usage grouped by file extension from the latest completed scan.
-          </Typography>
-        </Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <DsPageHeader
+        title="File Types"
+        subtitle="Disk usage grouped by file extension from the latest completed scan."
+      />
 
-        {status === 'scanning' && (
-          <Alert severity="info">
-            Scan in progress — file type breakdown will update when the scan completes.
-          </Alert>
-        )}
+      {status === 'scanning' && (
+        <Alert severity="info" variant="outlined">
+          Scan in progress — file type breakdown will update when the scan completes.
+        </Alert>
+      )}
 
-        {!result && status !== 'scanning' && (
-          <Typography variant="body2" color="text.secondary">
-            Run a scan to see which file types consume the most space.
-          </Typography>
-        )}
+      {!result && status !== 'scanning' && (
+        <Alert severity="info" variant="outlined">
+          Run a scan to see which file types consume the most space.
+        </Alert>
+      )}
 
-        {result && sortedSummaries.length === 0 && (
-          <Typography variant="body2" color="text.secondary">
-            No files were found in the scanned directory.
-          </Typography>
-        )}
+      {result && sortedSummaries.length === 0 && (
+        <Typography variant="body2" color="text.secondary">
+          No files were found in the scanned directory.
+        </Typography>
+      )}
 
-        {sortedSummaries.length > 0 && (
-          <TableContainer>
-            <Table size="small" aria-label="File types">
-              <TableHead>
-                <TableRow>
-                  <TableCell sortDirection={sortLabelProps('extension').direction}>
-                    <TableSortLabel {...sortLabelProps('extension')}>Extension</TableSortLabel>
-                  </TableCell>
-                  <TableCell align="right" sortDirection={sortLabelProps('sizeBytes').direction}>
-                    <TableSortLabel {...sortLabelProps('sizeBytes')}>Total size</TableSortLabel>
-                  </TableCell>
-                  <TableCell align="right" sortDirection={sortLabelProps('fileCount').direction}>
-                    <TableSortLabel {...sortLabelProps('fileCount')}>File count</TableSortLabel>
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sortedSummaries.map((summary) => (
-                  <TableRow
-                    key={summary.extension ?? '__no_extension__'}
-                    hover
-                  >
-                    <TableCell>{formatExtensionLabel(summary.extension)}</TableCell>
-                    <TableCell align="right">{formatBytes(summary.sizeBytes)}</TableCell>
-                    <TableCell align="right">{summary.fileCount.toLocaleString()}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </CardContent>
-    </Card>
+      {sortedSummaries.length > 0 && (
+        <DsDataTable
+          aria-label="File types"
+          header={
+            <DsTableHeadRow>
+              <DsTableCell sortDirection={sortLabelProps('extension').direction}>
+                <TableSortLabel {...sortLabelProps('extension')}>Extension</TableSortLabel>
+              </DsTableCell>
+              <DsTableCell align="right" sortDirection={sortLabelProps('sizeBytes').direction}>
+                <TableSortLabel {...sortLabelProps('sizeBytes')}>Total size</TableSortLabel>
+              </DsTableCell>
+              <DsTableCell align="right" sortDirection={sortLabelProps('fileCount').direction}>
+                <TableSortLabel {...sortLabelProps('fileCount')}>File count</TableSortLabel>
+              </DsTableCell>
+            </DsTableHeadRow>
+          }
+        >
+          <TableBody>
+            {sortedSummaries.map((summary) => (
+              <DsTableBodyRow key={summary.extension ?? '__no_extension__'}>
+                <TableCell>{formatExtensionLabel(summary.extension)}</TableCell>
+                <TableCell align="right">
+                  <DsTabular sx={{ fontWeight: 600 }}>{formatBytes(summary.sizeBytes)}</DsTabular>
+                </TableCell>
+                <TableCell align="right">
+                  <DsTabular>{summary.fileCount.toLocaleString()}</DsTabular>
+                </TableCell>
+              </DsTableBodyRow>
+            ))}
+          </TableBody>
+        </DsDataTable>
+      )}
+    </Box>
   );
 }

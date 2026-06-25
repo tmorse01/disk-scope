@@ -59,7 +59,7 @@ describe('scan store picker flow', () => {
 
     const { scanStore, resetScanSessionForTest } = await import('../../src/renderer/stores/scan-store');
     scanStore.status = 'idle';
-    scanStore.selectedPath = null;
+    scanStore.selectedPaths = [];
     scanStore.pickerError = null;
     resetScanSessionForTest();
   });
@@ -72,7 +72,7 @@ describe('scan store picker flow', () => {
     await pickScanTarget();
 
     expect(selectDirectory).toHaveBeenCalledOnce();
-    expect(scanStore.selectedPath).toBe('C:\\Projects\\disk-scope');
+    expect(scanStore.selectedPaths).toEqual(['C:\\Projects\\disk-scope']);
     expect(scanStore.status).toBe('idle');
     expect(scanStore.pickerError).toBeNull();
   });
@@ -84,7 +84,7 @@ describe('scan store picker flow', () => {
 
     await pickScanTarget();
 
-    expect(scanStore.selectedPath).toBeNull();
+    expect(scanStore.selectedPaths).toEqual([]);
     expect(scanStore.status).toBe('idle');
     expect(scanStore.pickerError).toBeNull();
   });
@@ -107,19 +107,23 @@ describe('scan store picker flow', () => {
     await pending;
 
     expect(scanStore.status).toBe('idle');
-    expect(scanStore.selectedPath).toBe('E:\\Archive');
+    expect(scanStore.selectedPaths).toEqual(['E:\\Archive']);
   });
 
-  it('records picker failures without changing status to failed', async () => {
-    selectDirectory.mockRejectedValue(new Error('IPC unavailable'));
+  it('appends additional targets without duplicates', async () => {
+    selectDirectory.mockResolvedValueOnce({ path: 'C:\\A' }).mockResolvedValueOnce({ path: 'C:\\B' });
 
     const { pickScanTarget, scanStore } = await import('../../src/renderer/stores/scan-store');
 
     await pickScanTarget();
+    await pickScanTarget();
 
-    expect(scanStore.selectedPath).toBeNull();
-    expect(scanStore.status).toBe('idle');
-    expect(scanStore.pickerError).toBe('IPC unavailable');
+    expect(scanStore.selectedPaths).toEqual(['C:\\A', 'C:\\B']);
+
+    selectDirectory.mockResolvedValueOnce({ path: 'C:\\A' });
+    await pickScanTarget();
+
+    expect(scanStore.selectedPaths).toEqual(['C:\\A', 'C:\\B']);
   });
 });
 
@@ -137,9 +141,9 @@ describe('scan store scan lifecycle', () => {
     mockDiskScope();
 
     const { scanStore, resetScanSessionForTest } = await import('../../src/renderer/stores/scan-store');
-    scanStore.selectedPath = 'C:\\Demo';
+    scanStore.selectedPaths = ['C:\\Demo'];
     resetScanSessionForTest();
-    scanStore.selectedPath = 'C:\\Demo';
+    scanStore.selectedPaths = ['C:\\Demo'];
   });
 
   it('starts a scan and stores the scan id', async () => {

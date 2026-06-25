@@ -1,111 +1,217 @@
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
+
 import Typography from '@mui/material/Typography';
+
 import { formatBytes } from '../../../shared/format-bytes';
+
+import { DsTabular } from '../../components/DsTabular';
+
 import { MaterialIcon } from '../../components/MaterialIcon';
-import { cancelScanFromStore } from '../../stores/scan-store';
+
 import { useScanStore } from '../../hooks/useScanStore';
-import { formatElapsed, shortenPath } from './format-elapsed';
+
+import { SCAN_STATUS_HEIGHT } from '../../theme/mui-theme';
+
+import { shellFooterBackgroundSx } from '../../theme/shell-chrome';
+
+import { shortenPath } from './format-elapsed';
+
+
 
 function statusIcon(status: string): string {
+
   switch (status) {
-    case 'scanning':
-      return 'progress_activity';
+
     case 'completed':
+
       return 'check_circle';
+
     case 'cancelled':
+
       return 'cancel';
+
     case 'failed':
+
       return 'error';
+
     default:
+
       return 'hourglass_empty';
+
   }
+
 }
+
+
 
 function statusLabel(status: string): string {
+
   switch (status) {
-    case 'scanning':
-      return 'Scan in progress';
+
     case 'completed':
+
       return 'Scan complete';
+
     case 'cancelled':
+
       return 'Scan cancelled';
+
     case 'failed':
+
       return 'Scan failed';
+
     default:
+
       return 'No scan in progress';
+
   }
+
 }
+
+
 
 export function ScanProgressRegion() {
-  const { status, progress, result, scanError } = useScanStore();
-  const isScanning = status === 'scanning';
+
+  const { status, result, scanError } = useScanStore();
+
   const hasSummary = status === 'completed' || status === 'cancelled';
 
-  let detail = 'Scan progress will appear here during active scans.';
 
-  if (isScanning && progress) {
-    detail = `${progress.filesScanned.toLocaleString()} files · ${progress.directoriesScanned.toLocaleString()} folders · ${formatBytes(progress.bytesDiscovered)} · ${progress.errorCount} errors · ${formatElapsed(progress.elapsedMs)} · ${shortenPath(progress.currentPath)}`;
-  } else if (hasSummary && result) {
-    detail = `${result.fileCount.toLocaleString()} files · ${result.directoryCount.toLocaleString()} folders · ${formatBytes(result.totalSizeBytes)} · ${result.errorCount} errors`;
+
+  let statsLine = 'Scan progress will appear here during active scans.';
+
+  let pathLine: string | null = null;
+
+
+
+  if (hasSummary && result) {
+
+    statsLine = `${result.fileCount.toLocaleString()} files · ${result.directoryCount.toLocaleString()} folders · ${formatBytes(result.totalSizeBytes)} · ${result.errorCount} errors`;
+
+    pathLine = result.rootPath;
+
   } else if (status === 'failed') {
-    detail = scanError ?? 'The scan could not be completed.';
+
+    statsLine = scanError ?? 'The scan could not be completed.';
+
   }
 
+
+
   return (
+
     <Box
+
       component="footer"
+
       aria-label="Scan status"
-      sx={{
+
+      className="ds-glass"
+
+      sx={(theme) => ({
+
         display: 'flex',
+
         alignItems: 'center',
+
         gap: 1.5,
-        minHeight: 48,
+
+        minHeight: SCAN_STATUS_HEIGHT,
+
         px: 3,
+
         py: 1,
-        bgcolor: 'background.paper',
+
+        ...shellFooterBackgroundSx(theme),
+
         borderTop: 1,
-        borderColor: 'divider',
-        color: 'text.secondary',
-        fontSize: '0.875rem',
-        fontWeight: 500,
-      }}
+
+        borderColor: 'outlineVariant.main',
+
+        color: 'text.primary',
+
+      })}
+
     >
+
       <MaterialIcon
+
         name={statusIcon(status)}
+
         style={{
-          color: isScanning
-            ? 'var(--mui-palette-primary-main)'
-            : status === 'failed'
+
+          color:
+
+            status === 'failed'
+
               ? 'var(--mui-palette-error-main)'
+
               : status === 'completed'
+
                 ? 'var(--mui-palette-success-main)'
+
                 : undefined,
+
           fontSize: 20,
+
+          flexShrink: 0,
+
         }}
+
       />
-      <Typography component="span" variant="body2" sx={{ fontWeight: 500, flexShrink: 0 }}>
+
+      <Typography component="span" variant="body2" sx={{ fontWeight: 600, flexShrink: 0 }}>
+
         {statusLabel(status)}
+
       </Typography>
-      <Typography
-        component="span"
-        variant="body2"
-        color="text.primary"
-        sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-        title={progress?.currentPath ?? result?.rootPath}
-      >
-        {detail}
-      </Typography>
-      {isScanning ? (
-        <Button
-          size="small"
-          color="warning"
-          onClick={() => void cancelScanFromStore()}
-          sx={{ flexShrink: 0, textTransform: 'none' }}
-        >
-          Cancel
-        </Button>
-      ) : null}
+
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+
+        <Typography component="span" variant="body2" color="text.primary" noWrap title={statsLine}>
+
+          {statsLine}
+
+        </Typography>
+
+        {pathLine ? (
+
+          <DsTabular
+
+            component="span"
+
+            sx={{
+
+              display: 'block',
+
+              overflow: 'hidden',
+
+              textOverflow: 'ellipsis',
+
+              whiteSpace: 'nowrap',
+
+              color: 'text.secondary',
+
+              fontSize: '11px',
+
+            }}
+
+            title={pathLine}
+
+          >
+
+            {shortenPath(pathLine)}
+
+          </DsTabular>
+
+        ) : null}
+
+      </Box>
+
     </Box>
+
   );
+
 }
+
+

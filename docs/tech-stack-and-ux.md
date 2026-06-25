@@ -45,10 +45,32 @@ Optional app-owned wrappers (e.g. `DsButton`, `DsDialog`) may wrap MUI for consi
 
 ### Theme
 
-- Central theme: `src/renderer/theme/` (MUI `createTheme` + CSS variables if needed).
-- Light mode first; support dark via `prefers-color-scheme` or explicit user preference later.
-- Use **semantic tokens** (primary, surface, error, on-surface, etc.) — no one-off hex colors in feature code.
-- Risk/cleanup labels map to M3 roles: success → tertiary/safe, warning → warning, danger → error.
+- Central theme: [`src/renderer/theme/`](src/renderer/theme/) — MUI `createTheme` with Stitch design tokens from [`src/stitch_diskscope_material_ui/diskscope/DESIGN.md`](../src/stitch_diskscope_material_ui/diskscope/DESIGN.md).
+- Token files: `tokens.ts` (colors, spacing, radii), `typography.ts` (Geist + JetBrains Mono scale), `mui-theme.ts` (MUI palette + component overrides).
+- **Fonts:** Geist (UI), JetBrains Mono (tabular sizes/paths) — loaded in `index.html` / `preview.html`.
+- **Palette:** Blue corporate M3 (`#005bbf` primary, `#1a73e8` primary-container, surface-container tiers). See `stitchColors` in `tokens.ts`.
+- Light mode first; dark mode via Settings (`AppPreferences.theme`) synced through `ThemeModeSync`.
+- Use **semantic tokens** (primary, surface-container-*, outline-variant, etc.) — avoid one-off hex in feature code.
+- Risk/cleanup labels map to M3 roles: success → safe/low, warning → moderate, danger → error/high.
+
+### App shell components
+
+Shared Stitch wrappers live in [`src/renderer/components/`](../src/renderer/components/):
+
+| Component | Purpose |
+| --- | --- |
+| `DsCard` | Rounded bordered containers (no heavy shadow) |
+| `DsNavItem` | Sidebar pill navigation |
+| `DsContextBar` | Glass sticky header with breadcrumbs |
+| `DsPageHeader` | View title + subtitle + actions |
+| `DsTabular` | JetBrains Mono for sizes/counts |
+| `DsEmptyState` | Empty-state icon tile + CTA |
+| `DsStatusChip` | Risk/safe dot badges |
+| `DsDataTable` | Shared table chrome + row hover |
+| `ShellContext` / `useShellOverrides` | Per-view breadcrumb + context bar actions |
+| `MaterialIcon` | Material Symbols Outlined (+ optional `filled`) |
+
+Layout constants: 80px nav rail / 280px expanded sidebar, 24px content gutter — see `layout` in `tokens.ts`.
 
 ---
 
@@ -139,12 +161,14 @@ Aligned with [scope doc §9](disk-scope-project-scope.md#9-ux-structure).
 
 ```text
 ┌─────────────────────────────────────────────┐
-│ Top app bar — title, active scan path       │
+│ Sidebar (brand, 7 nav pills, scan CTA)      │
 ├──────────┬──────────────────────────────────┤
-│ Nav rail │ Main content (routed views)      │
-│ (7 sect) │                                  │
+│          │ DsContextBar (glass, breadcrumbs)│
+│  Nav     ├──────────────────────────────────┤
+│  rail /  │ Main content (routed views)      │
+│  drawer  │                                  │
 ├──────────┴──────────────────────────────────┤
-│ Scan status strip (visible while scanning)  │
+│ Scan status strip (ScanProgressRegion)      │
 └─────────────────────────────────────────────┘
 ```
 

@@ -1,19 +1,23 @@
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
 import { useMemo, useState } from 'react';
 import { formatBytes } from '../../../shared/format-bytes';
+import {
+  DsDataTable,
+  DsTableBodyRow,
+  DsTableHeadRow,
+  TableCell as DsTableCell,
+} from '../../components/DsDataTable';
+import { DsPageHeader } from '../../components/DsStatusChip';
+import { DsTabular } from '../../components/DsTabular';
+import { MaterialIcon } from '../../components/MaterialIcon';
 import { useScanStore } from '../../hooks/useScanStore';
 import { formatExtensionLabel } from '../file-types/extension-label';
+import { fileIconForExtension } from './file-icon-utils';
 import {
   defaultSortDirectionForLargestFileKey,
   formatModifiedAt,
@@ -52,81 +56,85 @@ export function LargestFilesView() {
   });
 
   return (
-    <Card variant="outlined">
-      <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, py: 2 }}>
-        <Box>
-          <Typography variant="h5" component="h2" sx={{ fontWeight: 500 }}>
-            Largest Files
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Individual files ranked by size from the latest completed scan.
-          </Typography>
-        </Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <DsPageHeader
+        title="Largest Files"
+        subtitle="Individual files ranked by size from the latest completed scan."
+      />
 
-        {status === 'scanning' && (
-          <Alert severity="info">Scan in progress — file rankings will update when the scan completes.</Alert>
-        )}
+      {status === 'scanning' && (
+        <Alert severity="info" variant="outlined">
+          Scan in progress — file rankings will update when the scan completes.
+        </Alert>
+      )}
 
-        {!result && status !== 'scanning' && (
-          <Typography variant="body2" color="text.secondary">
-            Run a scan to see the largest files in the selected folder.
-          </Typography>
-        )}
+      {!result && status !== 'scanning' && (
+        <Alert severity="info" variant="outlined">
+          Run a scan to see the largest files in the selected folder.
+        </Alert>
+      )}
 
-        {result && sortedFiles.length === 0 && (
-          <Typography variant="body2" color="text.secondary">
-            No files were found in the scanned directory.
-          </Typography>
-        )}
+      {result && sortedFiles.length === 0 && (
+        <Typography variant="body2" color="text.secondary">
+          No files were found in the scanned directory.
+        </Typography>
+      )}
 
-        {sortedFiles.length > 0 && (
-          <TableContainer>
-            <Table size="small" aria-label="Largest files">
-              <TableHead>
-                <TableRow>
-                  <TableCell sortDirection={sortLabelProps('name').direction}>
-                    <TableSortLabel {...sortLabelProps('name')}>Name</TableSortLabel>
-                  </TableCell>
-                  <TableCell sortDirection={sortLabelProps('path').direction}>
-                    <TableSortLabel {...sortLabelProps('path')}>Path</TableSortLabel>
-                  </TableCell>
-                  <TableCell align="right" sortDirection={sortLabelProps('sizeBytes').direction}>
-                    <TableSortLabel {...sortLabelProps('sizeBytes')}>Size</TableSortLabel>
-                  </TableCell>
-                  <TableCell sortDirection={sortLabelProps('extension').direction}>
-                    <TableSortLabel {...sortLabelProps('extension')}>Extension</TableSortLabel>
-                  </TableCell>
-                  <TableCell sortDirection={sortLabelProps('modifiedAt').direction}>
-                    <TableSortLabel {...sortLabelProps('modifiedAt')}>Modified</TableSortLabel>
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sortedFiles.map((file) => (
-                  <TableRow key={file.path} hover>
-                    <TableCell>{file.name}</TableCell>
-                    <TableCell
-                      sx={{
-                        fontFamily: 'monospace',
-                        maxWidth: 320,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                      title={file.path}
-                    >
-                      {file.path}
-                    </TableCell>
-                    <TableCell align="right">{formatBytes(file.sizeBytes)}</TableCell>
-                    <TableCell>{formatExtensionLabel(file.extension)}</TableCell>
-                    <TableCell>{formatModifiedAt(file.modifiedAt)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </CardContent>
-    </Card>
+      {sortedFiles.length > 0 && (
+        <DsDataTable
+          aria-label="Largest files"
+          header={
+            <DsTableHeadRow>
+              <DsTableCell sortDirection={sortLabelProps('name').direction}>
+                <TableSortLabel {...sortLabelProps('name')}>Name</TableSortLabel>
+              </DsTableCell>
+              <DsTableCell sortDirection={sortLabelProps('path').direction}>
+                <TableSortLabel {...sortLabelProps('path')}>Path</TableSortLabel>
+              </DsTableCell>
+              <DsTableCell align="right" sortDirection={sortLabelProps('sizeBytes').direction}>
+                <TableSortLabel {...sortLabelProps('sizeBytes')}>Size</TableSortLabel>
+              </DsTableCell>
+              <DsTableCell sortDirection={sortLabelProps('extension').direction}>
+                <TableSortLabel {...sortLabelProps('extension')}>Extension</TableSortLabel>
+              </DsTableCell>
+              <DsTableCell sortDirection={sortLabelProps('modifiedAt').direction}>
+                <TableSortLabel {...sortLabelProps('modifiedAt')}>Modified</TableSortLabel>
+              </DsTableCell>
+            </DsTableHeadRow>
+          }
+        >
+          <TableBody>
+            {sortedFiles.map((file) => (
+              <DsTableBodyRow key={file.path}>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <MaterialIcon
+                      name={fileIconForExtension(file.extension)}
+                      style={{ fontSize: 20, color: 'var(--mui-palette-text-secondary)' }}
+                    />
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {file.name}
+                    </Typography>
+                  </Box>
+                </TableCell>
+                <TableCell
+                  sx={{ maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  title={file.path}
+                >
+                  <DsTabular>{file.path}</DsTabular>
+                </TableCell>
+                <TableCell align="right">
+                  <DsTabular sx={{ fontWeight: 600 }}>{formatBytes(file.sizeBytes)}</DsTabular>
+                </TableCell>
+                <TableCell>{formatExtensionLabel(file.extension)}</TableCell>
+                <TableCell>
+                  <DsTabular>{formatModifiedAt(file.modifiedAt)}</DsTabular>
+                </TableCell>
+              </DsTableBodyRow>
+            ))}
+          </TableBody>
+        </DsDataTable>
+      )}
+    </Box>
   );
 }

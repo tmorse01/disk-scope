@@ -98,6 +98,12 @@ export function removeExclusion(exclusionId: string): void {
   persistPreferences();
 }
 
+export function setThemePreference(theme: AppPreferences['theme']): void {
+  preferencesStore.theme = theme;
+  notifyPreferencesStore();
+  persistPreferences();
+}
+
 export function setPreferencesForTest(preferences: AppPreferences): void {
   applyPreferences(preferences);
   notifyPreferencesStore();
