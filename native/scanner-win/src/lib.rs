@@ -71,14 +71,15 @@ pub fn read_directory(dir_path: String) -> Result<Vec<NativeDirectoryEntry>> {
     let handle = FindFirstFileExW(
       PCWSTR(pattern_wide.as_ptr()),
       FindExInfoBasic,
-      Some(&mut find_data as *mut _ as *mut _),
+      &mut find_data as *mut _ as *mut core::ffi::c_void,
       FindExSearchNameMatch,
       None,
       FIND_FIRST_EX_LARGE_FETCH,
-    );
+    )
+    .map_err(|error| Error::from_reason(format!("FindFirstFileExW failed: {error}")))?;
 
     if handle.is_invalid() {
-      return Err(Error::from_last_win32_error());
+      return Err(Error::from_reason("FindFirstFileExW returned an invalid handle"));
     }
 
     let mut results = Vec::new();
