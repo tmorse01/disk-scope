@@ -41,6 +41,18 @@ export const LEGACY_SCAN_ENGINE_TUNING: ScanEngineTuning = {
   batchedProgress: false,
 };
 
+/** One directory entry returned by a ReadDirFn (native or TypeScript enumerator). */
+export type DirectoryEntry = {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  isSymlink: boolean;
+  sizeBytes: number;
+  mtimeMs?: number;
+};
+
+export type ReadDirFn = (dirPath: string) => Promise<DirectoryEntry[]>;
+
 export type ScanEngineOptions = {
   rootPath: string;
   scanId: ScanSessionId;
@@ -51,6 +63,8 @@ export type ScanEngineOptions = {
   onProgress?: (event: ScanProgressEvent) => void;
   /** Benchmark-only; production scans use DEFAULT_SCAN_ENGINE_TUNING. */
   tuning?: Partial<ScanEngineTuning>;
+  /** Override directory enumeration (native or TS fallback). Omit to use legacy Tier 1 readdir path. */
+  readDirectory?: ReadDirFn;
 };
 
 export type ScanEngineRunResult = {
