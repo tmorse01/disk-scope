@@ -17,11 +17,13 @@ import {
 } from './exclusions';
 import {
   DEFAULT_PROGRESS_INTERVAL_MS,
+  DEFAULT_SCAN_ENGINE_TUNING,
   DEFAULT_TOP_FILES_LIMIT,
   type ScanEngineOptions,
   type ScanEngineRunResult,
+  type ScanEngineTuning,
 } from './scan-types';
-import { TopFilesTracker } from './top-files-tracker';
+import { createTopFilesTracker, type TopFilesTrackerLike } from './top-files-tracker';
 
 type DirectoryWorkItem =
   | { phase: 'enter'; dirPath: string; nodeId: NodeId }
@@ -52,7 +54,10 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
-function inodeKey(stat: Stats): string {
+function inodeKey(stat: Stats, fallbackPath: string): string {
+  if (Number(stat.ino) === 0) {
+    return normalizePath(fallbackPath);
+  }
   return `${stat.dev}:${stat.ino}`;
 }
 
@@ -74,11 +79,16 @@ function isDefinitiveFile(entry: Dirent): boolean {
   return entry.isFile();
 }
 
+function resolveTuning(partial?: Partial<ScanEngineTuning>): ScanEngineTuning {
+  return { ...DEFAULT_SCAN_ENGINE_TUNING, ...partial };
+}
+
 export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRunResult> {
   const startedAt = new Date().toISOString();
   const startMs = Date.now();
   const progressIntervalMs = options.progressIntervalMs ?? DEFAULT_PROGRESS_INTERVAL_MS;
   const topFilesLimit = options.topFilesLimit ?? DEFAULT_TOP_FILES_LIMIT;
+  const tuning = resolveTuning(options.tuning);
 
   const rootPath = normalizePath(options.rootPath);
   const rootNodeId = pathToNodeId(rootPath);
@@ -87,7 +97,10 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
   const errors: ScanFileError[] = [];
   const visitedInodes = new Set<string>();
   const extensionTotals = new Map<string | null, ExtensionAccumulator>();
-  const topFiles = new TopFilesTracker(topFilesLimit);
+  const topFiles: TopFilesTrackerLike = createTopFilesTracker(
+    topFilesLimit,
+    tuning.minHeapTopFiles,
+  );
   const cleanupCollector = new CleanupCandidateCollector();
 
   let totalFileCount = 0;
@@ -122,7 +135,8 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
     });
   };
 
-  const progressFileBatch = progressIntervalMs === 0 ? 1 : PROGRESS_FILE_BATCH;
+  const progressFileBatch =
+    progressIntervalMs === 0 ? 1 : tuning.batchedProgress ? PROGRESS_FILE_BATCH : 1;
 
   const maybeEmitProgressAfterFile = (): void => {
     filesSinceProgress += 1;
@@ -184,6 +198,10 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
   };
 
   const bubbleDirectorySizeToParent = (nodeId: NodeId): void => {
+    if (!tuning.postOrderRollup) {
+      return;
+    }
+
     const node = directoriesById[nodeId];
     if (!node?.parentId) {
       return;
@@ -192,6 +210,18 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
     const parent = directoriesById[node.parentId];
     if (parent) {
       parent.sizeBytes += node.sizeBytes;
+    }
+  };
+
+  const addFileSizeToAncestors = (dirId: NodeId, sizeBytes: number): void => {
+    let currentId: NodeId | null = dirId;
+    while (currentId) {
+      const node: DirectoryNode | undefined = directoriesById[currentId];
+      if (!node) {
+        break;
+      }
+      node.sizeBytes += sizeBytes;
+      currentId = node.parentId;
     }
   };
 
@@ -207,7 +237,11 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
     }
 
     parentNode.fileCount += 1;
-    parentNode.sizeBytes += sizeBytes;
+    if (tuning.postOrderRollup) {
+      parentNode.sizeBytes += sizeBytes;
+    } else {
+      addFileSizeToAncestors(parentId, sizeBytes);
+    }
     totalFileCount += 1;
     bytesDiscovered += sizeBytes;
 
@@ -226,7 +260,7 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
       name: baseName(filePath),
       extension,
       sizeBytes,
-      mtimeMs,
+      mtimeMs: tuning.deferMtimeFormatting ? mtimeMs : mtimeMs,
     });
 
     maybeEmitProgressAfterFile();
@@ -272,26 +306,44 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
       continue;
     }
 
-    let dirStat: Stats;
-    try {
-      dirStat = await fs.lstat(current.dirPath);
-    } catch (error) {
-      recordError(current.dirPath, 'stat', error);
-      currentNode.unreadable = true;
-      currentNode.errorCode = toErrorCode(error);
-      emitProgress();
-      continue;
-    }
+    if (tuning.inodeLoopDetection) {
+      let dirStat: Stats;
+      try {
+        dirStat = await fs.lstat(current.dirPath);
+      } catch (error) {
+        recordError(current.dirPath, 'stat', error);
+        currentNode.unreadable = true;
+        currentNode.errorCode = toErrorCode(error);
+        emitProgress();
+        continue;
+      }
 
-    if (!dirStat.isDirectory()) {
-      continue;
-    }
+      if (!dirStat.isDirectory()) {
+        continue;
+      }
 
-    const currentInode = inodeKey(dirStat);
-    if (visitedInodes.has(currentInode)) {
-      continue;
+      const currentInode = inodeKey(dirStat, current.dirPath);
+      if (visitedInodes.has(currentInode)) {
+        continue;
+      }
+      visitedInodes.add(currentInode);
+    } else {
+      let realPath = current.dirPath;
+      try {
+        realPath = await fs.realpath(current.dirPath);
+      } catch (error) {
+        recordError(current.dirPath, 'stat', error);
+        currentNode.unreadable = true;
+        currentNode.errorCode = toErrorCode(error);
+        emitProgress();
+        continue;
+      }
+
+      if (visitedInodes.has(realPath)) {
+        continue;
+      }
+      visitedInodes.add(realPath);
     }
-    visitedInodes.add(currentInode);
 
     let entries: Dirent[];
     try {
@@ -304,70 +356,30 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
       continue;
     }
 
-    stack.push({ phase: 'exit', nodeId: current.nodeId });
+    if (tuning.postOrderRollup) {
+      stack.push({ phase: 'exit', nodeId: current.nodeId });
+    }
 
     const siblingFileNames = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
     const dotNetProjectContext = parentHasDotNetProject(siblingFileNames);
 
-    for (let index = entries.length - 1; index >= 0; index -= 1) {
-      if (shouldCancel()) {
-        break;
-      }
-
-      const entry = entries[index];
+    const processEntry = async (entry: Dirent): Promise<void> => {
       const entryPath = path.join(current.dirPath, entry.name);
       currentPath = entryPath;
 
       if (matchesExclusion(entryPath, exclusionConfig)) {
-        continue;
+        return;
       }
 
-      if (isDefinitiveSymlink(entry)) {
-        continue;
-      }
-
-      if (isDefinitiveDirectory(entry)) {
-        if (isExcludedFolderEntryName(entry.name, exclusionConfig)) {
-          continue;
-        }
-
-        cleanupCollector.tryRegister(
-          entry.name,
-          entryPath,
-          currentNode.name,
-          dotNetProjectContext,
-        );
-        const { node: childNode, created } = ensureDirectoryNode(entryPath, current.nodeId);
-        if (created) {
-          totalDirectoryCount += 1;
-        }
-        stack.push({ phase: 'enter', dirPath: entryPath, nodeId: childNode.id });
-        continue;
-      }
-
-      if (isDefinitiveFile(entry)) {
-        try {
-          const entryStat = await fs.lstat(entryPath);
-          if (entryStat.isSymbolicLink() || !entryStat.isFile()) {
-            continue;
-          }
-          trackFile(entryPath, entryStat.size, current.nodeId, entryStat.mtimeMs);
-        } catch (error) {
-          recordError(entryPath, 'stat', error);
-          emitProgress();
-        }
-        continue;
-      }
-
-      try {
-        const entryStat = await fs.lstat(entryPath);
+      const handleStat = async (entryStat: Stats): Promise<void> => {
         if (entryStat.isSymbolicLink()) {
-          continue;
+          return;
         }
         if (entryStat.isDirectory()) {
-          if (isExcludedFolderEntryName(entry.name, exclusionConfig)) {
-            continue;
+          if (tuning.exclusionShortCircuit && isExcludedFolderEntryName(entry.name, exclusionConfig)) {
+            return;
           }
+
           cleanupCollector.tryRegister(
             entry.name,
             entryPath,
@@ -379,15 +391,67 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
             totalDirectoryCount += 1;
           }
           stack.push({ phase: 'enter', dirPath: entryPath, nodeId: childNode.id });
-          continue;
+          return;
         }
         if (entryStat.isFile()) {
           trackFile(entryPath, entryStat.size, current.nodeId, entryStat.mtimeMs);
         }
+      };
+
+      if (tuning.skipRedundantLstat) {
+        if (isDefinitiveSymlink(entry)) {
+          return;
+        }
+
+        if (isDefinitiveDirectory(entry)) {
+          if (tuning.exclusionShortCircuit && isExcludedFolderEntryName(entry.name, exclusionConfig)) {
+            return;
+          }
+
+          cleanupCollector.tryRegister(
+            entry.name,
+            entryPath,
+            currentNode.name,
+            dotNetProjectContext,
+          );
+          const { node: childNode, created } = ensureDirectoryNode(entryPath, current.nodeId);
+          if (created) {
+            totalDirectoryCount += 1;
+          }
+          stack.push({ phase: 'enter', dirPath: entryPath, nodeId: childNode.id });
+          return;
+        }
+
+        if (isDefinitiveFile(entry)) {
+          try {
+            const entryStat = await fs.lstat(entryPath);
+            if (entryStat.isSymbolicLink() || !entryStat.isFile()) {
+              return;
+            }
+            trackFile(entryPath, entryStat.size, current.nodeId, entryStat.mtimeMs);
+          } catch (error) {
+            recordError(entryPath, 'stat', error);
+            emitProgress();
+          }
+          return;
+        }
+      }
+
+      try {
+        const entryStat = await fs.lstat(entryPath);
+        await handleStat(entryStat);
       } catch (error) {
         recordError(entryPath, 'stat', error);
         emitProgress();
       }
+    };
+
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
+      if (shouldCancel()) {
+        break;
+      }
+
+      await processEntry(entries[index]);
     }
   }
 

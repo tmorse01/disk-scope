@@ -1,8 +1,21 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { runScan } from '../src/scanner/scan-engine';
+import {
+  DEFAULT_SCAN_ENGINE_TUNING,
+  LEGACY_SCAN_ENGINE_TUNING,
+} from '../src/scanner/scan-types';
 import { createBenchmarkFixture, type BenchmarkFixtureKind } from '../tests/scanner/benchmark/fixture-generator';
+import {
+  formatMeasurement,
+  measureScan,
+  speedupRatio,
+} from '../tests/scanner/benchmark/measure';
+import {
+  OPTIMIZATION_KEYS,
+  OPTIMIZATION_LABELS,
+  tuningWithOnly,
+} from '../tests/scanner/benchmark/tuning-presets';
 
 type BenchmarkCase = {
   kind: BenchmarkFixtureKind;
@@ -16,48 +29,85 @@ const CASES: BenchmarkCase[] = [
   { kind: 'deep-narrow', fileCount: 200, label: 'deep-narrow-200' },
 ];
 
-async function runCase(root: string, spec: BenchmarkCase): Promise<{
-  label: string;
-  elapsedMs: number;
-  filesPerSec: number;
-  fileCount: number;
-  directoryCount: number;
-}> {
+type Profile = 'legacy' | 'optimized' | 'compare' | 'per-opt';
+
+function parseProfile(): Profile {
+  const arg = process.argv.find((value) => value.startsWith('--profile='));
+  const profile = arg?.split('=')[1] ?? 'compare';
+  if (profile === 'legacy' || profile === 'optimized' || profile === 'compare' || profile === 'per-opt') {
+    return profile;
+  }
+  return 'compare';
+}
+
+async function runCase(root: string, spec: BenchmarkCase, profile: Profile): Promise<void> {
   await createBenchmarkFixture(root, { kind: spec.kind, fileCount: spec.fileCount });
 
-  const start = performance.now();
-  const { result } = await runScan({
-    scanId: `bench-${spec.label}`,
-    rootPath: root,
-    progressIntervalMs: 250,
-  });
-  const elapsedMs = performance.now() - start;
+  if (profile === 'legacy' || profile === 'compare') {
+    const { measurement } = await measureScan(root, LEGACY_SCAN_ENGINE_TUNING, `${spec.label}-legacy`);
+    console.log(formatMeasurement(`${spec.label} legacy`, measurement));
+  }
 
-  return {
-    label: spec.label,
-    elapsedMs,
-    filesPerSec: result.fileCount / (elapsedMs / 1000),
-    fileCount: result.fileCount,
-    directoryCount: result.directoryCount,
-  };
+  if (profile === 'optimized' || profile === 'compare') {
+    const { measurement } = await measureScan(
+      root,
+      DEFAULT_SCAN_ENGINE_TUNING,
+      `${spec.label}-optimized`,
+    );
+    console.log(formatMeasurement(`${spec.label} optimized`, measurement));
+  }
+
+  if (profile === 'compare') {
+    const { measurement: legacy } = await measureScan(
+      root,
+      LEGACY_SCAN_ENGINE_TUNING,
+      `${spec.label}-legacy-cmp`,
+    );
+    const { measurement: optimized } = await measureScan(
+      root,
+      DEFAULT_SCAN_ENGINE_TUNING,
+      `${spec.label}-opt-cmp`,
+    );
+    console.log(
+      `[bench] ${spec.label} total: ${speedupRatio(legacy.elapsedMs, optimized.elapsedMs).toFixed(2)}×`,
+    );
+  }
+
+  if (profile === 'per-opt') {
+    const { measurement: legacy } = await measureScan(
+      root,
+      LEGACY_SCAN_ENGINE_TUNING,
+      `${spec.label}-legacy-base`,
+    );
+    console.log(formatMeasurement(`${spec.label} legacy baseline`, legacy));
+
+    for (const key of OPTIMIZATION_KEYS) {
+      const { measurement: single } = await measureScan(
+        root,
+        tuningWithOnly(key),
+        `${spec.label}-${key}`,
+      );
+      const ratio = speedupRatio(legacy.elapsedMs, single.elapsedMs);
+      console.log(
+        `[bench] ${spec.label} +${OPTIMIZATION_LABELS[key]}: ${single.elapsedMs.toFixed(1)}ms (${ratio.toFixed(2)}× vs legacy)`,
+      );
+    }
+  }
 }
 
 async function main(): Promise<void> {
-  console.log(`Scan benchmark (platform: ${process.platform}, cpus: ${os.cpus().length})`);
+  const profile = parseProfile();
+  console.log(`Scan benchmark (platform: ${process.platform}, cpus: ${os.cpus().length}, profile: ${profile})`);
   console.log('---');
 
   for (const spec of CASES) {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), `diskscope-bench-${spec.label}-`));
     try {
-      const result = await runCase(root, spec);
-      console.log(
-        `${result.label}: ${result.elapsedMs.toFixed(1)}ms | ` +
-          `${result.filesPerSec.toFixed(0)} files/sec | ` +
-          `files=${result.fileCount} dirs=${result.directoryCount}`,
-      );
+      await runCase(root, spec, profile);
     } finally {
       await fs.rm(root, { recursive: true, force: true });
     }
+    console.log('---');
   }
 }
 

@@ -94,3 +94,72 @@ export class TopFilesTracker {
     this.heap[right] = temp;
   }
 }
+
+/** Legacy O(limit) sorted-array tracker for benchmark baseline comparison. */
+export class SortedArrayTopFilesTracker {
+  private readonly entries: TopFileCandidate[] = [];
+
+  constructor(private readonly limit: number) {}
+
+  add(entry: TopFileCandidate): void {
+    if (this.limit <= 0) {
+      return;
+    }
+
+    if (this.entries.length < this.limit) {
+      this.insertSorted(entry);
+      return;
+    }
+
+    const smallest = this.entries[this.entries.length - 1];
+    if (entry.sizeBytes <= smallest.sizeBytes) {
+      return;
+    }
+
+    this.entries.pop();
+    this.insertSorted(entry);
+  }
+
+  toArray(deferMtimeFormatting: boolean): LargestFileEntry[] {
+    return this.entries.map((entry) => ({
+      path: entry.path,
+      name: entry.name,
+      extension: entry.extension,
+      sizeBytes: entry.sizeBytes,
+      modifiedAt: deferMtimeFormatting
+        ? entry.mtimeMs === undefined
+          ? undefined
+          : new Date(entry.mtimeMs).toISOString()
+        : entry.mtimeMs === undefined
+          ? undefined
+          : new Date(entry.mtimeMs).toISOString(),
+    }));
+  }
+
+  private insertSorted(entry: TopFileCandidate): void {
+    let insertAt = this.entries.findIndex((existing) => entry.sizeBytes > existing.sizeBytes);
+    if (insertAt === -1) {
+      insertAt = this.entries.length;
+    }
+    this.entries.splice(insertAt, 0, entry);
+  }
+}
+
+export type TopFilesTrackerLike = {
+  add(entry: TopFileCandidate): void;
+  toArray(): LargestFileEntry[];
+};
+
+export function createTopFilesTracker(
+  limit: number,
+  minHeap: boolean,
+): TopFilesTrackerLike {
+  if (minHeap) {
+    return new TopFilesTracker(limit);
+  }
+  const legacy = new SortedArrayTopFilesTracker(limit);
+  return {
+    add: (entry) => legacy.add(entry),
+    toArray: () => legacy.toArray(true),
+  };
+}
