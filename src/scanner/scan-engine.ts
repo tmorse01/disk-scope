@@ -9,6 +9,7 @@ import type {
   ScanFileError,
   ScanResult,
 } from '../shared/types';
+import { CleanupCandidateCollector, parentHasDotNetProject } from './cleanup-rules';
 import { baseName, fileExtension, normalizePath, parentPath, pathToNodeId } from './path-utils';
 import {
   DEFAULT_PROGRESS_INTERVAL_MS,
@@ -33,13 +34,6 @@ type ExtensionAccumulator = {
  */
 export function shouldExcludePath(_targetPath: string): boolean {
   return false;
-}
-
-/**
- * Task 009 will replace this stub with cleanup rule evaluation.
- */
-export function detectCleanupCandidates(): [] {
-  return [];
 }
 
 class TopFilesTracker {
@@ -111,6 +105,7 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
   const visitedRealPaths = new Set<string>();
   const extensionTotals = new Map<string | null, ExtensionAccumulator>();
   const topFiles = new TopFilesTracker(topFilesLimit);
+  const cleanupCollector = new CleanupCandidateCollector();
 
   let totalFileCount = 0;
   let totalDirectoryCount = 0;
@@ -302,6 +297,9 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
       continue;
     }
 
+    const siblingFileNames = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
+    const dotNetProjectContext = parentHasDotNetProject(siblingFileNames);
+
     for (const entry of entries) {
       if (shouldCancel()) {
         break;
@@ -322,6 +320,12 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
         }
 
         if (entryStat.isDirectory()) {
+          cleanupCollector.tryRegister(
+            entry.name,
+            entryPath,
+            currentNode.name,
+            dotNetProjectContext,
+          );
           const { node: childNode, created } = ensureDirectoryNode(entryPath, current.nodeId);
           if (created) {
             totalDirectoryCount += 1;
@@ -360,7 +364,7 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
     directoriesById,
     largestFiles: topFiles.toArray(),
     extensionSummaries: buildExtensionSummaries(extensionTotals),
-    cleanupCandidates: detectCleanupCandidates(),
+    cleanupCandidates: cleanupCollector.finalize(directoriesById),
     errors,
   };
 

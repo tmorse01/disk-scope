@@ -180,4 +180,44 @@ describe('scan-engine', () => {
     expect(result.totalSizeBytes).toBe(0);
     expect(result.errors[0]?.operation).toBe('stat');
   });
+
+  it('detects cleanup candidates during scan', async () => {
+    const root = await trackFixture('diskscope-cleanup-');
+    const projectRoot = path.join(root, 'web-app');
+    await writeFileWithSize(path.join(projectRoot, 'node_modules', 'pkg', 'index.js'), 300);
+    await writeFileWithSize(path.join(projectRoot, 'dist', 'bundle.js'), 150);
+    await writeFileWithSize(path.join(projectRoot, 'src', 'index.ts'), 20);
+
+    const dotnetRoot = path.join(root, 'dotnet-app');
+    await writeFileWithSize(path.join(dotnetRoot, 'App.csproj'), 64);
+    await writeFileWithSize(path.join(dotnetRoot, 'bin', 'Debug', 'App.dll'), 120);
+    await writeFileWithSize(path.join(root, 'bin', 'tool'), 80);
+
+    const { result } = await runScan({
+      scanId: 'scan-cleanup',
+      rootPath: root,
+    });
+
+    const ruleIds = result.cleanupCandidates.map((candidate) => candidate.ruleId).sort();
+    expect(ruleIds).toContain('node_modules');
+    expect(ruleIds).toContain('dist');
+    expect(ruleIds).toContain('bin');
+    expect(ruleIds).not.toContain('obj');
+    const rootBinPath = path.join(root, 'bin');
+    const dotnetBinPath = path.join(dotnetRoot, 'bin');
+
+    expect(result.cleanupCandidates.some((candidate) => candidate.path === rootBinPath)).toBe(
+      false,
+    );
+    expect(result.cleanupCandidates.some((candidate) => candidate.path === dotnetBinPath)).toBe(
+      true,
+    );
+
+    const nodeModulesCandidate = result.cleanupCandidates.find(
+      (candidate) => candidate.ruleId === 'node_modules',
+    );
+    expect(nodeModulesCandidate?.sizeBytes).toBe(300);
+    expect(nodeModulesCandidate?.risk).toBe('low');
+    expect(nodeModulesCandidate?.recommendation.length).toBeGreaterThan(0);
+  });
 });
