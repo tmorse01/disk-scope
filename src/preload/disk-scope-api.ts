@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { IPC_CHANNELS } from '../shared/ipc-channels';
 import type {
+  AppPreferences,
   DiskScopeAPI,
   ExportOptions,
   ScanCompleteEvent,
@@ -50,6 +51,14 @@ const diskScopeAPI: DiskScopeAPI = {
 
   exportReport: (scanId: ScanSessionId, options: ExportOptions): Promise<void> => {
     return ipcRenderer.invoke(IPC_CHANNELS.EXPORT_REPORT, scanId, options);
+  },
+
+  getPreferences: (): Promise<AppPreferences> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.GET_PREFERENCES);
+  },
+
+  setPreferences: (preferences: AppPreferences): Promise<AppPreferences> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SET_PREFERENCES, preferences);
   },
 
   onScanProgress: (callback: (event: ScanProgressEvent) => void): Unsubscribe => {

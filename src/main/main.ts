@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import started from 'electron-squirrel-startup';
 import { createMainWindow } from './browser-window';
 import { registerScanIpc } from './ipc/scan-ipc';
+import { initPreferencesStore } from './services/preferences-store';
 import { terminateAllScans } from './services/scan-coordinator';
 
 if (started) {
@@ -15,6 +16,7 @@ app.on('before-quit', () => {
 });
 
 app.on('ready', () => {
+  void initPreferencesStore();
   createMainWindow();
 });
 

@@ -11,6 +11,10 @@ import type {
 } from '../shared/types';
 import { baseName, fileExtension, normalizePath, parentPath, pathToNodeId } from './path-utils';
 import {
+  buildExclusionConfig,
+  shouldExcludePath as matchesExclusion,
+} from './exclusions';
+import {
   DEFAULT_PROGRESS_INTERVAL_MS,
   DEFAULT_TOP_FILES_LIMIT,
   type ScanEngineOptions,
@@ -27,13 +31,6 @@ type ExtensionAccumulator = {
   sizeBytes: number;
   fileCount: number;
 };
-
-/**
- * Task 010 will replace this stub with persisted exclusion patterns.
- */
-export function shouldExcludePath(_targetPath: string): boolean {
-  return false;
-}
 
 /**
  * Task 009 will replace this stub with cleanup rule evaluation.
@@ -106,6 +103,7 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
 
   const rootPath = normalizePath(options.rootPath);
   const rootNodeId = pathToNodeId(rootPath);
+  const exclusionConfig = buildExclusionConfig(options.exclusions ?? []);
   const directoriesById: Record<NodeId, DirectoryNode> = {};
   const errors: ScanFileError[] = [];
   const visitedRealPaths = new Set<string>();
@@ -271,7 +269,7 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
       continue;
     }
 
-    if (shouldExcludePath(current.dirPath)) {
+    if (matchesExclusion(current.dirPath, exclusionConfig)) {
       continue;
     }
 
@@ -310,7 +308,7 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
       const entryPath = path.join(current.dirPath, entry.name);
       currentPath = entryPath;
 
-      if (shouldExcludePath(entryPath)) {
+      if (matchesExclusion(entryPath, exclusionConfig)) {
         continue;
       }
 

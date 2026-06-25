@@ -1,4 +1,5 @@
 import type { ExportFormat, ScanSessionId } from '../../shared/types';
+import { normalizePreferences } from '../services/preferences-store';
 
 export class ValidationError extends Error {
   readonly field: string;
@@ -47,4 +48,8 @@ export function validateExportOptions(value: unknown): { format: ExportFormat } 
   }
 
   return { format };
+}
+
+export function validateAppPreferences(value: unknown): ReturnType<typeof normalizePreferences> {
+  return normalizePreferences(value);
 }

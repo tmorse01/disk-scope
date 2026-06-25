@@ -10,6 +10,7 @@ import type {
 } from '../../shared/types';
 import { randomUUID } from 'node:crypto';
 import type { WorkerInboundMessage, WorkerOutboundMessage } from '../../scanner/scan-types';
+import { getPreferencesSync } from './preferences-store';
 
 type ActiveScan = {
   worker: Worker;
@@ -88,9 +89,10 @@ export function startScan(rootPath: string): ScanSessionId {
     }
   });
 
+  const exclusions = getPreferencesSync().exclusions;
   const startMessage: WorkerInboundMessage = {
     type: 'start',
-    payload: { scanId, rootPath },
+    payload: { scanId, rootPath, exclusions },
   };
   worker.postMessage(startMessage);
 

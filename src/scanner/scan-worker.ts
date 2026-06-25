@@ -15,6 +15,7 @@ async function handleStart(payload: WorkerInboundMessage & { type: 'start' }): P
     const { result, cancelled: _cancelled } = await runScan({
       scanId: payload.payload.scanId,
       rootPath: payload.payload.rootPath,
+      exclusions: payload.payload.exclusions,
       shouldCancel: () => cancelRequested,
       onProgress: (event) => {
         postMessage({ type: 'progress', payload: event });

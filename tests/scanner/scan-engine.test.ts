@@ -180,4 +180,26 @@ describe('scan-engine', () => {
     expect(result.totalSizeBytes).toBe(0);
     expect(result.errors[0]?.operation).toBe('stat');
   });
+
+  it('skips excluded paths and folder name patterns', async () => {
+    const root = await trackFixture('diskscope-exclusions-');
+    await writeFileWithSize(path.join(root, 'keep.txt'), 100);
+    await writeFileWithSize(path.join(root, 'skip-dir', 'hidden.txt'), 500);
+    await writeFileWithSize(path.join(root, 'node_modules', 'pkg', 'index.js'), 900);
+
+    const excludedDir = path.join(root, 'skip-dir');
+    const { result } = await runScan({
+      scanId: 'scan-exclusions',
+      rootPath: root,
+      exclusions: [
+        { id: 'path', kind: 'path', value: excludedDir },
+        { id: 'pattern', kind: 'folder-name', value: 'node_modules' },
+      ],
+    });
+
+    expect(result.fileCount).toBe(1);
+    expect(result.totalSizeBytes).toBe(100);
+    expect(result.directoriesById[excludedDir]).toBeUndefined();
+    expect(result.directoriesById[path.join(root, 'node_modules')]).toBeUndefined();
+  });
 });

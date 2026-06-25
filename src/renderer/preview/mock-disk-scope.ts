@@ -1,6 +1,11 @@
-import type { DiskScopeAPI, ScanProgressEvent } from '../../shared/types';
+import type { AppPreferences, DiskScopeAPI, ScanProgressEvent } from '../../shared/types';
 
 const noopUnsubscribe = () => undefined;
+
+const mockPreferences: AppPreferences = {
+  theme: 'light',
+  exclusions: [],
+};
 
 export function createMockDiskScope(
   overrides: Partial<DiskScopeAPI> = {},
@@ -30,6 +35,18 @@ export function createMockDiskScope(
     revealPath: async () => undefined,
     copyPath: async () => undefined,
     exportReport: async () => undefined,
+    getPreferences: async () => ({
+      theme: mockPreferences.theme,
+      exclusions: mockPreferences.exclusions.map((entry) => ({ ...entry })),
+    }),
+    setPreferences: async (preferences) => {
+      mockPreferences.theme = preferences.theme;
+      mockPreferences.exclusions = preferences.exclusions.map((entry) => ({ ...entry }));
+      return {
+        theme: mockPreferences.theme,
+        exclusions: mockPreferences.exclusions.map((entry) => ({ ...entry })),
+      };
+    },
     onScanProgress: (callback) => {
       progressHandler = callback;
       return noopUnsubscribe;

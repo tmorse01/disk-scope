@@ -5,9 +5,11 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import './index.css';
 import { initScanStoreListeners } from './stores/scan-store';
+import { initPreferencesStore } from './stores/preferences-store';
 import { muiTheme } from './theme/mui-theme';
 
 initScanStoreListeners();
+void initPreferencesStore();
 
 const appRoot = document.getElementById('app');
 
