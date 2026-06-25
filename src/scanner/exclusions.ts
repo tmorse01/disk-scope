@@ -101,12 +101,30 @@ export function shouldExcludePath(targetPath: string, config: ExclusionConfig): 
   }
 
   for (const folderName of folderNamesInPath(targetPath)) {
-    for (const pattern of config.folderNamePatterns) {
-      if (matchesFolderNamePattern(folderName, pattern)) {
-        return true;
-      }
+    if (matchesAnyFolderNamePattern(folderName, config.folderNamePatterns)) {
+      return true;
     }
   }
 
   return false;
+}
+
+function matchesAnyFolderNamePattern(folderName: string, patterns: string[]): boolean {
+  for (const pattern of patterns) {
+    if (matchesFolderNamePattern(folderName, pattern)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Fast check for folder-name exclusions on a single directory entry name.
+ * Used to skip readdir for excluded subtrees without walking ancestor paths.
+ */
+export function isExcludedFolderEntryName(folderName: string, config: ExclusionConfig): boolean {
+  if (config.folderNamePatterns.length === 0) {
+    return false;
+  }
+  return matchesAnyFolderNamePattern(folderName, config.folderNamePatterns);
 }
