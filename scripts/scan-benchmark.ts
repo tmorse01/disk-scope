@@ -2,6 +2,10 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {
+  readDirectoryTypeScript,
+  tryLoadNativeReadDirectory,
+} from '../src/scanner/native-enumerator';
+import {
   DEFAULT_SCAN_ENGINE_TUNING,
   LEGACY_SCAN_ENGINE_TUNING,
 } from '../src/scanner/scan-types';
@@ -29,12 +33,18 @@ const CASES: BenchmarkCase[] = [
   { kind: 'deep-narrow', fileCount: 200, label: 'deep-narrow-200' },
 ];
 
-type Profile = 'legacy' | 'optimized' | 'compare' | 'per-opt';
+type Profile = 'legacy' | 'optimized' | 'compare' | 'per-opt' | 'native-compare';
 
 function parseProfile(): Profile {
   const arg = process.argv.find((value) => value.startsWith('--profile='));
   const profile = arg?.split('=')[1] ?? 'compare';
-  if (profile === 'legacy' || profile === 'optimized' || profile === 'compare' || profile === 'per-opt') {
+  if (
+    profile === 'legacy' ||
+    profile === 'optimized' ||
+    profile === 'compare' ||
+    profile === 'per-opt' ||
+    profile === 'native-compare'
+  ) {
     return profile;
   }
   return 'compare';
@@ -91,6 +101,36 @@ async function runCase(root: string, spec: BenchmarkCase, profile: Profile): Pro
       console.log(
         `[bench] ${spec.label} +${OPTIMIZATION_LABELS[key]}: ${single.elapsedMs.toFixed(1)}ms (${ratio.toFixed(2)}× vs legacy)`,
       );
+    }
+  }
+
+  if (profile === 'native-compare') {
+    const nativeReadDirectory = tryLoadNativeReadDirectory();
+    const { measurement: tsMeasurement } = await measureScan(
+      root,
+      DEFAULT_SCAN_ENGINE_TUNING,
+      `${spec.label}-ts-enumerator`,
+      { readDirectory: readDirectoryTypeScript },
+    );
+    console.log(
+      `[bench] ${spec.label} ts-enumerator: ${tsMeasurement.elapsedMs.toFixed(1)}ms | ${tsMeasurement.filesPerSec.toFixed(0)} files/sec`,
+    );
+
+    if (nativeReadDirectory) {
+      const { measurement: nativeMeasurement } = await measureScan(
+        root,
+        DEFAULT_SCAN_ENGINE_TUNING,
+        `${spec.label}-native-enumerator`,
+        { readDirectory: nativeReadDirectory },
+      );
+      console.log(
+        `[bench] ${spec.label} native-enumerator: ${nativeMeasurement.elapsedMs.toFixed(1)}ms | ${nativeMeasurement.filesPerSec.toFixed(0)} files/sec`,
+      );
+      console.log(
+        `[bench] ${spec.label} native speedup: ${speedupRatio(tsMeasurement.elapsedMs, nativeMeasurement.elapsedMs).toFixed(2)}×`,
+      );
+    } else {
+      console.log(`[bench] ${spec.label} native-enumerator: unavailable (build with pnpm build:native on Windows)`);
     }
   }
 }

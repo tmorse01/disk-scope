@@ -1,8 +1,10 @@
 import { parentPort } from 'node:worker_threads';
+import { resolveReadDirectory } from './native-enumerator';
 import { runScan } from './scan-engine';
 import type { WorkerInboundMessage, WorkerOutboundMessage } from './scan-types';
 
 let cancelRequested = false;
+const readDirectory = resolveReadDirectory();
 
 function postMessage(message: WorkerOutboundMessage): void {
   parentPort?.postMessage(message);
@@ -16,6 +18,7 @@ async function handleStart(payload: WorkerInboundMessage & { type: 'start' }): P
       scanId: payload.payload.scanId,
       rootPath: payload.payload.rootPath,
       exclusions: payload.payload.exclusions,
+      readDirectory,
       shouldCancel: () => cancelRequested,
       onProgress: (event) => {
         postMessage({ type: 'progress', payload: event });

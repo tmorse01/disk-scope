@@ -19,6 +19,7 @@ import {
   DEFAULT_PROGRESS_INTERVAL_MS,
   DEFAULT_SCAN_ENGINE_TUNING,
   DEFAULT_TOP_FILES_LIMIT,
+  type DirectoryEntry,
   type ScanEngineOptions,
   type ScanEngineRunResult,
   type ScanEngineTuning,
@@ -345,9 +346,75 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
       visitedInodes.add(realPath);
     }
 
-    let entries: Dirent[];
+    if (options.readDirectory) {
+      let directoryEntries: DirectoryEntry[];
+      try {
+        directoryEntries = await options.readDirectory(current.dirPath);
+      } catch (error) {
+        recordError(current.dirPath, 'read-dir', error);
+        currentNode.unreadable = true;
+        currentNode.errorCode = toErrorCode(error);
+        emitProgress();
+        continue;
+      }
+
+      if (tuning.postOrderRollup) {
+        stack.push({ phase: 'exit', nodeId: current.nodeId });
+      }
+
+      const siblingFileNames = directoryEntries
+        .filter((entry) => !entry.isDirectory && !entry.isSymlink)
+        .map((entry) => entry.name);
+      const dotNetProjectContext = parentHasDotNetProject(siblingFileNames);
+
+      const processDirectoryEntry = (entry: DirectoryEntry): void => {
+        const entryPath = entry.path;
+        currentPath = entryPath;
+
+        if (matchesExclusion(entryPath, exclusionConfig)) {
+          return;
+        }
+
+        if (entry.isSymlink) {
+          return;
+        }
+
+        if (entry.isDirectory) {
+          if (tuning.exclusionShortCircuit && isExcludedFolderEntryName(entry.name, exclusionConfig)) {
+            return;
+          }
+
+          cleanupCollector.tryRegister(
+            entry.name,
+            entryPath,
+            currentNode.name,
+            dotNetProjectContext,
+          );
+          const { node: childNode, created } = ensureDirectoryNode(entryPath, current.nodeId);
+          if (created) {
+            totalDirectoryCount += 1;
+          }
+          stack.push({ phase: 'enter', dirPath: entryPath, nodeId: childNode.id });
+          return;
+        }
+
+        trackFile(entryPath, entry.sizeBytes, current.nodeId, entry.mtimeMs);
+      };
+
+      for (let index = directoryEntries.length - 1; index >= 0; index -= 1) {
+        if (shouldCancel()) {
+          break;
+        }
+
+        processDirectoryEntry(directoryEntries[index]);
+      }
+
+      continue;
+    }
+
+    let direntEntries: Dirent[];
     try {
-      entries = await fs.readdir(current.dirPath, { withFileTypes: true });
+      direntEntries = await fs.readdir(current.dirPath, { withFileTypes: true });
     } catch (error) {
       recordError(current.dirPath, 'read-dir', error);
       currentNode.unreadable = true;
@@ -360,7 +427,7 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
       stack.push({ phase: 'exit', nodeId: current.nodeId });
     }
 
-    const siblingFileNames = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
+    const siblingFileNames = direntEntries.filter((entry) => entry.isFile()).map((entry) => entry.name);
     const dotNetProjectContext = parentHasDotNetProject(siblingFileNames);
 
     const processEntry = async (entry: Dirent): Promise<void> => {
@@ -446,12 +513,12 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
       }
     };
 
-    for (let index = entries.length - 1; index >= 0; index -= 1) {
+    for (let index = direntEntries.length - 1; index >= 0; index -= 1) {
       if (shouldCancel()) {
         break;
       }
 
-      await processEntry(entries[index]);
+      await processEntry(direntEntries[index]);
     }
   }
 

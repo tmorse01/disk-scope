@@ -16,7 +16,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "dev:renderer-preview": "vite --config vite.renderer.preview.config.ts"
+    "dev:renderer-preview": "vite --config vite.renderer.preview.config.ts",
+    "build:native": "pnpm --dir native/scanner-win install && pnpm --dir native/scanner-win run build && node scripts/sync-native-binding.mjs",
+    "benchmark:scan": "tsx scripts/scan-benchmark.ts",
+    "benchmark:scan:native": "tsx scripts/scan-benchmark.ts --profile=native-compare"
   },
   "keywords": [
     "electron",
@@ -38,6 +41,7 @@
     ]
   },
   "dependencies": {
+    "@diskscope/scanner-win": "file:native/scanner-win",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^9.1.2",
@@ -76,6 +80,7 @@
     "prettier": "^3.5.3",
     "typescript": "~5.8.2",
     "typescript-eslint": "^8.26.1",
+    "tsx": "^4.19.3",
     "vite": "^5.4.21",
     "vitest": "^3.0.9"
   },

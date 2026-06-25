@@ -1,7 +1,11 @@
 import { runScan } from '../../../src/scanner/scan-engine';
-import type { ScanEngineTuning } from '../../../src/scanner/scan-types';
+import type { ReadDirFn, ScanEngineTuning } from '../../../src/scanner/scan-types';
 import { DEFAULT_SCAN_ENGINE_TUNING, LEGACY_SCAN_ENGINE_TUNING } from '../../../src/scanner/scan-types';
 import type { ScanResult } from '../../../src/shared/types';
+
+export type MeasureScanOptions = {
+  readDirectory?: ReadDirFn;
+};
 
 export type BenchmarkMeasurement = {
   elapsedMs: number;
@@ -15,14 +19,19 @@ export async function measureScan(
   rootPath: string,
   tuning: ScanEngineTuning,
   scanId: string,
+  options?: MeasureScanOptions,
 ): Promise<{ measurement: BenchmarkMeasurement; result: ScanResult }> {
   const start = performance.now();
-  const { result } = await runScan({
+  const scanOptions: Parameters<typeof runScan>[0] = {
     scanId,
     rootPath,
     progressIntervalMs: 250,
     tuning,
-  });
+  };
+  if (options?.readDirectory) {
+    scanOptions.readDirectory = options.readDirectory;
+  }
+  const { result } = await runScan(scanOptions);
   const elapsedMs = performance.now() - start;
 
   return {
