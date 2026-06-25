@@ -1,4 +1,5 @@
 import type {
+  ExportFormat,
   ScanProgressEvent,
   ScanResult,
   ScanSessionId,
@@ -252,6 +253,36 @@ export async function cancelScanFromStore(): Promise<void> {
   } catch (error) {
     scanStore.scanError =
       error instanceof Error ? error.message : 'Failed to cancel scan.';
+    notifyScanStore();
+  }
+}
+
+export async function exportReportFromStore(format: ExportFormat): Promise<void> {
+  if (typeof window.diskScope === 'undefined') {
+    scanStore.scanError = 'DiskScope API is not available yet.';
+    notifyScanStore();
+    return;
+  }
+
+  if (!scanStore.scanId || !scanStore.result) {
+    scanStore.scanError = 'Complete a scan before exporting.';
+    notifyScanStore();
+    return;
+  }
+
+  if (scanStore.status !== 'completed' && scanStore.status !== 'cancelled') {
+    scanStore.scanError = 'Export is available only after a scan finishes.';
+    notifyScanStore();
+    return;
+  }
+
+  try {
+    await window.diskScope.exportReport(scanStore.scanId, { format });
+    scanStore.scanError = null;
+    notifyScanStore();
+  } catch (error) {
+    scanStore.scanError =
+      error instanceof Error ? error.message : 'Failed to export report.';
     notifyScanStore();
   }
 }

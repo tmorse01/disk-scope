@@ -6,6 +6,7 @@ import type {
   ScanCompleteEvent,
   ScanErrorEvent,
   ScanProgressEvent,
+  ScanResult,
   ScanSessionId,
 } from '../../shared/types';
 import { randomUUID } from 'node:crypto';
@@ -17,6 +18,11 @@ type ActiveScan = {
 };
 
 const activeScans = new Map<ScanSessionId, ActiveScan>();
+const completedScans = new Map<ScanSessionId, ScanResult>();
+
+export function getCompletedScanResult(scanId: ScanSessionId): ScanResult | undefined {
+  return completedScans.get(scanId);
+}
 
 function broadcastToRenderers<T>(channel: string, payload: T): void {
   for (const window of BrowserWindow.getAllWindows()) {
@@ -36,6 +42,7 @@ function handleWorkerMessage(scanId: ScanSessionId, message: WorkerOutboundMessa
       broadcastToRenderers<ScanProgressEvent>(IPC_CHANNELS.SCAN_PROGRESS, message.payload);
       break;
     case 'complete':
+      completedScans.set(scanId, message.payload.result);
       broadcastToRenderers<ScanCompleteEvent>(IPC_CHANNELS.SCAN_COMPLETE, message.payload);
       cleanupScan(scanId);
       break;
@@ -60,6 +67,7 @@ function cleanupScan(scanId: ScanSessionId): void {
 }
 
 export function startScan(rootPath: string): ScanSessionId {
+  completedScans.clear();
   const scanId = randomUUID();
   const worker = new Worker(getScanWorkerPath());
 

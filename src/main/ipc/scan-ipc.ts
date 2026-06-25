@@ -1,7 +1,8 @@
 import { BrowserWindow, ipcMain } from 'electron';
 import { IPC_CHANNELS } from '../../shared/ipc-channels';
 import { pickDirectory } from '../services/directory-picker';
-import { cancelScan, startScan } from '../services/scan-coordinator';
+import { exportScanReport } from '../services/report-exporter';
+import { cancelScan, getCompletedScanResult, startScan } from '../services/scan-coordinator';
 import { copyPathToClipboard, revealPathInExplorer } from '../services/file-actions';
 import { getPreferencesSync, loadPreferences, savePreferences } from '../services/preferences-store';
 import {
@@ -11,10 +12,6 @@ import {
   validateScanSessionId,
   validateStartScanOptions,
 } from './validators';
-
-function notImplemented(message: string): never {
-  throw new Error(`Not implemented: ${message}`);
-}
 
 export function registerScanIpc(): void {
   ipcMain.handle(IPC_CHANNELS.SELECT_DIRECTORY, async (event) => {
@@ -43,10 +40,17 @@ export function registerScanIpc(): void {
     await copyPathToClipboard(validated);
   });
 
-  ipcMain.handle(IPC_CHANNELS.EXPORT_REPORT, async (_event, scanId: unknown, options: unknown) => {
+  ipcMain.handle(IPC_CHANNELS.EXPORT_REPORT, async (event, scanId: unknown, options: unknown) => {
     const validatedScanId = validateScanSessionId(scanId);
     const validatedOptions = validateExportOptions(options);
-    notImplemented(`exportReport for ${validatedScanId} as ${validatedOptions.format}`);
+    const result = getCompletedScanResult(validatedScanId);
+    if (!result) {
+      throw new Error('No completed scan found for export');
+    }
+
+    const parentWindow =
+      BrowserWindow.fromWebContents(event.sender) ?? BrowserWindow.getFocusedWindow();
+    await exportScanReport(parentWindow, result, validatedOptions.format);
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_PREFERENCES, async () => {
