@@ -3,7 +3,9 @@ import { IPC_CHANNELS } from '../../shared/ipc-channels';
 import { pickDirectory } from '../services/directory-picker';
 import { cancelScan, startScan } from '../services/scan-coordinator';
 import { copyPathToClipboard, revealPathInExplorer } from '../services/file-actions';
+import { getPreferencesSync, loadPreferences, savePreferences } from '../services/preferences-store';
 import {
+  validateAppPreferences,
   validateExportOptions,
   validatePath,
   validateScanSessionId,
@@ -46,6 +48,16 @@ export function registerScanIpc(): void {
     const validatedOptions = validateExportOptions(options);
     notImplemented(`exportReport for ${validatedScanId} as ${validatedOptions.format}`);
   });
+
+  ipcMain.handle(IPC_CHANNELS.GET_PREFERENCES, async () => {
+    await loadPreferences();
+    return getPreferencesSync();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SET_PREFERENCES, async (_event, preferences: unknown) => {
+    const validated = validateAppPreferences(preferences);
+    return savePreferences(validated);
+  });
 }
 
 export function unregisterScanIpc(): void {
@@ -56,6 +68,8 @@ export function unregisterScanIpc(): void {
     IPC_CHANNELS.REVEAL_PATH,
     IPC_CHANNELS.COPY_PATH,
     IPC_CHANNELS.EXPORT_REPORT,
+    IPC_CHANNELS.GET_PREFERENCES,
+    IPC_CHANNELS.SET_PREFERENCES,
   ];
 
   for (const channel of channels) {

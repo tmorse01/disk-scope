@@ -5,6 +5,8 @@ export const IPC_CHANNELS = {
   REVEAL_PATH: 'disk-scope:reveal-path',
   COPY_PATH: 'disk-scope:copy-path',
   EXPORT_REPORT: 'disk-scope:export-report',
+  GET_PREFERENCES: 'disk-scope:get-preferences',
+  SET_PREFERENCES: 'disk-scope:set-preferences',
   SCAN_PROGRESS: 'disk-scope:scan-progress',
   SCAN_COMPLETE: 'disk-scope:scan-complete',
   SCAN_ERROR: 'disk-scope:scan-error',

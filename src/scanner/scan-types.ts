@@ -1,4 +1,11 @@
-import type { ScanResult, ScanCompleteEvent, ScanErrorEvent, ScanProgressEvent, ScanSessionId } from '../shared/types';
+import type {
+  ScanCompleteEvent,
+  ScanErrorEvent,
+  ScanExclusion,
+  ScanProgressEvent,
+  ScanResult,
+  ScanSessionId,
+} from '../shared/types';
 
 export const DEFAULT_TOP_FILES_LIMIT = 500;
 export const DEFAULT_PROGRESS_INTERVAL_MS = 250;
@@ -8,6 +15,7 @@ export type ScanEngineOptions = {
   scanId: ScanSessionId;
   topFilesLimit?: number;
   progressIntervalMs?: number;
+  exclusions?: ScanExclusion[];
   shouldCancel?: () => boolean;
   onProgress?: (event: ScanProgressEvent) => void;
 };
@@ -20,6 +28,7 @@ export type ScanEngineRunResult = {
 export type WorkerStartPayload = {
   scanId: ScanSessionId;
   rootPath: string;
+  exclusions: ScanExclusion[];
 };
 
 export type WorkerInboundMessage =

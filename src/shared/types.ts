@@ -78,6 +78,19 @@ export type SelectedPath = {
   path: string;
 };
 
+export type ExclusionKind = 'path' | 'folder-name';
+
+export type ScanExclusion = {
+  id: string;
+  kind: ExclusionKind;
+  value: string;
+};
+
+export type AppPreferences = {
+  theme: 'light' | 'dark';
+  exclusions: ScanExclusion[];
+};
+
 export type StartScanOptions = {
   rootPath: string;
 };
@@ -118,6 +131,8 @@ export type DiskScopeAPI = {
   revealPath(path: string): Promise<void>;
   copyPath(path: string): Promise<void>;
   exportReport(scanId: ScanSessionId, options: ExportOptions): Promise<void>;
+  getPreferences(): Promise<AppPreferences>;
+  setPreferences(preferences: AppPreferences): Promise<AppPreferences>;
   onScanProgress(callback: (event: ScanProgressEvent) => void): Unsubscribe;
   onScanComplete(callback: (event: ScanCompleteEvent) => void): Unsubscribe;
   onScanError(callback: (event: ScanErrorEvent) => void): Unsubscribe;
