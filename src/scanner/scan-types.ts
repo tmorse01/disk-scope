@@ -10,6 +10,37 @@ import type {
 export const DEFAULT_TOP_FILES_LIMIT = 500;
 export const DEFAULT_PROGRESS_INTERVAL_MS = 250;
 
+/** Internal toggles for benchmark A/B of individual Tier 1 optimizations. */
+export type ScanEngineTuning = {
+  postOrderRollup: boolean;
+  skipRedundantLstat: boolean;
+  minHeapTopFiles: boolean;
+  deferMtimeFormatting: boolean;
+  inodeLoopDetection: boolean;
+  exclusionShortCircuit: boolean;
+  batchedProgress: boolean;
+};
+
+export const DEFAULT_SCAN_ENGINE_TUNING: ScanEngineTuning = {
+  postOrderRollup: true,
+  skipRedundantLstat: true,
+  minHeapTopFiles: true,
+  deferMtimeFormatting: true,
+  inodeLoopDetection: true,
+  exclusionShortCircuit: true,
+  batchedProgress: true,
+};
+
+export const LEGACY_SCAN_ENGINE_TUNING: ScanEngineTuning = {
+  postOrderRollup: false,
+  skipRedundantLstat: false,
+  minHeapTopFiles: false,
+  deferMtimeFormatting: false,
+  inodeLoopDetection: false,
+  exclusionShortCircuit: false,
+  batchedProgress: false,
+};
+
 export type ScanEngineOptions = {
   rootPath: string;
   scanId: ScanSessionId;
@@ -18,6 +49,8 @@ export type ScanEngineOptions = {
   exclusions?: ScanExclusion[];
   shouldCancel?: () => boolean;
   onProgress?: (event: ScanProgressEvent) => void;
+  /** Benchmark-only; production scans use DEFAULT_SCAN_ENGINE_TUNING. */
+  tuning?: Partial<ScanEngineTuning>;
 };
 
 export type ScanEngineRunResult = {

@@ -1,10 +1,9 @@
-import type { Dirent } from 'node:fs';
+import type { Dirent, Stats } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
   DirectoryNode,
   ExtensionSummary,
-  LargestFileEntry,
   NodeId,
   ScanFileError,
   ScanResult,
@@ -13,19 +12,22 @@ import { CleanupCandidateCollector, parentHasDotNetProject } from './cleanup-rul
 import { baseName, fileExtension, normalizePath, parentPath, pathToNodeId } from './path-utils';
 import {
   buildExclusionConfig,
+  isExcludedFolderEntryName,
   shouldExcludePath as matchesExclusion,
 } from './exclusions';
 import {
   DEFAULT_PROGRESS_INTERVAL_MS,
+  DEFAULT_SCAN_ENGINE_TUNING,
   DEFAULT_TOP_FILES_LIMIT,
   type ScanEngineOptions,
   type ScanEngineRunResult,
+  type ScanEngineTuning,
 } from './scan-types';
+import { createTopFilesTracker, type TopFilesTrackerLike } from './top-files-tracker';
 
-type DirectoryWorkItem = {
-  dirPath: string;
-  nodeId: NodeId;
-};
+type DirectoryWorkItem =
+  | { phase: 'enter'; dirPath: string; nodeId: NodeId }
+  | { phase: 'exit'; nodeId: NodeId };
 
 type ExtensionAccumulator = {
   extension: string | null;
@@ -33,38 +35,7 @@ type ExtensionAccumulator = {
   fileCount: number;
 };
 
-class TopFilesTracker {
-  private readonly entries: LargestFileEntry[] = [];
-
-  constructor(private readonly limit: number) {}
-
-  add(entry: LargestFileEntry): void {
-    if (this.entries.length < this.limit) {
-      this.insertSorted(entry);
-      return;
-    }
-
-    const smallest = this.entries[this.entries.length - 1];
-    if (entry.sizeBytes <= smallest.sizeBytes) {
-      return;
-    }
-
-    this.entries.pop();
-    this.insertSorted(entry);
-  }
-
-  toArray(): LargestFileEntry[] {
-    return [...this.entries];
-  }
-
-  private insertSorted(entry: LargestFileEntry): void {
-    let insertAt = this.entries.findIndex((existing) => entry.sizeBytes > existing.sizeBytes);
-    if (insertAt === -1) {
-      insertAt = this.entries.length;
-    }
-    this.entries.splice(insertAt, 0, entry);
-  }
-}
+const PROGRESS_FILE_BATCH = 64;
 
 function toErrorCode(error: unknown): string {
   if (error && typeof error === 'object' && 'code' in error) {
@@ -83,10 +54,33 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function inodeKey(stat: Stats, fallbackPath: string): string {
+  if (Number(stat.ino) === 0) {
+    return normalizePath(fallbackPath);
+  }
+  return `${stat.dev}:${stat.ino}`;
+}
+
 function buildExtensionSummaries(
   extensionTotals: Map<string | null, ExtensionAccumulator>,
 ): ExtensionSummary[] {
   return [...extensionTotals.values()].sort((left, right) => right.sizeBytes - left.sizeBytes);
+}
+
+function isDefinitiveSymlink(entry: Dirent): boolean {
+  return entry.isSymbolicLink();
+}
+
+function isDefinitiveDirectory(entry: Dirent): boolean {
+  return entry.isDirectory();
+}
+
+function isDefinitiveFile(entry: Dirent): boolean {
+  return entry.isFile();
+}
+
+function resolveTuning(partial?: Partial<ScanEngineTuning>): ScanEngineTuning {
+  return { ...DEFAULT_SCAN_ENGINE_TUNING, ...partial };
 }
 
 export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRunResult> {
@@ -94,15 +88,19 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
   const startMs = Date.now();
   const progressIntervalMs = options.progressIntervalMs ?? DEFAULT_PROGRESS_INTERVAL_MS;
   const topFilesLimit = options.topFilesLimit ?? DEFAULT_TOP_FILES_LIMIT;
+  const tuning = resolveTuning(options.tuning);
 
   const rootPath = normalizePath(options.rootPath);
   const rootNodeId = pathToNodeId(rootPath);
   const exclusionConfig = buildExclusionConfig(options.exclusions ?? []);
   const directoriesById: Record<NodeId, DirectoryNode> = {};
   const errors: ScanFileError[] = [];
-  const visitedRealPaths = new Set<string>();
+  const visitedInodes = new Set<string>();
   const extensionTotals = new Map<string | null, ExtensionAccumulator>();
-  const topFiles = new TopFilesTracker(topFilesLimit);
+  const topFiles: TopFilesTrackerLike = createTopFilesTracker(
+    topFilesLimit,
+    tuning.minHeapTopFiles,
+  );
   const cleanupCollector = new CleanupCandidateCollector();
 
   let totalFileCount = 0;
@@ -111,6 +109,7 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
   let bytesDiscovered = 0;
   let currentPath = rootPath;
   let lastProgressAt = 0;
+  let filesSinceProgress = 0;
   let cancelled = false;
 
   const emitProgress = (force = false): void => {
@@ -124,6 +123,7 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
     }
 
     lastProgressAt = now;
+    filesSinceProgress = 0;
     options.onProgress({
       scanId: options.scanId,
       filesScanned: totalFileCount,
@@ -133,6 +133,16 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
       errorCount,
       elapsedMs: now - startMs,
     });
+  };
+
+  const progressFileBatch =
+    progressIntervalMs === 0 ? 1 : tuning.batchedProgress ? PROGRESS_FILE_BATCH : 1;
+
+  const maybeEmitProgressAfterFile = (): void => {
+    filesSinceProgress += 1;
+    if (filesSinceProgress >= progressFileBatch) {
+      emitProgress();
+    }
   };
 
   const recordError = (
@@ -187,6 +197,22 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
     return { node, created: true };
   };
 
+  const bubbleDirectorySizeToParent = (nodeId: NodeId): void => {
+    if (!tuning.postOrderRollup) {
+      return;
+    }
+
+    const node = directoriesById[nodeId];
+    if (!node?.parentId) {
+      return;
+    }
+
+    const parent = directoriesById[node.parentId];
+    if (parent) {
+      parent.sizeBytes += node.sizeBytes;
+    }
+  };
+
   const addFileSizeToAncestors = (dirId: NodeId, sizeBytes: number): void => {
     let currentId: NodeId | null = dirId;
     while (currentId) {
@@ -203,7 +229,7 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
     filePath: string,
     sizeBytes: number,
     parentId: NodeId,
-    modifiedAt?: string,
+    mtimeMs?: number,
   ): void => {
     const parentNode = directoriesById[parentId];
     if (!parentNode) {
@@ -211,9 +237,13 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
     }
 
     parentNode.fileCount += 1;
+    if (tuning.postOrderRollup) {
+      parentNode.sizeBytes += sizeBytes;
+    } else {
+      addFileSizeToAncestors(parentId, sizeBytes);
+    }
     totalFileCount += 1;
     bytesDiscovered += sizeBytes;
-    addFileSizeToAncestors(parentId, sizeBytes);
 
     const extension = fileExtension(filePath);
     const extensionEntry = extensionTotals.get(extension) ?? {
@@ -230,8 +260,10 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
       name: baseName(filePath),
       extension,
       sizeBytes,
-      modifiedAt,
+      mtimeMs: tuning.deferMtimeFormatting ? mtimeMs : mtimeMs,
     });
+
+    maybeEmitProgressAfterFile();
   };
 
   const shouldCancel = (): boolean => {
@@ -245,7 +277,7 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
   ensureDirectoryNode(rootPath, null);
   totalDirectoryCount = 1;
 
-  const stack: DirectoryWorkItem[] = [{ dirPath: rootPath, nodeId: rootNodeId }];
+  const stack: DirectoryWorkItem[] = [{ phase: 'enter', dirPath: rootPath, nodeId: rootNodeId }];
   emitProgress(true);
 
   while (stack.length > 0) {
@@ -255,6 +287,12 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
 
     const current = stack.pop();
     if (!current) {
+      continue;
+    }
+
+    if (current.phase === 'exit') {
+      bubbleDirectorySizeToParent(current.nodeId);
+      emitProgress();
       continue;
     }
 
@@ -268,21 +306,44 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
       continue;
     }
 
-    let realPath = current.dirPath;
-    try {
-      realPath = await fs.realpath(current.dirPath);
-    } catch (error) {
-      recordError(current.dirPath, 'stat', error);
-      currentNode.unreadable = true;
-      currentNode.errorCode = toErrorCode(error);
-      emitProgress();
-      continue;
-    }
+    if (tuning.inodeLoopDetection) {
+      let dirStat: Stats;
+      try {
+        dirStat = await fs.lstat(current.dirPath);
+      } catch (error) {
+        recordError(current.dirPath, 'stat', error);
+        currentNode.unreadable = true;
+        currentNode.errorCode = toErrorCode(error);
+        emitProgress();
+        continue;
+      }
 
-    if (visitedRealPaths.has(realPath)) {
-      continue;
+      if (!dirStat.isDirectory()) {
+        continue;
+      }
+
+      const currentInode = inodeKey(dirStat, current.dirPath);
+      if (visitedInodes.has(currentInode)) {
+        continue;
+      }
+      visitedInodes.add(currentInode);
+    } else {
+      let realPath = current.dirPath;
+      try {
+        realPath = await fs.realpath(current.dirPath);
+      } catch (error) {
+        recordError(current.dirPath, 'stat', error);
+        currentNode.unreadable = true;
+        currentNode.errorCode = toErrorCode(error);
+        emitProgress();
+        continue;
+      }
+
+      if (visitedInodes.has(realPath)) {
+        continue;
+      }
+      visitedInodes.add(realPath);
     }
-    visitedRealPaths.add(realPath);
 
     let entries: Dirent[];
     try {
@@ -295,29 +356,30 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
       continue;
     }
 
+    if (tuning.postOrderRollup) {
+      stack.push({ phase: 'exit', nodeId: current.nodeId });
+    }
+
     const siblingFileNames = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
     const dotNetProjectContext = parentHasDotNetProject(siblingFileNames);
 
-    for (const entry of entries) {
-      if (shouldCancel()) {
-        break;
-      }
-
+    const processEntry = async (entry: Dirent): Promise<void> => {
       const entryPath = path.join(current.dirPath, entry.name);
       currentPath = entryPath;
 
       if (matchesExclusion(entryPath, exclusionConfig)) {
-        continue;
+        return;
       }
 
-      try {
-        const entryStat = await fs.lstat(entryPath);
-
+      const handleStat = async (entryStat: Stats): Promise<void> => {
         if (entryStat.isSymbolicLink()) {
-          continue;
+          return;
         }
-
         if (entryStat.isDirectory()) {
+          if (tuning.exclusionShortCircuit && isExcludedFolderEntryName(entry.name, exclusionConfig)) {
+            return;
+          }
+
           cleanupCollector.tryRegister(
             entry.name,
             entryPath,
@@ -328,19 +390,68 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
           if (created) {
             totalDirectoryCount += 1;
           }
-          stack.push({ dirPath: entryPath, nodeId: childNode.id });
-          continue;
+          stack.push({ phase: 'enter', dirPath: entryPath, nodeId: childNode.id });
+          return;
+        }
+        if (entryStat.isFile()) {
+          trackFile(entryPath, entryStat.size, current.nodeId, entryStat.mtimeMs);
+        }
+      };
+
+      if (tuning.skipRedundantLstat) {
+        if (isDefinitiveSymlink(entry)) {
+          return;
         }
 
-        if (entryStat.isFile()) {
-          const modifiedAt = entryStat.mtime.toISOString();
-          trackFile(entryPath, entryStat.size, current.nodeId, modifiedAt);
-          emitProgress();
+        if (isDefinitiveDirectory(entry)) {
+          if (tuning.exclusionShortCircuit && isExcludedFolderEntryName(entry.name, exclusionConfig)) {
+            return;
+          }
+
+          cleanupCollector.tryRegister(
+            entry.name,
+            entryPath,
+            currentNode.name,
+            dotNetProjectContext,
+          );
+          const { node: childNode, created } = ensureDirectoryNode(entryPath, current.nodeId);
+          if (created) {
+            totalDirectoryCount += 1;
+          }
+          stack.push({ phase: 'enter', dirPath: entryPath, nodeId: childNode.id });
+          return;
         }
+
+        if (isDefinitiveFile(entry)) {
+          try {
+            const entryStat = await fs.lstat(entryPath);
+            if (entryStat.isSymbolicLink() || !entryStat.isFile()) {
+              return;
+            }
+            trackFile(entryPath, entryStat.size, current.nodeId, entryStat.mtimeMs);
+          } catch (error) {
+            recordError(entryPath, 'stat', error);
+            emitProgress();
+          }
+          return;
+        }
+      }
+
+      try {
+        const entryStat = await fs.lstat(entryPath);
+        await handleStat(entryStat);
       } catch (error) {
         recordError(entryPath, 'stat', error);
         emitProgress();
       }
+    };
+
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
+      if (shouldCancel()) {
+        break;
+      }
+
+      await processEntry(entries[index]);
     }
   }
 
