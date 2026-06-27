@@ -42,8 +42,12 @@ function pathToSegments(path: string): { id: string; label: string }[] {
   });
 }
 
-function AppLayout() {
-  const [activeRoute, setActiveRoute] = useState<AppRoute>(DEFAULT_ROUTE);
+type AppLayoutProps = {
+  activeRoute: AppRoute;
+  onRouteChange: (route: AppRoute) => void;
+};
+
+function AppLayout({ activeRoute, onRouteChange }: AppLayoutProps) {
   const { result, status } = useScanStore();
   const { breadcrumbSegments, contextActions } = useShellContext();
   const route = getRouteById(activeRoute);
@@ -76,7 +80,7 @@ function AppLayout() {
       <DsTitleBar />
 
       <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <DsSidebar activeRoute={activeRoute} onRouteChange={setActiveRoute} />
+        <DsSidebar activeRoute={activeRoute} onRouteChange={onRouteChange} />
 
         <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <DsContextBar segments={segments} actions={contextActions} />
@@ -94,7 +98,7 @@ function AppLayout() {
             <Box sx={{ maxWidth: CONTENT_MAX_WIDTH, mx: 'auto' }}>
               <DsErrorBoundary
                 resetKeys={[activeRoute]}
-                onBackToSafety={() => setActiveRoute(DEFAULT_ROUTE)}
+                onBackToSafety={() => onRouteChange(DEFAULT_ROUTE)}
                 title={`${route.label} ran into a problem`}
               >
                 <ActiveView />
@@ -110,9 +114,11 @@ function AppLayout() {
 }
 
 export function App() {
+  const [activeRoute, setActiveRoute] = useState<AppRoute>(DEFAULT_ROUTE);
+
   return (
-    <ShellProvider>
-      <AppLayout />
+    <ShellProvider navigateTo={setActiveRoute}>
+      <AppLayout activeRoute={activeRoute} onRouteChange={setActiveRoute} />
     </ShellProvider>
   );
 }

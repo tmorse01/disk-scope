@@ -1,7 +1,14 @@
 import { BrowserWindow } from 'electron';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { brandColors } from '../shared/branding';
 import { attachWindowChromeListeners } from './ipc/window-ipc';
+
+function resolveWindowIcon(): string | undefined {
+  const fileName = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
+  const iconPath = path.join(__dirname, '../../assets', fileName);
+  return existsSync(iconPath) ? iconPath : undefined;
+}
 
 const DEFAULT_WIDTH = 1200;
 const DEFAULT_HEIGHT = 800;
@@ -11,12 +18,15 @@ const MIN_HEIGHT = 640;
 const USE_CUSTOM_WINDOW_FRAME = process.platform === 'win32';
 
 export function createMainWindow(): BrowserWindow {
+  const windowIcon = resolveWindowIcon();
+
   const mainWindow = new BrowserWindow({
     width: DEFAULT_WIDTH,
     height: DEFAULT_HEIGHT,
     minWidth: MIN_WIDTH,
     minHeight: MIN_HEIGHT,
     show: false,
+    ...(windowIcon ? { icon: windowIcon } : {}),
     ...(USE_CUSTOM_WINDOW_FRAME
       ? {
           frame: false,

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { AppRoute } from '../routes';
 import type { BreadcrumbSegment } from './DsContextBar';
 
 type ShellContextValue = {
@@ -6,11 +7,17 @@ type ShellContextValue = {
   setBreadcrumbSegments: (segments: BreadcrumbSegment[]) => void;
   contextActions: ReactNode;
   setContextActions: (actions: ReactNode) => void;
+  navigateTo: (route: AppRoute) => void;
 };
 
 const ShellContext = createContext<ShellContextValue | null>(null);
 
-export function ShellProvider({ children }: { children: ReactNode }) {
+type ShellProviderProps = {
+  children: ReactNode;
+  navigateTo: (route: AppRoute) => void;
+};
+
+export function ShellProvider({ children, navigateTo }: ShellProviderProps) {
   const [breadcrumbSegments, setBreadcrumbSegments] = useState<BreadcrumbSegment[]>([]);
   const [contextActions, setContextActions] = useState<ReactNode>(null);
 
@@ -20,8 +27,9 @@ export function ShellProvider({ children }: { children: ReactNode }) {
       setBreadcrumbSegments,
       contextActions,
       setContextActions,
+      navigateTo,
     }),
-    [breadcrumbSegments, contextActions],
+    [breadcrumbSegments, contextActions, navigateTo],
   );
 
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;

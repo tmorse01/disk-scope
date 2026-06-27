@@ -1,19 +1,19 @@
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
 import { useMemo, useState } from 'react';
 import type { LargestFileEntry } from '../../../shared/types';
 import { formatBytes } from '../../../shared/format-bytes';
 import { DsCard } from '../../components/DsCard';
+import { DsDataTable, DsTableBodyRow, DsTableHeadRow } from '../../components/DsDataTable';
 import {
-  DsDataTable,
-  DsTableBodyRow,
-  DsTableHeadRow,
-  TableCell as DsTableCell,
-} from '../../components/DsDataTable';
+  DsResizableBodyCell,
+  DsResizableColumnsProvider,
+  DsResizableHeaderCell,
+  type ResizableColumnDef,
+} from '../../components/DsResizableColumns';
 import { DsPageHeader } from '../../components/DsStatusChip';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
@@ -29,6 +29,14 @@ import {
   type LargestFileSortKey,
   type SortDirection,
 } from './largest-files-utils';
+
+const LARGEST_FILES_COLUMNS: ResizableColumnDef[] = [
+  { id: 'name', defaultWidth: 240, minWidth: 120 },
+  { id: 'path', defaultWidth: 320, minWidth: 160 },
+  { id: 'sizeBytes', defaultWidth: 108, minWidth: 72 },
+  { id: 'extension', defaultWidth: 120, minWidth: 80 },
+  { id: 'modifiedAt', defaultWidth: 148, minWidth: 100 },
+];
 
 function largestFileToDeleteTarget(file: LargestFileEntry): DeleteTarget {
   return {
@@ -97,64 +105,76 @@ export function LargestFilesView() {
       {sortedFiles.length > 0 && (
         <DsCard noPadding sx={{ overflow: 'hidden' }}>
           {toolbar}
-          <DsDataTable
-            noOuterCard
-            aria-label="Largest files"
-            header={
-              <DsTableHeadRow>
-                <DsTableCell sortDirection={sortLabelProps('name').direction}>
-                  <TableSortLabel {...sortLabelProps('name')}>Name</TableSortLabel>
-                </DsTableCell>
-                <DsTableCell sortDirection={sortLabelProps('path').direction}>
-                  <TableSortLabel {...sortLabelProps('path')}>Path</TableSortLabel>
-                </DsTableCell>
-                <DsTableCell align="right" sortDirection={sortLabelProps('sizeBytes').direction}>
-                  <TableSortLabel {...sortLabelProps('sizeBytes')}>Size</TableSortLabel>
-                </DsTableCell>
-                <DsTableCell sortDirection={sortLabelProps('extension').direction}>
-                  <TableSortLabel {...sortLabelProps('extension')}>Extension</TableSortLabel>
-                </DsTableCell>
-                <DsTableCell sortDirection={sortLabelProps('modifiedAt').direction}>
-                  <TableSortLabel {...sortLabelProps('modifiedAt')}>Modified</TableSortLabel>
-                </DsTableCell>
-              </DsTableHeadRow>
-            }
-          >
-            <TableBody>
-              {sortedFiles.map((file) => {
-                const rowProps = getRowProps(largestFileToDeleteTarget(file));
+          <DsResizableColumnsProvider columns={LARGEST_FILES_COLUMNS}>
+            <DsDataTable
+              noOuterCard
+              aria-label="Largest files"
+              header={
+                <DsTableHeadRow>
+                  <DsResizableHeaderCell columnId="name" sortDirection={sortLabelProps('name').direction}>
+                    <TableSortLabel {...sortLabelProps('name')}>Name</TableSortLabel>
+                  </DsResizableHeaderCell>
+                  <DsResizableHeaderCell columnId="path" sortDirection={sortLabelProps('path').direction}>
+                    <TableSortLabel {...sortLabelProps('path')}>Path</TableSortLabel>
+                  </DsResizableHeaderCell>
+                  <DsResizableHeaderCell
+                    columnId="sizeBytes"
+                    align="right"
+                    sortDirection={sortLabelProps('sizeBytes').direction}
+                  >
+                    <TableSortLabel {...sortLabelProps('sizeBytes')}>Size</TableSortLabel>
+                  </DsResizableHeaderCell>
+                  <DsResizableHeaderCell columnId="extension" sortDirection={sortLabelProps('extension').direction}>
+                    <TableSortLabel {...sortLabelProps('extension')}>Extension</TableSortLabel>
+                  </DsResizableHeaderCell>
+                  <DsResizableHeaderCell
+                    columnId="modifiedAt"
+                    sortDirection={sortLabelProps('modifiedAt').direction}
+                  >
+                    <TableSortLabel {...sortLabelProps('modifiedAt')}>Modified</TableSortLabel>
+                  </DsResizableHeaderCell>
+                </DsTableHeadRow>
+              }
+            >
+              <TableBody>
+                {sortedFiles.map((file) => {
+                  const rowProps = getRowProps(largestFileToDeleteTarget(file));
 
-                return (
-                  <DsTableBodyRow key={file.path} {...rowProps}>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <MaterialIcon
-                          name={fileIconForExtension(file.extension)}
-                          style={{ fontSize: 20, color: 'var(--mui-palette-text-secondary)' }}
-                        />
-                        <Typography variant="body2" sx={{ fontWeight: rowProps.selected ? 600 : 400 }}>
-                          {file.name}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell
-                      sx={{ maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                      title={file.path}
-                    >
-                      <DsTabular>{file.path}</DsTabular>
-                    </TableCell>
-                    <TableCell align="right">
-                      <DsTabular sx={{ fontWeight: 600 }}>{formatBytes(file.sizeBytes)}</DsTabular>
-                    </TableCell>
-                    <TableCell>{formatExtensionLabel(file.extension)}</TableCell>
-                    <TableCell>
-                      <DsTabular>{formatModifiedAt(file.modifiedAt)}</DsTabular>
-                    </TableCell>
-                  </DsTableBodyRow>
-                );
-              })}
-            </TableBody>
-          </DsDataTable>
+                  return (
+                    <DsTableBodyRow key={file.path} {...rowProps}>
+                      <DsResizableBodyCell columnId="name" title={file.name}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                          <MaterialIcon
+                            name={fileIconForExtension(file.extension)}
+                            style={{ fontSize: 20, color: 'var(--mui-palette-text-secondary)', flexShrink: 0 }}
+                          />
+                          <Typography
+                            variant="body2"
+                            noWrap
+                            sx={{ fontWeight: rowProps.selected ? 600 : 400 }}
+                          >
+                            {file.name}
+                          </Typography>
+                        </Box>
+                      </DsResizableBodyCell>
+                      <DsResizableBodyCell columnId="path" title={file.path}>
+                        <DsTabular>{file.path}</DsTabular>
+                      </DsResizableBodyCell>
+                      <DsResizableBodyCell columnId="sizeBytes" align="right">
+                        <DsTabular sx={{ fontWeight: 600 }}>{formatBytes(file.sizeBytes)}</DsTabular>
+                      </DsResizableBodyCell>
+                      <DsResizableBodyCell columnId="extension">
+                        {formatExtensionLabel(file.extension)}
+                      </DsResizableBodyCell>
+                      <DsResizableBodyCell columnId="modifiedAt">
+                        <DsTabular>{formatModifiedAt(file.modifiedAt)}</DsTabular>
+                      </DsResizableBodyCell>
+                    </DsTableBodyRow>
+                  );
+                })}
+              </TableBody>
+            </DsDataTable>
+          </DsResizableColumnsProvider>
           {contextMenu}
           {deleteConfirmationUi}
         </DsCard>

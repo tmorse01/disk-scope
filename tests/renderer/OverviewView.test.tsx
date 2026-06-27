@@ -1,0 +1,84 @@
+import CssBaseline from '@mui/material/CssBaseline';
+import { ThemeProvider } from '@mui/material/styles';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ShellProvider } from '../../src/renderer/components/ShellContext';
+import { OverviewView } from '../../src/renderer/features/overview/OverviewView';
+import { scanStore, resetScanSessionForTest } from '../../src/renderer/stores/scan-store';
+import { muiTheme } from '../../src/renderer/theme/mui-theme';
+import type { ScanResult } from '../../src/shared/types';
+
+function buildResult(overrides: Partial<ScanResult> = {}): ScanResult {
+  return {
+    scanId: 'scan-1',
+    rootPath: 'C:\\Demo\\Projects',
+    startedAt: '2026-01-01T00:00:00.000Z',
+    completedAt: '2026-01-01T00:00:05.000Z',
+    durationMs: 5000,
+    totalSizeBytes: 1024 * 1024 * 48,
+    fileCount: 1200,
+    directoryCount: 85,
+    errorCount: 0,
+    rootNodeId: 'C:\\Demo\\Projects',
+    directoriesById: {},
+    largestFiles: [],
+    extensionSummaries: [],
+    cleanupCandidates: [
+      {
+        path: 'C:\\Demo\\Projects\\temp\\cache.tmp',
+        name: 'cache.tmp',
+        ruleId: 'temp-files',
+        risk: 'low',
+        sizeBytes: 4096,
+        reason: 'Temporary file',
+      },
+    ],
+    errors: [],
+    ...overrides,
+  };
+}
+
+function renderView(navigateTo = vi.fn()) {
+  return render(
+    <ThemeProvider theme={muiTheme} defaultMode="light">
+      <CssBaseline />
+      <ShellProvider navigateTo={navigateTo}>
+        <OverviewView />
+      </ShellProvider>
+    </ThemeProvider>,
+  );
+}
+
+describe('OverviewView', () => {
+  beforeEach(() => {
+    resetScanSessionForTest();
+  });
+
+  it('shows scan target picker before a scan completes', () => {
+    renderView();
+
+    expect(screen.getByRole('heading', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add folder or drive/i })).toBeInTheDocument();
+  });
+
+  it('shows next-step navigation after a scan completes', async () => {
+    const navigateTo = vi.fn();
+    scanStore.result = buildResult();
+    scanStore.status = 'completed';
+
+    renderView(navigateTo);
+
+    expect(screen.getByRole('heading', { name: 'Scan complete' })).toBeInTheDocument();
+    expect(screen.getByText(/C:\\Demo\\Projects/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Browse largest folders/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Browse largest files/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /View cleanup recommendations \(1\)/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Export JSON/i })).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Browse largest folders/i }));
+
+    expect(navigateTo).toHaveBeenCalledWith('largest-folders');
+  });
+});

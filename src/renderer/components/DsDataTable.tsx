@@ -5,6 +5,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import type { MouseEvent, ReactNode } from 'react';
 import { DsCard } from './DsCard';
+import { useOptionalResizableColumns } from './DsResizableColumns';
 
 type DsDataTableProps = {
   'aria-label': string;
@@ -14,9 +15,19 @@ type DsDataTableProps = {
 };
 
 export function DsDataTable({ 'aria-label': ariaLabel, header, children, noOuterCard = false }: DsDataTableProps) {
+  const resizableColumns = useOptionalResizableColumns();
+
   const table = (
     <TableContainer className="ds-custom-scrollbar">
-      <Table size="small" aria-label={ariaLabel}>
+      <Table
+        size="small"
+        aria-label={ariaLabel}
+        sx={{
+          tableLayout: 'fixed',
+          width: '100%',
+          minWidth: resizableColumns?.totalWidth,
+        }}
+      >
         {header}
         {children}
       </Table>

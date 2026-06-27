@@ -4,7 +4,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import IconButton from '@mui/material/IconButton';
 import LinearProgress from '@mui/material/LinearProgress';
 import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
 import { useCallback, useMemo, useState } from 'react';
@@ -15,9 +14,20 @@ import {
   DsDataTable,
   DsTableBodyRow,
   DsTableHeadRow,
-  TableCell as DsTableCell,
 } from '../../components/DsDataTable';
+import {
+  DsResizableBodyCell,
+  DsResizableColumnsProvider,
+  DsResizableHeaderCell,
+  type ResizableColumnDef,
+} from '../../components/DsResizableColumns';
 import { DsPageHeader } from '../../components/DsStatusChip';
+import {
+  buildCleanupCandidatePathIndex,
+  getCleanupCandidateForPath,
+  getFolderGridRiskHint,
+} from './folder-cleanup-hint';
+import { FolderRiskHintCell } from './FolderRiskHintCell';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { useShellOverrides } from '../../components/ShellContext';
@@ -30,7 +40,6 @@ import {
   DEFAULT_FOLDER_SORT_COLUMN,
   DEFAULT_FOLDER_SORT_DIRECTION,
   flattenFolderTreeRows,
-  formatModifiedAt,
   formatPercentOfRoot,
   isFilesGroupId,
   parentIdFromFilesGroupId,
@@ -52,20 +61,28 @@ const COLUMNS: ColumnDef[] = [
   { id: 'name', label: 'Folder', sortable: true },
   { id: 'sizeBytes', label: 'Size', sortable: true, align: 'right' },
   { id: 'percentOfRoot', label: '% of root', sortable: true, align: 'right' },
-  { id: 'fileCount', label: 'Files', sortable: true, align: 'right' },
-  { id: 'directoryCount', label: 'Folders', sortable: true, align: 'right' },
-  { id: 'modifiedAt', label: 'Modified', sortable: true, align: 'right' },
   { id: 'risk', label: 'Risk', sortable: false, align: 'right' },
 ];
 
-function directoryToDeleteTarget(node: DirectoryNode): DeleteTarget {
+const FOLDER_TREE_COLUMNS: ResizableColumnDef[] = [
+  { id: 'name', defaultWidth: 300, minWidth: 160 },
+  { id: 'sizeBytes', defaultWidth: 108, minWidth: 72 },
+  { id: 'percentOfRoot', defaultWidth: 96, minWidth: 72 },
+  { id: 'risk', defaultWidth: 120, minWidth: 88 },
+];
+
+function directoryToDeleteTarget(
+  node: DirectoryNode,
+  cleanupCandidate?: ReturnType<typeof getCleanupCandidateForPath>,
+) {
   return {
     path: node.path,
     name: node.name,
-    kind: 'directory',
+    kind: 'directory' as const,
     sizeBytes: node.sizeBytes,
     childFileCount: node.fileCount,
     childDirectoryCount: node.directoryCount,
+    risk: cleanupCandidate?.risk,
   };
 }
 
@@ -104,6 +121,13 @@ export function LargestFoldersView() {
 
   const effectiveFocusId = focusNodeId ?? result?.rootNodeId ?? null;
 
+  const cleanupCandidatesByPath = useMemo(
+    () => buildCleanupCandidatePathIndex(result?.cleanupCandidates ?? []),
+    [result?.cleanupCandidates],
+  );
+
+  const riskReferenceDate = result?.completedAt;
+
   const breadcrumb = useMemo(() => {
     if (!result || !effectiveFocusId) {
       return [];
@@ -140,7 +164,7 @@ export function LargestFoldersView() {
       }
 
       setSortColumn(column);
-      setSortDirection(column === 'name' || column === 'modifiedAt' ? 'asc' : 'desc');
+      setSortDirection(column === 'name' ? 'asc' : 'desc');
     },
     [sortColumn],
   );
@@ -236,35 +260,43 @@ export function LargestFoldersView() {
       ) : (
         <DsCard noPadding sx={{ overflow: 'hidden' }}>
           {toolbar}
-          <DsDataTable
-            noOuterCard
-            aria-label="Largest folders"
-            header={
-              <DsTableHeadRow>
-                {COLUMNS.map((column) => (
-                  <DsTableCell key={column.id} align={column.align ?? 'left'}>
-                    {column.sortable ? (
-                      <TableSortLabel
-                        active={sortColumn === column.id}
-                        direction={sortColumn === column.id ? sortDirection : 'asc'}
-                        onClick={() => handleSort(column.id as FolderSortColumn)}
-                      >
-                        {column.label}
-                      </TableSortLabel>
-                    ) : (
-                      column.label
-                    )}
-                  </DsTableCell>
-                ))}
-              </DsTableHeadRow>
-            }
-          >
+          <DsResizableColumnsProvider columns={FOLDER_TREE_COLUMNS}>
+            <DsDataTable
+              noOuterCard
+              aria-label="Largest folders"
+              header={
+                <DsTableHeadRow>
+                  {COLUMNS.map((column) => (
+                    <DsResizableHeaderCell key={column.id} columnId={column.id} align={column.align ?? 'left'}>
+                      {column.sortable ? (
+                        <TableSortLabel
+                          active={sortColumn === column.id}
+                          direction={sortColumn === column.id ? sortDirection : 'asc'}
+                          onClick={() => handleSort(column.id as FolderSortColumn)}
+                        >
+                          {column.label}
+                        </TableSortLabel>
+                      ) : (
+                        column.label
+                      )}
+                    </DsResizableHeaderCell>
+                  ))}
+                </DsTableHeadRow>
+              }
+            >
             <TableBody>
               {rows.map((row) => {
                 if (row.kind === 'directory') {
                   const { nodeId, node, depth, hasChildren, isExpanded } = row;
-                  const rowProps = getRowProps(directoryToDeleteTarget(node));
+                  const cleanupCandidate = getCleanupCandidateForPath(cleanupCandidatesByPath, node.path);
+                  const rowProps = getRowProps(directoryToDeleteTarget(node, cleanupCandidate));
                   const percent = percentOfRoot(node.sizeBytes, result.totalSizeBytes);
+                  const riskHint = getFolderGridRiskHint({
+                    cleanupCandidatesByPath,
+                    path: node.path,
+                    modifiedAt: node.modifiedAt,
+                    referenceDate: riskReferenceDate,
+                  });
 
                   return (
                     <DsTableBodyRow
@@ -272,8 +304,8 @@ export function LargestFoldersView() {
                       {...rowProps}
                       onDoubleClick={() => handleDrillDown(nodeId)}
                     >
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: depth * 2 }}>
+                      <DsResizableBodyCell columnId="name" multiline title={node.path}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: depth * 2, minWidth: 0 }}>
                           {hasChildren ? (
                             <IconButton
                               size="small"
@@ -316,27 +348,16 @@ export function LargestFoldersView() {
                             />
                           </Box>
                         </Box>
-                      </TableCell>
-                      <TableCell align="right">
+                      </DsResizableBodyCell>
+                      <DsResizableBodyCell columnId="sizeBytes" align="right">
                         <DsTabular sx={{ fontWeight: 600 }}>{formatBytes(node.sizeBytes)}</DsTabular>
-                      </TableCell>
-                      <TableCell align="right">
+                      </DsResizableBodyCell>
+                      <DsResizableBodyCell columnId="percentOfRoot" align="right">
                         <DsTabular>{formatPercentOfRoot(node.sizeBytes, result.totalSizeBytes)}</DsTabular>
-                      </TableCell>
-                      <TableCell align="right">
-                        <DsTabular>{node.fileCount.toLocaleString()}</DsTabular>
-                      </TableCell>
-                      <TableCell align="right">
-                        <DsTabular>{node.directoryCount.toLocaleString()}</DsTabular>
-                      </TableCell>
-                      <TableCell align="right">
-                        <DsTabular>{formatModifiedAt(node.modifiedAt)}</DsTabular>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" color="text.disabled">
-                          —
-                        </Typography>
-                      </TableCell>
+                      </DsResizableBodyCell>
+                      <DsResizableBodyCell columnId="risk" align="right">
+                        <FolderRiskHintCell hint={riskHint} />
+                      </DsResizableBodyCell>
                     </DsTableBodyRow>
                   );
                 }
@@ -347,7 +368,7 @@ export function LargestFoldersView() {
                       key={row.nodeId}
                       onClick={() => handleToggleExpand(row.nodeId, row.parentPath)}
                     >
-                      <TableCell>
+                      <DsResizableBodyCell columnId="name" multiline>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: row.depth * 2 }}>
                           <IconButton
                             size="small"
@@ -372,35 +393,20 @@ export function LargestFoldersView() {
                             &lt;Files&gt;
                           </Typography>
                         </Box>
-                      </TableCell>
-                      <TableCell align="right">
+                      </DsResizableBodyCell>
+                      <DsResizableBodyCell columnId="sizeBytes" align="right">
                         <Typography variant="body2" color="text.disabled">
                           —
                         </Typography>
-                      </TableCell>
-                      <TableCell align="right">
+                      </DsResizableBodyCell>
+                      <DsResizableBodyCell columnId="percentOfRoot" align="right">
                         <Typography variant="body2" color="text.disabled">
                           —
                         </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <DsTabular>{row.fileCount.toLocaleString()}</DsTabular>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" color="text.disabled">
-                          —
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" color="text.disabled">
-                          —
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" color="text.disabled">
-                          —
-                        </Typography>
-                      </TableCell>
+                      </DsResizableBodyCell>
+                      <DsResizableBodyCell columnId="risk" align="right">
+                        <FolderRiskHintCell hint={null} />
+                      </DsResizableBodyCell>
                     </DsTableBodyRow>
                   );
                 }
@@ -409,11 +415,17 @@ export function LargestFoldersView() {
                   ? `.${row.entry.name.split('.').pop()}`
                   : null;
                 const rowProps = getRowProps(fileEntryToDeleteTarget(row));
+                const riskHint = getFolderGridRiskHint({
+                  cleanupCandidatesByPath,
+                  path: row.entry.path,
+                  modifiedAt: row.entry.modifiedAt,
+                  referenceDate: riskReferenceDate,
+                });
 
                 return (
                   <DsTableBodyRow key={row.nodeId} {...rowProps}>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: row.depth * 2 }}>
+                    <DsResizableBodyCell columnId="name" title={row.entry.path}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: row.depth * 2, minWidth: 0 }}>
                         <Box sx={{ width: 28, flexShrink: 0 }} />
                         <MaterialIcon
                           name={fileIconForExtension(extension)}
@@ -422,46 +434,29 @@ export function LargestFoldersView() {
                         <Typography
                           variant="body2"
                           noWrap
-                          title={row.entry.path}
                           sx={{ fontWeight: rowProps.selected ? 600 : 400 }}
                         >
                           {row.entry.name}
                         </Typography>
                       </Box>
-                    </TableCell>
-                    <TableCell align="right">
+                    </DsResizableBodyCell>
+                    <DsResizableBodyCell columnId="sizeBytes" align="right">
                       <DsTabular sx={{ fontWeight: 600 }}>{formatBytes(row.entry.sizeBytes)}</DsTabular>
-                    </TableCell>
-                    <TableCell align="right">
+                    </DsResizableBodyCell>
+                    <DsResizableBodyCell columnId="percentOfRoot" align="right">
                       <Typography variant="body2" color="text.disabled">
                         —
                       </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2" color="text.disabled">
-                        —
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2" color="text.disabled">
-                        —
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <DsTabular>
-                        {row.entry.modifiedAt ? formatModifiedAt(row.entry.modifiedAt) : '—'}
-                      </DsTabular>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2" color="text.disabled">
-                        —
-                      </Typography>
-                    </TableCell>
+                    </DsResizableBodyCell>
+                    <DsResizableBodyCell columnId="risk" align="right">
+                      <FolderRiskHintCell hint={riskHint} />
+                    </DsResizableBodyCell>
                   </DsTableBodyRow>
                 );
               })}
             </TableBody>
           </DsDataTable>
+          </DsResizableColumnsProvider>
           {contextMenu}
           {deleteConfirmationUi}
         </DsCard>

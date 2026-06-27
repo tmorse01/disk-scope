@@ -1,7 +1,6 @@
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
 import Typography from '@mui/material/Typography';
 import type { CleanupCandidate, RiskLevel } from '../../../shared/types';
 import { formatBytes } from '../../../shared/format-bytes';
@@ -10,8 +9,13 @@ import {
   DsDataTable,
   DsTableBodyRow,
   DsTableHeadRow,
-  TableCell as DsTableCell,
 } from '../../components/DsDataTable';
+import {
+  DsResizableBodyCell,
+  DsResizableColumnsProvider,
+  DsResizableHeaderCell,
+  type ResizableColumnDef,
+} from '../../components/DsResizableColumns';
 import { DsPageHeader, DsStatusChip } from '../../components/DsStatusChip';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
@@ -33,6 +37,14 @@ const RISK_VARIANTS: Record<RiskLevel, 'success' | 'warning' | 'error' | 'neutra
   high: 'error',
   'do-not-touch': 'neutral',
 };
+
+const CLEANUP_COLUMNS: ResizableColumnDef[] = [
+  { id: 'folder', defaultWidth: 280, minWidth: 160 },
+  { id: 'category', defaultWidth: 140, minWidth: 88 },
+  { id: 'risk', defaultWidth: 120, minWidth: 88 },
+  { id: 'sizeBytes', defaultWidth: 108, minWidth: 72 },
+  { id: 'recommendation', defaultWidth: 280, minWidth: 160 },
+];
 
 function candidateToDeleteTarget(candidate: CleanupCandidate): DeleteTarget {
   return {
@@ -105,68 +117,81 @@ export function CleanupCandidatesView() {
 
           <DsCard noPadding sx={{ overflow: 'hidden' }}>
             {toolbar}
-            <DsDataTable
-              noOuterCard
-              aria-label="Cleanup candidates"
-              header={
-                <DsTableHeadRow>
-                  <DsTableCell>Folder</DsTableCell>
-                  <DsTableCell>Category</DsTableCell>
-                  <DsTableCell>Risk</DsTableCell>
-                  <DsTableCell align="right">Size</DsTableCell>
-                  <DsTableCell>Why flagged</DsTableCell>
-                </DsTableHeadRow>
-              }
-            >
-              <TableBody>
-                {candidates.map((candidate) => {
-                  const rowProps = getRowProps(candidateToDeleteTarget(candidate));
+            <DsResizableColumnsProvider columns={CLEANUP_COLUMNS}>
+              <DsDataTable
+                noOuterCard
+                aria-label="Cleanup candidates"
+                header={
+                  <DsTableHeadRow>
+                    <DsResizableHeaderCell columnId="folder">Folder</DsResizableHeaderCell>
+                    <DsResizableHeaderCell columnId="category">Category</DsResizableHeaderCell>
+                    <DsResizableHeaderCell columnId="risk">Risk</DsResizableHeaderCell>
+                    <DsResizableHeaderCell columnId="sizeBytes" align="right">
+                      Size
+                    </DsResizableHeaderCell>
+                    <DsResizableHeaderCell columnId="recommendation">Why flagged</DsResizableHeaderCell>
+                  </DsTableHeadRow>
+                }
+              >
+                <TableBody>
+                  {candidates.map((candidate) => {
+                    const rowProps = getRowProps(candidateToDeleteTarget(candidate));
 
-                  return (
-                    <DsTableBodyRow key={candidate.path} {...rowProps}>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Box
-                            sx={{
-                              width: 40,
-                              height: 40,
-                              borderRadius: `${radii.lg}px`,
-                              bgcolor: 'surfaceContainerHighest.main',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
-                            }}
-                          >
-                            <MaterialIcon name="folder_zip" style={{ color: 'var(--mui-palette-primary-main)' }} />
+                    return (
+                      <DsTableBodyRow key={candidate.path} {...rowProps}>
+                        <DsResizableBodyCell columnId="folder" multiline title={candidate.path}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                            <Box
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: `${radii.lg}px`,
+                                bgcolor: 'surfaceContainerHighest.main',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                              }}
+                            >
+                              <MaterialIcon name="folder_zip" style={{ color: 'var(--mui-palette-primary-main)' }} />
+                            </Box>
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography variant="body2" noWrap sx={{ fontWeight: rowProps.selected ? 700 : 400 }}>
+                                {candidate.name}
+                              </Typography>
+                              <DsTabular
+                                sx={{
+                                  display: 'block',
+                                  color: 'text.secondary',
+                                  fontSize: '11px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {candidate.path}
+                              </DsTabular>
+                            </Box>
                           </Box>
-                          <Box>
-                            <Typography variant="body2" sx={{ fontWeight: rowProps.selected ? 700 : 400 }}>
-                              {candidate.name}
-                            </Typography>
-                            <DsTabular sx={{ color: 'text.secondary', fontSize: '11px', wordBreak: 'break-all' }}>
-                              {candidate.path}
-                            </DsTabular>
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell>{candidate.label}</TableCell>
-                      <TableCell>
-                        <DsStatusChip label={RISK_LABELS[candidate.risk]} variant={RISK_VARIANTS[candidate.risk]} />
-                      </TableCell>
-                      <TableCell align="right">
-                        <DsTabular sx={{ fontWeight: 700 }}>{formatBytes(candidate.sizeBytes)}</DsTabular>
-                      </TableCell>
-                      <TableCell sx={{ maxWidth: 280 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          {candidate.recommendation}
-                        </Typography>
-                      </TableCell>
-                    </DsTableBodyRow>
-                  );
-                })}
-              </TableBody>
-            </DsDataTable>
+                        </DsResizableBodyCell>
+                        <DsResizableBodyCell columnId="category">{candidate.label}</DsResizableBodyCell>
+                        <DsResizableBodyCell columnId="risk">
+                          <DsStatusChip label={RISK_LABELS[candidate.risk]} variant={RISK_VARIANTS[candidate.risk]} />
+                        </DsResizableBodyCell>
+                        <DsResizableBodyCell columnId="sizeBytes" align="right">
+                          <DsTabular sx={{ fontWeight: 700 }}>{formatBytes(candidate.sizeBytes)}</DsTabular>
+                        </DsResizableBodyCell>
+                        <DsResizableBodyCell columnId="recommendation">
+                          <Typography variant="body2" color="text.secondary" noWrap>
+                            {candidate.recommendation}
+                          </Typography>
+                        </DsResizableBodyCell>
+                      </DsTableBodyRow>
+                    );
+                  })}
+                </TableBody>
+              </DsDataTable>
+            </DsResizableColumnsProvider>
             {contextMenu}
             {deleteConfirmationUi}
           </DsCard>

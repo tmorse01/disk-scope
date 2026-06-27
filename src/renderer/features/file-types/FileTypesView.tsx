@@ -1,7 +1,6 @@
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
 import { useMemo, useState } from 'react';
@@ -10,8 +9,13 @@ import {
   DsDataTable,
   DsTableBodyRow,
   DsTableHeadRow,
-  TableCell as DsTableCell,
 } from '../../components/DsDataTable';
+import {
+  DsResizableBodyCell,
+  DsResizableColumnsProvider,
+  DsResizableHeaderCell,
+  type ResizableColumnDef,
+} from '../../components/DsResizableColumns';
 import { DsPageHeader } from '../../components/DsStatusChip';
 import { DsTabular } from '../../components/DsTabular';
 import { useScanStore } from '../../hooks/useScanStore';
@@ -22,6 +26,12 @@ import {
   type SortDirection,
 } from './file-types-utils';
 import { formatExtensionLabel } from './extension-label';
+
+const FILE_TYPES_COLUMNS: ResizableColumnDef[] = [
+  { id: 'extension', defaultWidth: 200, minWidth: 120 },
+  { id: 'sizeBytes', defaultWidth: 140, minWidth: 88 },
+  { id: 'fileCount', defaultWidth: 120, minWidth: 80 },
+];
 
 export function FileTypesView() {
   const { result, status } = useScanStore();
@@ -78,36 +88,48 @@ export function FileTypesView() {
       )}
 
       {sortedSummaries.length > 0 && (
-        <DsDataTable
-          aria-label="File types"
-          header={
-            <DsTableHeadRow>
-              <DsTableCell sortDirection={sortLabelProps('extension').direction}>
-                <TableSortLabel {...sortLabelProps('extension')}>Extension</TableSortLabel>
-              </DsTableCell>
-              <DsTableCell align="right" sortDirection={sortLabelProps('sizeBytes').direction}>
-                <TableSortLabel {...sortLabelProps('sizeBytes')}>Total size</TableSortLabel>
-              </DsTableCell>
-              <DsTableCell align="right" sortDirection={sortLabelProps('fileCount').direction}>
-                <TableSortLabel {...sortLabelProps('fileCount')}>File count</TableSortLabel>
-              </DsTableCell>
-            </DsTableHeadRow>
-          }
-        >
-          <TableBody>
-            {sortedSummaries.map((summary) => (
-              <DsTableBodyRow key={summary.extension ?? '__no_extension__'}>
-                <TableCell>{formatExtensionLabel(summary.extension)}</TableCell>
-                <TableCell align="right">
-                  <DsTabular sx={{ fontWeight: 600 }}>{formatBytes(summary.sizeBytes)}</DsTabular>
-                </TableCell>
-                <TableCell align="right">
-                  <DsTabular>{summary.fileCount.toLocaleString()}</DsTabular>
-                </TableCell>
-              </DsTableBodyRow>
-            ))}
-          </TableBody>
-        </DsDataTable>
+        <DsResizableColumnsProvider columns={FILE_TYPES_COLUMNS}>
+          <DsDataTable
+            aria-label="File types"
+            header={
+              <DsTableHeadRow>
+                <DsResizableHeaderCell columnId="extension" sortDirection={sortLabelProps('extension').direction}>
+                  <TableSortLabel {...sortLabelProps('extension')}>Extension</TableSortLabel>
+                </DsResizableHeaderCell>
+                <DsResizableHeaderCell
+                  columnId="sizeBytes"
+                  align="right"
+                  sortDirection={sortLabelProps('sizeBytes').direction}
+                >
+                  <TableSortLabel {...sortLabelProps('sizeBytes')}>Total size</TableSortLabel>
+                </DsResizableHeaderCell>
+                <DsResizableHeaderCell
+                  columnId="fileCount"
+                  align="right"
+                  sortDirection={sortLabelProps('fileCount').direction}
+                >
+                  <TableSortLabel {...sortLabelProps('fileCount')}>File count</TableSortLabel>
+                </DsResizableHeaderCell>
+              </DsTableHeadRow>
+            }
+          >
+            <TableBody>
+              {sortedSummaries.map((summary) => (
+                <DsTableBodyRow key={summary.extension ?? '__no_extension__'}>
+                  <DsResizableBodyCell columnId="extension">
+                    {formatExtensionLabel(summary.extension)}
+                  </DsResizableBodyCell>
+                  <DsResizableBodyCell columnId="sizeBytes" align="right">
+                    <DsTabular sx={{ fontWeight: 600 }}>{formatBytes(summary.sizeBytes)}</DsTabular>
+                  </DsResizableBodyCell>
+                  <DsResizableBodyCell columnId="fileCount" align="right">
+                    <DsTabular>{summary.fileCount.toLocaleString()}</DsTabular>
+                  </DsResizableBodyCell>
+                </DsTableBodyRow>
+              ))}
+            </TableBody>
+          </DsDataTable>
+        </DsResizableColumnsProvider>
       )}
     </Box>
   );

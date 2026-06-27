@@ -1,60 +1,64 @@
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
-import { useState } from 'react';
-import type { ExportFormat } from '../../../shared/types';
 import { formatBytes } from '../../../shared/format-bytes';
-import {
-  computeFilesPerSec,
-  computeScanDurationMs,
-  formatFilesPerSec,
-} from '../../../shared/scan-duration';
 import { DsCard } from '../../components/DsCard';
 import { DsPageHeader } from '../../components/DsStatusChip';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
+import { useShellContext } from '../../components/ShellContext';
 import { useScanStore } from '../../hooks/useScanStore';
-import { APP_ROUTES } from '../../routes';
-import { exportReportFromStore } from '../../stores/scan-store';
 import { radii } from '../../theme/tokens';
-import { formatElapsed } from '../scan-progress/format-elapsed';
 import { OverviewLandingView } from './OverviewLandingView';
-import { ScanSessionControls } from '../scan-progress/ScanSessionControls';
 
 type OverviewViewProps = {
   message?: string;
 };
 
+const NEXT_STEP_ROUTES = [
+  {
+    id: 'largest-folders' as const,
+    label: 'Browse largest folders',
+    icon: 'folder',
+    variant: 'contained' as const,
+  },
+  {
+    id: 'disk-map' as const,
+    label: 'Open disk map',
+    icon: 'grid_view',
+    variant: 'contained' as const,
+  },
+  {
+    id: 'largest-files' as const,
+    label: 'Browse largest files',
+    icon: 'description',
+    variant: 'contained' as const,
+  },
+  {
+    id: 'cleanup-candidates' as const,
+    label: 'View cleanup recommendations',
+    icon: 'cleaning_services',
+    variant: 'outlined' as const,
+  },
+];
+
 export function OverviewView(_props: OverviewViewProps = {}) {
   const { status, result } = useScanStore();
-  const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(null);
+  const { navigateTo } = useShellContext();
   const hasResult = result && (status === 'completed' || status === 'cancelled');
-
-  async function handleExport(format: ExportFormat): Promise<void> {
-    setExportingFormat(format);
-    try {
-      await exportReportFromStore(format);
-    } finally {
-      setExportingFormat(null);
-    }
-  }
 
   if (status === 'scanning' || !hasResult) {
     return <OverviewLandingView />;
   }
 
-  const navChips = APP_ROUTES.filter((route) =>
-    ['largest-folders', 'disk-map', 'largest-files', 'file-types', 'cleanup-candidates'].includes(
-      route.id,
-    ),
-  );
-  const durationMs = computeScanDurationMs(result);
-  const filesPerSec = computeFilesPerSec(result.fileCount, durationMs);
+  const cleanupCount = result.cleanupCandidates.length;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <DsPageHeader title="Overview" subtitle="Summary from your latest completed scan." />
+      <DsPageHeader
+        title="Scan complete"
+        subtitle="Explore what's using space or review recommended cleanup items."
+      />
 
       <DsCard
         sx={{
@@ -91,73 +95,54 @@ export function OverviewView(_props: OverviewViewProps = {}) {
               {result.directoryCount.toLocaleString()}
             </DsTabular>
           </Box>
-          <Box>
-            <Typography variant="overline" color="text.secondary">
-              Cleanup candidates
-            </Typography>
-            <DsTabular sx={{ display: 'block', fontSize: '22px', fontWeight: 600 }}>
-              {result.cleanupCandidates.length}
-            </DsTabular>
-          </Box>
-          <Box>
-            <Typography variant="overline" color="text.secondary">
-              Completed in
-            </Typography>
-            <DsTabular sx={{ display: 'block', fontSize: '22px', fontWeight: 600 }}>
-              {formatElapsed(durationMs)}
-            </DsTabular>
-          </Box>
-          <Box>
-            <Typography variant="overline" color="text.secondary">
-              Throughput
-            </Typography>
-            <DsTabular sx={{ display: 'block', fontSize: '22px', fontWeight: 600 }}>
-              {formatFilesPerSec(filesPerSec)}
-            </DsTabular>
-          </Box>
+          {cleanupCount > 0 ? (
+            <Box>
+              <Typography variant="overline" color="text.secondary">
+                Cleanup recommendations
+              </Typography>
+              <DsTabular sx={{ display: 'block', fontSize: '22px', fontWeight: 600 }}>
+                {cleanupCount.toLocaleString()}
+              </DsTabular>
+            </Box>
+          ) : null}
         </Box>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 3 }}>
-          {navChips.map((route) => (
-            <Chip
-              key={route.id}
-              icon={<MaterialIcon name={route.icon} style={{ fontSize: 18 }} aria-hidden={false} />}
-              label={route.label}
-              variant="outlined"
-              sx={{ borderRadius: `${radii.full}px` }}
-            />
-          ))}
-        </Box>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 2 }}>
-          <Button
-            variant="outlined"
-            size="small"
-            disabled={exportingFormat !== null}
-            onClick={() => void handleExport('json')}
-            startIcon={<MaterialIcon name="download" aria-hidden={false} />}
-            sx={{ borderRadius: `${radii.full}px`, textTransform: 'none', fontWeight: 600 }}
-          >
-            {exportingFormat === 'json' ? 'Exporting…' : 'Export JSON'}
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            disabled={exportingFormat !== null}
-            onClick={() => void handleExport('csv')}
-            startIcon={<MaterialIcon name="download" aria-hidden={false} />}
-            sx={{ borderRadius: `${radii.full}px`, textTransform: 'none', fontWeight: 600 }}
-          >
-            {exportingFormat === 'csv' ? 'Exporting…' : 'Export CSV'}
-          </Button>
-        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2, wordBreak: 'break-all' }}>
+          Scanned{' '}
+          <DsTabular component="span" sx={{ fontSize: 'inherit' }}>
+            {result.rootPath}
+          </DsTabular>
+        </Typography>
       </DsCard>
 
       <DsCard>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Scanned path
+        <Typography variant="h3" component="h2" sx={{ fontSize: '18px', fontWeight: 600, mb: 0.5 }}>
+          What&apos;s next?
         </Typography>
-        <DsTabular sx={{ wordBreak: 'break-all' }}>{result.rootPath}</DsTabular>
-        <Box sx={{ mt: 2 }}>
-          <ScanSessionControls />
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Drill into folders and files to find what you want to clean up.
+        </Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+          {NEXT_STEP_ROUTES.map((route) => (
+            <Button
+              key={route.id}
+              variant={route.variant}
+              color="primary"
+              size="large"
+              onClick={() => navigateTo(route.id)}
+              startIcon={<MaterialIcon name={route.icon} aria-hidden={false} />}
+              sx={{
+                borderRadius: `${radii.full}px`,
+                textTransform: 'none',
+                fontWeight: 600,
+                flex: { xs: '1 1 100%', sm: '1 1 auto' },
+              }}
+            >
+              {route.label}
+              {route.id === 'cleanup-candidates' && cleanupCount > 0
+                ? ` (${cleanupCount.toLocaleString()})`
+                : ''}
+            </Button>
+          ))}
         </Box>
       </DsCard>
     </Box>
