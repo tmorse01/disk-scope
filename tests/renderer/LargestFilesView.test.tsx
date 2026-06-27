@@ -91,12 +91,33 @@ describe('LargestFilesView', () => {
     expect(rows()[1]).toHaveTextContent('readme');
   });
 
-  it('renders delete actions for each file row', () => {
+  it('shows a toolbar with disabled actions until a row is selected', async () => {
     scanStore.result = buildResult();
     scanStore.status = 'completed';
 
+    const user = userEvent.setup();
     renderView();
 
-    expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(2);
+    const deleteButton = screen.getByRole('button', { name: 'Delete' });
+    expect(deleteButton).toBeDisabled();
+
+    await user.click(screen.getByRole('cell', { name: 'large.bin' }));
+
+    expect(deleteButton).toBeEnabled();
+    expect(screen.getByRole('toolbar')).toHaveTextContent('large.bin');
+  });
+
+  it('opens a context menu on right-click', async () => {
+    scanStore.result = buildResult();
+    scanStore.status = 'completed';
+
+    const user = userEvent.setup();
+    renderView();
+
+    await user.pointer({ keys: '[MouseRight>]', target: screen.getByRole('cell', { name: 'large.bin' }) });
+
+    expect(screen.getByRole('menuitem', { name: 'Reveal in Explorer' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Copy path' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
   });
 });

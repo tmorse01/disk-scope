@@ -1,7 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
   <rect width="1200" height="630" fill="#f8f9fa"/>
   <rect x="80" y="80" width="1040" height="470" rx="24" fill="#ffffff" stroke="#c1c6d6" stroke-width="2"/>
-  <rect x="120" y="120" width="48" height="48" rx="12" fill="#005bbf"/>
+  <svg x="120" y="120" width="48" height="48" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+    <rect width="32" height="32" rx="8" fill="#005bbf"/>
+    <g transform="translate(3, 5) scale(0.019)">
+      <g transform="translate(0, 960)">
+        <path fill="#ffffff" d="M140-260h680v-280H140v280Zm575.5-104.62q14.5-14.62 14.5-35.5 0-20.88-14.62-35.38-14.62-14.5-35.5-14.5-20.88 0-35.38 14.62-14.5 14.62-14.5 35.5 0 20.88 14.62 35.38 14.62 14.5 35.5 14.5 20.88 0 35.38-14.62ZM880-600h-85L695-700H265L165-600H80l142-142q8-8 19.28-13 11.28-5 23.72-5h430q12.44 0 23.72 5T738-742l142 142ZM140-200q-24.75 0-42.37-17.63Q80-235.25 80-260v-340h800v340q0 24.75-17.62 42.37Q844.75-200 820-200H140Z"/>
+      </g>
+    </g>
+    <g transform="translate(16.5, 16.5) scale(0.0135)">
+      <g transform="translate(0, 960)">
+        <path fill="#ffffff" d="M796-121 533-384q-30 26-70 40.5T378-329q-108 0-183-75t-75-181q0-106 75-181t182-75q106 0 180.5 75T632-585q0 43-14 83t-42 75l264 262-44 44ZM377-389q81 0 138-57.5T572-585q0-81-57-138.5T377-781q-82 0-139.5 57.5T180-585q0 81 57.5 138.5T377-389Z"/>
+      </g>
+    </g>
+  </svg>
   <text x="184" y="152" font-family="system-ui, sans-serif" font-size="36" font-weight="600" fill="#191c1d">DiskScope</text>
   <text x="120" y="240" font-family="system-ui, sans-serif" font-size="52" font-weight="600" fill="#191c1d">Free disk usage analyzer</text>
   <text x="120" y="300" font-family="system-ui, sans-serif" font-size="28" fill="#414754">Find large folders and safe cleanup targets on Windows</text>

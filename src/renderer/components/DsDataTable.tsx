@@ -3,7 +3,7 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { DsCard } from './DsCard';
 
 type DsDataTableProps = {
@@ -64,11 +64,13 @@ export function DsTableBodyRow({
   selected,
   onClick,
   onDoubleClick,
+  onContextMenu,
 }: {
   children: ReactNode;
   selected?: boolean;
   onClick?: () => void;
   onDoubleClick?: () => void;
+  onContextMenu?: (event: MouseEvent<HTMLTableRowElement>) => void;
 }) {
   return (
     <TableRow
@@ -76,8 +78,9 @@ export function DsTableBodyRow({
       selected={selected}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
+      onContextMenu={onContextMenu}
       sx={{
-        cursor: onClick || onDoubleClick ? 'pointer' : 'default',
+        cursor: onClick || onDoubleClick || onContextMenu ? 'pointer' : 'default',
         '&:hover': { bgcolor: 'surfaceContainerHigh.main' },
         '&.Mui-selected': { bgcolor: 'secondary.light' },
         '& .MuiTableCell-root': {

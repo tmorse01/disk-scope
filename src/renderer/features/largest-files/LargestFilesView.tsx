@@ -7,6 +7,7 @@ import Typography from '@mui/material/Typography';
 import { useMemo, useState } from 'react';
 import type { LargestFileEntry } from '../../../shared/types';
 import { formatBytes } from '../../../shared/format-bytes';
+import { DsCard } from '../../components/DsCard';
 import {
   DsDataTable,
   DsTableBodyRow,
@@ -17,8 +18,8 @@ import { DsPageHeader } from '../../components/DsStatusChip';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { useScanStore } from '../../hooks/useScanStore';
-import { FileRowActions } from '../file-actions/FileRowActions';
 import type { DeleteTarget } from '../file-actions/delete-target';
+import { useSelectableFileActions } from '../file-actions/useSelectableFileActions';
 import { formatExtensionLabel } from '../file-types/extension-label';
 import { fileIconForExtension } from './file-icon-utils';
 import {
@@ -42,6 +43,7 @@ export function LargestFilesView() {
   const { result, status } = useScanStore();
   const [sortKey, setSortKey] = useState<LargestFileSortKey>('sizeBytes');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const { getRowProps, toolbar, contextMenu, deleteConfirmationUi } = useSelectableFileActions();
 
   const sortedFiles = useMemo(() => {
     if (!result?.largestFiles.length) {
@@ -93,63 +95,69 @@ export function LargestFilesView() {
       )}
 
       {sortedFiles.length > 0 && (
-        <DsDataTable
-          aria-label="Largest files"
-          header={
-            <DsTableHeadRow>
-              <DsTableCell sortDirection={sortLabelProps('name').direction}>
-                <TableSortLabel {...sortLabelProps('name')}>Name</TableSortLabel>
-              </DsTableCell>
-              <DsTableCell sortDirection={sortLabelProps('path').direction}>
-                <TableSortLabel {...sortLabelProps('path')}>Path</TableSortLabel>
-              </DsTableCell>
-              <DsTableCell align="right" sortDirection={sortLabelProps('sizeBytes').direction}>
-                <TableSortLabel {...sortLabelProps('sizeBytes')}>Size</TableSortLabel>
-              </DsTableCell>
-              <DsTableCell sortDirection={sortLabelProps('extension').direction}>
-                <TableSortLabel {...sortLabelProps('extension')}>Extension</TableSortLabel>
-              </DsTableCell>
-              <DsTableCell sortDirection={sortLabelProps('modifiedAt').direction}>
-                <TableSortLabel {...sortLabelProps('modifiedAt')}>Modified</TableSortLabel>
-              </DsTableCell>
-              <DsTableCell align="right">Actions</DsTableCell>
-            </DsTableHeadRow>
-          }
-        >
-          <TableBody>
-            {sortedFiles.map((file) => (
-              <DsTableBodyRow key={file.path}>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <MaterialIcon
-                      name={fileIconForExtension(file.extension)}
-                      style={{ fontSize: 20, color: 'var(--mui-palette-text-secondary)' }}
-                    />
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {file.name}
-                    </Typography>
-                  </Box>
-                </TableCell>
-                <TableCell
-                  sx={{ maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                  title={file.path}
-                >
-                  <DsTabular>{file.path}</DsTabular>
-                </TableCell>
-                <TableCell align="right">
-                  <DsTabular sx={{ fontWeight: 600 }}>{formatBytes(file.sizeBytes)}</DsTabular>
-                </TableCell>
-                <TableCell>{formatExtensionLabel(file.extension)}</TableCell>
-                <TableCell>
-                  <DsTabular>{formatModifiedAt(file.modifiedAt)}</DsTabular>
-                </TableCell>
-                <TableCell align="right">
-                  <FileRowActions target={largestFileToDeleteTarget(file)} />
-                </TableCell>
-              </DsTableBodyRow>
-            ))}
-          </TableBody>
-        </DsDataTable>
+        <DsCard noPadding sx={{ overflow: 'hidden' }}>
+          {toolbar}
+          <DsDataTable
+            noOuterCard
+            aria-label="Largest files"
+            header={
+              <DsTableHeadRow>
+                <DsTableCell sortDirection={sortLabelProps('name').direction}>
+                  <TableSortLabel {...sortLabelProps('name')}>Name</TableSortLabel>
+                </DsTableCell>
+                <DsTableCell sortDirection={sortLabelProps('path').direction}>
+                  <TableSortLabel {...sortLabelProps('path')}>Path</TableSortLabel>
+                </DsTableCell>
+                <DsTableCell align="right" sortDirection={sortLabelProps('sizeBytes').direction}>
+                  <TableSortLabel {...sortLabelProps('sizeBytes')}>Size</TableSortLabel>
+                </DsTableCell>
+                <DsTableCell sortDirection={sortLabelProps('extension').direction}>
+                  <TableSortLabel {...sortLabelProps('extension')}>Extension</TableSortLabel>
+                </DsTableCell>
+                <DsTableCell sortDirection={sortLabelProps('modifiedAt').direction}>
+                  <TableSortLabel {...sortLabelProps('modifiedAt')}>Modified</TableSortLabel>
+                </DsTableCell>
+              </DsTableHeadRow>
+            }
+          >
+            <TableBody>
+              {sortedFiles.map((file) => {
+                const rowProps = getRowProps(largestFileToDeleteTarget(file));
+
+                return (
+                  <DsTableBodyRow key={file.path} {...rowProps}>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <MaterialIcon
+                          name={fileIconForExtension(file.extension)}
+                          style={{ fontSize: 20, color: 'var(--mui-palette-text-secondary)' }}
+                        />
+                        <Typography variant="body2" sx={{ fontWeight: rowProps.selected ? 600 : 400 }}>
+                          {file.name}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell
+                      sx={{ maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      title={file.path}
+                    >
+                      <DsTabular>{file.path}</DsTabular>
+                    </TableCell>
+                    <TableCell align="right">
+                      <DsTabular sx={{ fontWeight: 600 }}>{formatBytes(file.sizeBytes)}</DsTabular>
+                    </TableCell>
+                    <TableCell>{formatExtensionLabel(file.extension)}</TableCell>
+                    <TableCell>
+                      <DsTabular>{formatModifiedAt(file.modifiedAt)}</DsTabular>
+                    </TableCell>
+                  </DsTableBodyRow>
+                );
+              })}
+            </TableBody>
+          </DsDataTable>
+          {contextMenu}
+          {deleteConfirmationUi}
+        </DsCard>
       )}
     </Box>
   );

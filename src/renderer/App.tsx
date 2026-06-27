@@ -4,6 +4,7 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { useMemo, useState } from 'react';
+import { BrandMark } from './components/BrandMark';
 import { DsContextBar } from './components/DsContextBar';
 import { DsErrorBoundary } from './components/DsErrorBoundary';
 import { DsNavItem } from './components/DsNavItem';
@@ -103,21 +104,7 @@ function AppLayout() {
         }}
       >
         <Box sx={{ p: expanded ? 3 : 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: `${radii.lg}px`,
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <MaterialIcon name="hard_drive" filled style={{ fontSize: 22 }} />
-          </Box>
+          <BrandMark size={40} />
           <Box
             sx={{
               overflow: 'hidden',

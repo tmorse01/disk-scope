@@ -17,7 +17,8 @@ import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { useScanStore } from '../../hooks/useScanStore';
 import { radii } from '../../theme/tokens';
-import { FileRowActions } from '../file-actions/FileRowActions';
+import type { DeleteTarget } from '../file-actions/delete-target';
+import { useSelectableFileActions } from '../file-actions/useSelectableFileActions';
 
 const RISK_LABELS: Record<RiskLevel, string> = {
   low: 'Minimal',
@@ -33,19 +34,15 @@ const RISK_VARIANTS: Record<RiskLevel, 'success' | 'warning' | 'error' | 'neutra
   'do-not-touch': 'neutral',
 };
 
-function candidateToDeleteTarget(candidate: CleanupCandidate) {
+function candidateToDeleteTarget(candidate: CleanupCandidate): DeleteTarget {
   return {
     path: candidate.path,
     name: candidate.name,
-    kind: 'directory' as const,
+    kind: 'directory',
     sizeBytes: candidate.sizeBytes,
     childFileCount: candidate.fileCount,
     risk: candidate.risk,
   };
-}
-
-function CandidateActions({ candidate }: { candidate: CleanupCandidate }) {
-  return <FileRowActions target={candidateToDeleteTarget(candidate)} />;
 }
 
 export function CleanupCandidatesView() {
@@ -53,6 +50,7 @@ export function CleanupCandidatesView() {
   const candidates = result?.cleanupCandidates ?? [];
   const hasScanResult = status === 'completed' || status === 'cancelled';
   const totalReclaimable = candidates.reduce((sum, candidate) => sum + candidate.sizeBytes, 0);
+  const { getRowProps, toolbar, contextMenu, deleteConfirmationUi } = useSelectableFileActions();
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -105,71 +103,77 @@ export function CleanupCandidatesView() {
             </Typography>
           </DsCard>
 
-          <DsDataTable
-            aria-label="Cleanup candidates"
-            header={
-              <DsTableHeadRow>
-                <DsTableCell>Folder</DsTableCell>
-                <DsTableCell>Category</DsTableCell>
-                <DsTableCell>Risk</DsTableCell>
-                <DsTableCell align="right">Size</DsTableCell>
-                <DsTableCell>Why flagged</DsTableCell>
-                <DsTableCell align="right">Actions</DsTableCell>
-              </DsTableHeadRow>
-            }
-          >
-            <TableBody>
-              {candidates.map((candidate) => (
-                <DsTableBodyRow key={candidate.path}>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Box
-                        sx={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: `${radii.lg}px`,
-                          bgcolor: 'surfaceContainerHighest.main',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <MaterialIcon name="folder_zip" style={{ color: 'var(--mui-palette-primary-main)' }} />
-                      </Box>
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                          {candidate.name}
+          <DsCard noPadding sx={{ overflow: 'hidden' }}>
+            {toolbar}
+            <DsDataTable
+              noOuterCard
+              aria-label="Cleanup candidates"
+              header={
+                <DsTableHeadRow>
+                  <DsTableCell>Folder</DsTableCell>
+                  <DsTableCell>Category</DsTableCell>
+                  <DsTableCell>Risk</DsTableCell>
+                  <DsTableCell align="right">Size</DsTableCell>
+                  <DsTableCell>Why flagged</DsTableCell>
+                </DsTableHeadRow>
+              }
+            >
+              <TableBody>
+                {candidates.map((candidate) => {
+                  const rowProps = getRowProps(candidateToDeleteTarget(candidate));
+
+                  return (
+                    <DsTableBodyRow key={candidate.path} {...rowProps}>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Box
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: `${radii.lg}px`,
+                              bgcolor: 'surfaceContainerHighest.main',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <MaterialIcon name="folder_zip" style={{ color: 'var(--mui-palette-primary-main)' }} />
+                          </Box>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: rowProps.selected ? 700 : 400 }}>
+                              {candidate.name}
+                            </Typography>
+                            <DsTabular sx={{ color: 'text.secondary', fontSize: '11px', wordBreak: 'break-all' }}>
+                              {candidate.path}
+                            </DsTabular>
+                          </Box>
+                        </Box>
+                      </TableCell>
+                      <TableCell>{candidate.label}</TableCell>
+                      <TableCell>
+                        <DsStatusChip label={RISK_LABELS[candidate.risk]} variant={RISK_VARIANTS[candidate.risk]} />
+                      </TableCell>
+                      <TableCell align="right">
+                        <DsTabular sx={{ fontWeight: 700 }}>{formatBytes(candidate.sizeBytes)}</DsTabular>
+                      </TableCell>
+                      <TableCell sx={{ maxWidth: 280 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          {candidate.recommendation}
                         </Typography>
-                        <DsTabular sx={{ color: 'text.secondary', fontSize: '11px', wordBreak: 'break-all' }}>
-                          {candidate.path}
-                        </DsTabular>
-                      </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell>{candidate.label}</TableCell>
-                  <TableCell>
-                    <DsStatusChip label={RISK_LABELS[candidate.risk]} variant={RISK_VARIANTS[candidate.risk]} />
-                  </TableCell>
-                  <TableCell align="right">
-                    <DsTabular sx={{ fontWeight: 700 }}>{formatBytes(candidate.sizeBytes)}</DsTabular>
-                  </TableCell>
-                  <TableCell sx={{ maxWidth: 280 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {candidate.recommendation}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <CandidateActions candidate={candidate} />
-                  </TableCell>
-                </DsTableBodyRow>
-              ))}
-            </TableBody>
-          </DsDataTable>
+                      </TableCell>
+                    </DsTableBodyRow>
+                  );
+                })}
+              </TableBody>
+            </DsDataTable>
+            {contextMenu}
+            {deleteConfirmationUi}
+          </DsCard>
 
           <Alert severity="info" variant="outlined" icon={<MaterialIcon name="info" filled aria-hidden={false} />}>
-            Safe-first approach: DiskScope recommends targets only. Use Reveal in Explorer to verify folders before
-            deleting outside the app.
+            Safe-first approach: DiskScope recommends targets only. Select a row and use the toolbar, or right-click
+            for the same actions.
           </Alert>
         </>
       )}
