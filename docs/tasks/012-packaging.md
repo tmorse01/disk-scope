@@ -40,3 +40,4 @@ Build installable artifacts for local testing on Windows.
 
 - Code signing not in MVP scope
 - CI packaging optional per foundation plan
+- GitHub Releases publish user-facing artifacts from `out/` via [`scripts/stage-release-assets.ps1`](../../scripts/stage-release-assets.ps1) — see README Releasing section

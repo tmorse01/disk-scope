@@ -113,47 +113,21 @@ function New-ReleaseAssets {
         [string]$Version
     )
 
-    $distDir = Join-Path $RepoRoot "dist/release"
-    if (Test-Path $distDir) {
-        Remove-Item $distDir -Recurse -Force
-    }
-    New-Item -ItemType Directory -Path $distDir -Force | Out-Null
-
-    $setupSource = Get-ChildItem -Path (Join-Path $RepoRoot "out/make/squirrel.windows/x64") -Filter "*Setup.exe" -ErrorAction SilentlyContinue |
-        Sort-Object LastWriteTime -Descending |
-        Select-Object -First 1
-
-    if (-not $setupSource) {
-        throw "Squirrel installer not found. Run 'pnpm make' first or omit -SkipBuild."
+    $stageScript = Join-Path $RepoRoot "scripts/stage-release-assets.ps1"
+    & $stageScript -Version $Version -RepoRoot $RepoRoot
+    if ($LASTEXITCODE -ne 0) {
+        throw "stage-release-assets.ps1 failed."
     }
 
-    $setupName = "DiskScope-$Version-Setup.exe"
-    $setupTarget = Join-Path $distDir $setupName
-    Copy-Item $setupSource.FullName $setupTarget
-
-    $portableSource = Join-Path $RepoRoot "out/DiskScope-win32-x64"
-    if (-not (Test-Path $portableSource)) {
-        throw "Unpacked app folder not found at out/DiskScope-win32-x64. Run 'pnpm make' or 'pnpm package'."
+    $manifestPath = Join-Path $RepoRoot "dist/release/upload-manifest.json"
+    if (-not (Test-Path $manifestPath)) {
+        throw "Upload manifest not found: $manifestPath"
     }
 
-    $portableName = "DiskScope-$Version-win32-x64-portable.zip"
-    $portableTarget = Join-Path $distDir $portableName
-    if (Test-Path $portableTarget) {
-        Remove-Item $portableTarget -Force
-    }
-    Compress-Archive -Path (Join-Path $portableSource "*") -DestinationPath $portableTarget -CompressionLevel Optimal
-
-    $checksumLines = @()
-    foreach ($asset in Get-ChildItem $distDir -File) {
-        $hash = (Get-FileHash -Algorithm SHA256 $asset.FullName).Hash.ToLowerInvariant()
-        $checksumLines += "$hash  $($asset.Name)"
-    }
-    $checksumPath = Join-Path $distDir "SHA256SUMS.txt"
-    Set-Content -Path $checksumPath -Value ($checksumLines -join "`n") -NoNewline
-
+    $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
     return @{
-        Directory = $distDir
-        Files     = Get-ChildItem $distDir -File | ForEach-Object { $_.FullName }
+        Directory = [string]$manifest.directory
+        Files     = @($manifest.upload)
     }
 }
 
@@ -272,7 +246,14 @@ if (-not $SkipBuild) {
 }
 
 $assets = New-ReleaseAssets -RepoRoot $repoRoot -Version $Version
-Publish-LocalRelease -RepoRoot $repoRoot -Tag $tag -Version $Version -AssetPaths $assets.Files -ReleaseNotes $releaseNotes -IsDraft:$Draft.IsPresent
+
+$buildBodyScript = Join-Path $repoRoot "scripts/build-release-body.ps1"
+& $buildBodyScript -Version $Version -OutputPath (Join-Path $repoRoot "dist/release-body.md")
+
+$downloadGuide = Get-Content (Join-Path $repoRoot "dist/release-body.md") -Raw
+$combinedNotes = if ($releaseNotes) { "$downloadGuide`n`n$releaseNotes" } else { $downloadGuide }
+
+Publish-LocalRelease -RepoRoot $repoRoot -Tag $tag -Version $Version -AssetPaths $assets.Files -ReleaseNotes $combinedNotes -IsDraft:$Draft.IsPresent
 
 Write-Host ""
 Write-Host "Uploaded assets:"

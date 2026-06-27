@@ -68,38 +68,36 @@ jobs:
       - name: Build Windows installers
         run: pnpm make
 
-      - name: Stage release assets
+      - name: Verify out/ build outputs
         shell: pwsh
         run: |
-          $version = "${{ steps.version.outputs.version }}"
-          $dist = "dist/release"
-          New-Item -ItemType Directory -Path $dist -Force | Out-Null
-
-          $setup = Get-ChildItem "out/make/squirrel.windows/x64/*Setup.exe" | Select-Object -First 1
-          if (-not $setup) { throw "Squirrel Setup.exe not found after pnpm make." }
-
-          $setupName = "DiskScope-$version-Setup.exe"
-          Copy-Item $setup.FullName (Join-Path $dist $setupName)
-
-          $portableName = "DiskScope-$version-win32-x64-portable.zip"
-          Compress-Archive -Path "out/DiskScope-win32-x64/*" -DestinationPath (Join-Path $dist $portableName) -CompressionLevel Optimal
-
-          $checksumLines = @()
-          Get-ChildItem $dist -File | ForEach-Object {
-            $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant()
-            $checksumLines += "$hash  $($_.Name)"
+          if (-not (Test-Path "out/DiskScope-win32-x64/DiskScope.exe")) {
+            throw "Missing out/DiskScope-win32-x64/DiskScope.exe after pnpm make."
           }
-          Set-Content -Path (Join-Path $dist "SHA256SUMS.txt") -Value ($checksumLines -join "`n") -NoNewline
+          $setup = Get-ChildItem "out/make/squirrel.windows/x64/*Setup.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $setup) {
+            throw "Missing Squirrel Setup.exe in out/make/squirrel.windows/x64/."
+          }
+          Write-Host "Squirrel installer: $($setup.Name) ($($setup.Length) bytes)"
+          Write-Host "Unpacked app: out/DiskScope-win32-x64/DiskScope.exe"
 
-          Write-Host "Release assets:"
-          Get-ChildItem $dist | Format-Table Name, Length
+      - name: Stage release assets
+        shell: pwsh
+        run: ./scripts/stage-release-assets.ps1 -Version "${{ steps.version.outputs.version }}"
+
+      - name: Prepare release notes
+        shell: pwsh
+        run: ./scripts/build-release-body.ps1 -Version "${{ steps.version.outputs.version }}"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: DiskScope ${{ steps.version.outputs.version }}
+          body_path: dist/release-body.md
           generate_release_notes: true
           files: |
-            dist/release/*
+            dist/release/DiskScope-*-Setup.exe
+            dist/release/DiskScope-*-win32-x64-portable.zip
+            dist/release/SHA256SUMS.txt
           fail_on_unmatched_files: true

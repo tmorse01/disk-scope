@@ -1,7 +1,7 @@
 {
   "name": "diskscope",
   "productName": "DiskScope",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Cleanup-focused disk usage analyzer for developers and power users",
   "main": ".vite/build/main.js",
   "private": true,
@@ -11,6 +11,7 @@
     "make": "electron-forge make",
     "release": "powershell -ExecutionPolicy Bypass -File scripts/release-github.ps1",
     "release:ci": "powershell -ExecutionPolicy Bypass -File scripts/release-github.ps1 -CiOnly",
+    "stage:release": "powershell -ExecutionPolicy Bypass -File scripts/stage-release-assets.ps1",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

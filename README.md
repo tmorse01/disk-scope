@@ -55,11 +55,37 @@ After `pnpm make`, install from the Squirrel Setup exe (or run the unpacked exe)
 
 ## Releasing (GitHub)
 
-Published builds appear on the repo **Releases** page with:
+GitHub automatically attaches **Source code (zip)** and **Source code (tar.gz)** to every release. Those are repository source archives, **not the installable app**. Users must download the staged binaries below.
 
-- `DiskScope-<version>-Setup.exe` — Squirrel Windows installer
-- `DiskScope-<version>-win32-x64-portable.zip` — portable build (no installer)
-- `SHA256SUMS.txt` — checksums for verification
+### `out/` to GitHub Release mapping
+
+After `pnpm make`, Electron Forge writes build outputs under `out/`. The release pipeline stages these into upload-ready assets:
+
+| `out/` source | Published asset | Purpose |
+| --- | --- | --- |
+| `out/make/squirrel.windows/x64/*Setup.exe` | `DiskScope-<version>-Setup.exe` | Windows installer (recommended) |
+| `out/DiskScope-win32-x64/` (folder) | `DiskScope-<version>-win32-x64-portable.zip` | Portable app — unzip and run `DiskScope.exe` |
+| (generated) | `SHA256SUMS.txt` | SHA256 checksums for the two files above |
+
+Squirrel internals (`*.nupkg`, `RELEASES`) stay in `out/` only and are not published.
+
+Preview staging locally without publishing:
+
+```powershell
+pnpm make
+pnpm stage:release
+# inspect dist/release/
+```
+
+### Verify a release succeeded
+
+On the GitHub **Releases** page for a tag, confirm these **3 app assets** are present (plus GitHub's 2 source archives):
+
+- `DiskScope-<version>-Setup.exe`
+- `DiskScope-<version>-win32-x64-portable.zip`
+- `SHA256SUMS.txt`
+
+Release notes include a download guide that warns users not to use the source code links.
 
 ### Recommended: CI release (no local upload)
 
@@ -71,7 +97,7 @@ Published builds appear on the repo **Releases** page with:
 pnpm release:ci
 ```
 
-This pushes `v<version>` and triggers [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds on `windows-latest` and uploads assets.
+This pushes `v<version>` and triggers [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds on `windows-latest`, runs [`scripts/stage-release-assets.ps1`](scripts/stage-release-assets.ps1), and uploads assets.
 
 You can also run the workflow manually from **Actions → Release → Run workflow** (enter the semver that matches `package.json`).
 
@@ -87,7 +113,9 @@ pnpm release -- -SkipTests   # faster iteration
 
 ### User download
 
-After a release completes, users install from the GitHub Release asset **DiskScope-*-Setup.exe**.
+After a release completes, users install from **DiskScope-*-Setup.exe** on the Releases page — not from "Source code (zip)".
+
+Windows SmartScreen may warn because builds are not code-signed yet.
 
 ## Project layout
 
