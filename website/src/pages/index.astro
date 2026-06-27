@@ -1,0 +1,252 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import DownloadButton from '../components/react/DownloadButton';
+import { FAQ, FEATURES, GITHUB, SEO, SITE } from '../lib/site';
+import appPackage from '../../../package.json';
+
+const appVersion = appPackage.version;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: SITE.name,
+  applicationCategory: 'UtilitiesApplication',
+  operatingSystem: 'Windows 10, Windows 11',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+  description: SEO.description,
+  downloadUrl: GITHUB.releasesUrl,
+  softwareVersion: appVersion,
+  license: 'https://opensource.org/licenses/MIT',
+  url: Astro.site?.href,
+  author: {
+    '@type': 'Organization',
+    name: SITE.name,
+    url: GITHUB.repoUrl,
+  },
+};
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <header
+    style="position: sticky; top: 0; z-index: 100; backdrop-filter: blur(8px); background: color-mix(in srgb, var(--ds-surface-container-lowest) 85%, transparent); border-bottom: 1px solid var(--ds-outline-variant);"
+  >
+    <div
+      class="container"
+      style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1rem;"
+    >
+      <a href="/" style="display: flex; align-items: center; gap: 0.75rem; text-decoration: none; color: inherit;">
+        <span
+          style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--ds-radius-md); background: var(--ds-primary); color: var(--ds-on-primary);"
+          aria-hidden="true"
+        >
+          <span class="material-symbols-outlined" style="font-size: 20px;">storage</span>
+        </span>
+        <span style="font-size: 1.125rem; font-weight: 600;">{SITE.name}</span>
+      </a>
+      <nav style="display: flex; align-items: center; gap: 1rem;">
+        <span class="badge">
+          <span class="material-symbols-outlined" style="font-size: 16px;">desktop_windows</span>
+          Free for Windows
+        </span>
+        <a class="btn-primary" href="#download">Download</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero-gradient section" aria-labelledby="hero-heading">
+      <div class="container" style="display: grid; gap: 3rem; align-items: center;">
+        <div style="display: grid; gap: 1.5rem; max-width: 40rem;">
+          <p class="overline">Free disk usage analyzer</p>
+          <h1 id="hero-heading" style="margin: 0; font-size: clamp(2rem, 5vw, 3.25rem); font-weight: 600; line-height: 1.1; letter-spacing: -0.02em;">
+            Find what is eating your disk space — and what you can safely clean up
+          </h1>
+          <p style="margin: 0; font-size: 1.125rem; line-height: 1.55; color: var(--ds-on-surface-variant);">
+            {SITE.tagline}. Scan drives or folders, drill into the largest directories first, and get
+            developer-aware cleanup hints for caches like <code class="mono">node_modules</code> and build outputs.
+          </p>
+          <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
+            <DownloadButton client:load fallbackVersion={appVersion} variant="hero" />
+          </div>
+        </div>
+
+        <div class="product-frame" aria-hidden="true">
+          <div class="product-frame-bar">
+            <span class="product-frame-dot"></span>
+            <span class="product-frame-dot"></span>
+            <span class="product-frame-dot"></span>
+            <span class="mono" style="margin-left: auto; font-size: 11px; color: var(--ds-on-surface-variant);">
+              DiskScope — Largest folders
+            </span>
+          </div>
+          <div class="product-frame-body">
+            <div class="mock-row">
+              <span class="material-symbols-outlined" style="color: var(--ds-primary);">folder</span>
+              <span>Projects</span>
+              <span class="mock-size">842.3 GB</span>
+            </div>
+            <div class="mock-row">
+              <span class="material-symbols-outlined" style="color: var(--ds-primary);">folder</span>
+              <span>node_modules</span>
+              <span class="mock-size">128.7 GB</span>
+            </div>
+            <div class="mock-row">
+              <span class="material-symbols-outlined" style="color: var(--ds-primary);">folder</span>
+              <span>.next</span>
+              <span class="mock-size">24.1 GB</span>
+            </div>
+            <div class="mock-row">
+              <span class="material-symbols-outlined" style="color: var(--ds-tertiary);">shield</span>
+              <span>Cleanup candidates</span>
+              <span class="mock-size">Low risk</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="section" aria-labelledby="features-heading">
+      <div class="container">
+        <div class="section-header">
+          <h2 id="features-heading">Built for developers and power users</h2>
+          <p>
+            A modern alternative to WinDirStat and WizTree — focused on cleanup intelligence, not just pretty charts.
+          </p>
+        </div>
+        <div
+          style="display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));"
+        >
+          {
+            FEATURES.map((feature) => (
+              <article class="card">
+                <div class="icon-tile">
+                  <span class="material-symbols-outlined">{feature.icon}</span>
+                </div>
+                <h3 style="margin: 0 0 0.5rem; font-size: 1.125rem; font-weight: 600;">{feature.title}</h3>
+                <p style="margin: 0; color: var(--ds-on-surface-variant); line-height: 1.5;">{feature.description}</p>
+              </article>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="background: var(--ds-surface-container-low);" aria-labelledby="compare-heading">
+      <div class="container" style="display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items: center;">
+        <div>
+          <h2 id="compare-heading" style="margin: 0 0 1rem; font-size: 1.75rem; font-weight: 600;">
+            Where is my disk space going?
+          </h2>
+          <p style="margin: 0 0 1rem; color: var(--ds-on-surface-variant); line-height: 1.55;">
+            DiskScope answers the question quickly: pick a drive or folder, scan, and jump straight to the largest
+            folders and files. Risk labels help you target safe cleanup wins without guessing.
+          </p>
+          <ul style="margin: 0; padding-left: 1.25rem; color: var(--ds-on-surface-variant); line-height: 1.7;">
+            <li>Largest folders tree with sort and drilldown</li>
+            <li>Largest files and file-type breakdown</li>
+            <li>Cleanup candidates for dev caches and build artifacts</li>
+            <li>Exclusions, export reports, reveal in Explorer</li>
+          </ul>
+        </div>
+        <div class="card" style="padding: 2rem;">
+          <p class="overline" style="margin-bottom: 0.75rem;">Typical wins</p>
+          <div style="display: grid; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; gap: 1rem;">
+              <span>node_modules</span>
+              <span class="mono" style="color: var(--ds-on-surface-variant);">Low risk</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 1rem;">
+              <span>.next / dist / build</span>
+              <span class="mono" style="color: var(--ds-on-surface-variant);">Low risk</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 1rem;">
+              <span>.pnpm-store / .turbo</span>
+              <span class="mono" style="color: var(--ds-on-surface-variant);">Low risk</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; gap: 1rem;">
+              <span>System folders</span>
+              <span class="mono" style="color: var(--ds-on-surface-variant);">High risk</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" class="section" aria-labelledby="faq-heading">
+      <div class="container" style="max-width: 48rem;">
+        <div class="section-header">
+          <h2 id="faq-heading">Frequently asked questions</h2>
+          <p>Common questions about DiskScope, downloads, and safety.</p>
+        </div>
+        {
+          FAQ.map((item) => (
+            <details class="faq-item">
+              <summary>{item.question}</summary>
+              <p>{item.answer}</p>
+            </details>
+          ))
+        }
+      </div>
+    </section>
+
+    <section
+      id="download"
+      class="section"
+      style="background: linear-gradient(180deg, var(--ds-surface-container-low) 0%, var(--ds-background) 100%);"
+      aria-labelledby="download-heading"
+    >
+      <div class="container" style="text-align: center; display: grid; gap: 1.5rem; justify-items: center;">
+        <h2 id="download-heading" style="margin: 0; font-size: clamp(1.75rem, 4vw, 2.25rem); font-weight: 600;">
+          Download DiskScope for Windows
+        </h2>
+        <p style="margin: 0; max-width: 36rem; color: var(--ds-on-surface-variant); line-height: 1.55;">
+          Free, local, and open source. Install the recommended Setup.exe from GitHub Releases — not the source code
+          archive.
+        </p>
+        <DownloadButton client:load fallbackVersion={appVersion} variant="footer" />
+        <a class="btn-outlined" href={GITHUB.repoUrl}>
+          <span class="material-symbols-outlined" style="font-size: 20px;">code</span>
+          View source on GitHub
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer
+    style="margin-top: auto; border-top: 1px solid var(--ds-outline-variant); background: var(--ds-surface-container-lowest);"
+  >
+    <div
+      class="container"
+      style="padding-block: 2rem; display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: center; color: var(--ds-on-surface-variant); font-size: 13px;"
+    >
+      <p style="margin: 0;">
+        © {new Date().getFullYear()} {SITE.name}. MIT License. Scans run locally — no cloud upload.
+      </p>
+      <nav style="display: flex; gap: 1.25rem;">
+        <a href={GITHUB.repoUrl}>GitHub</a>
+        <a href={GITHUB.releasesUrl}>Releases</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+    </div>
+  </footer>
+</BaseLayout>
+
+<style>
+  @media (min-width: 960px) {
+    .hero-gradient .container {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  code.mono {
+    font-family: var(--ds-font-mono);
+    font-size: 0.9em;
+    padding: 0.1em 0.35em;
+    border-radius: var(--ds-radius-sm);
+    background: var(--ds-surface-container);
+  }
+</style>

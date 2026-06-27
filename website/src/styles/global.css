@@ -1,0 +1,317 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--ds-font-ui);
+  font-size: 14px;
+  line-height: 1.43;
+  color: var(--ds-on-surface);
+  background: var(--ds-background);
+  -webkit-font-smoothing: antialiased;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  color: var(--ds-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+
+.material-symbols-outlined.filled {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.mono {
+  font-family: var(--ds-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.overline {
+  font-family: var(--ds-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--ds-primary);
+}
+
+.container {
+  width: min(100% - 2 * var(--ds-margin-mobile), var(--ds-content-max));
+  margin-inline: auto;
+}
+
+@media (min-width: 960px) {
+  .container {
+    width: min(100% - 2 * var(--ds-margin-desktop), var(--ds-content-max));
+  }
+}
+
+.section {
+  padding-block: 4rem;
+}
+
+.section-header {
+  margin-bottom: 2.5rem;
+  max-width: 42rem;
+}
+
+.section-header h2 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.5rem, 2.5vw, 1.75rem);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ds-on-surface);
+}
+
+.section-header p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--ds-on-surface-variant);
+}
+
+.card {
+  background: var(--ds-surface-container-lowest);
+  border: 1px solid var(--ds-outline-variant);
+  border-radius: var(--ds-radius-xl);
+  padding: 1.5rem;
+}
+
+.card:hover {
+  background: var(--ds-surface-container-low);
+}
+
+.icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface-container);
+  color: var(--ds-primary);
+  margin-bottom: 1rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-surface-container);
+  border: 1px solid var(--ds-outline-variant);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ds-on-surface-variant);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  border: none;
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-primary);
+  color: var(--ds-on-primary);
+  font-family: var(--ds-font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  background: var(--ds-primary-container);
+  text-decoration: none;
+}
+
+.btn-outlined {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  border: 1px solid var(--ds-outline-variant);
+  border-radius: var(--ds-radius-full);
+  background: transparent;
+  color: var(--ds-primary);
+  font-family: var(--ds-font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-outlined:hover {
+  background: var(--ds-surface-container-low);
+  text-decoration: none;
+}
+
+.faq-item {
+  border: 1px solid var(--ds-outline-variant);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface-container-lowest);
+  overflow: hidden;
+}
+
+.faq-item + .faq-item {
+  margin-top: 0.75rem;
+}
+
+.faq-item summary {
+  padding: 1rem 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary::after {
+  content: 'expand_more';
+  font-family: 'Material Symbols Outlined';
+  font-size: 24px;
+  color: var(--ds-on-surface-variant);
+  flex-shrink: 0;
+}
+
+.faq-item[open] summary::after {
+  content: 'expand_less';
+}
+
+.faq-item p {
+  margin: 0;
+  padding: 0 1.25rem 1.25rem;
+  color: var(--ds-on-surface-variant);
+  line-height: 1.5;
+}
+
+.hero-gradient {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(26, 115, 232, 0.12), transparent),
+    var(--ds-background);
+}
+
+.product-frame {
+  border: 1px solid var(--ds-outline-variant);
+  border-radius: var(--ds-radius-xl);
+  background: linear-gradient(
+    135deg,
+    var(--ds-surface-container-lowest) 0%,
+    var(--ds-surface-container-low) 100%
+  );
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(25, 28, 29, 0.05);
+}
+
+.product-frame-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--ds-outline-variant);
+  background: var(--ds-surface-container-low);
+}
+
+.product-frame-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ds-outline-variant);
+}
+
+.product-frame-dot:first-child {
+  background: #ff5f57;
+}
+
+.product-frame-dot:nth-child(2) {
+  background: #febc2e;
+}
+
+.product-frame-dot:nth-child(3) {
+  background: #28c840;
+}
+
+.product-frame-body {
+  padding: 2rem;
+  min-height: 280px;
+  display: grid;
+  gap: 1rem;
+}
+
+.mock-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-container-lowest);
+  border: 1px solid var(--ds-outline-variant);
+}
+
+.mock-row:hover {
+  background: var(--ds-surface-container-high);
+}
+
+.mock-size {
+  margin-left: auto;
+  font-family: var(--ds-font-mono);
+  font-size: 13px;
+  color: var(--ds-on-surface-variant);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

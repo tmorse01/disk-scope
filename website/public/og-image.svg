@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#f8f9fa"/>
+  <rect x="80" y="80" width="1040" height="470" rx="24" fill="#ffffff" stroke="#c1c6d6" stroke-width="2"/>
+  <rect x="120" y="120" width="48" height="48" rx="12" fill="#005bbf"/>
+  <text x="184" y="152" font-family="system-ui, sans-serif" font-size="36" font-weight="600" fill="#191c1d">DiskScope</text>
+  <text x="120" y="240" font-family="system-ui, sans-serif" font-size="52" font-weight="600" fill="#191c1d">Free disk usage analyzer</text>
+  <text x="120" y="300" font-family="system-ui, sans-serif" font-size="28" fill="#414754">Find large folders and safe cleanup targets on Windows</text>
+  <rect x="120" y="360" width="220" height="56" rx="28" fill="#005bbf"/>
+  <text x="230" y="396" text-anchor="middle" font-family="system-ui, sans-serif" font-size="22" font-weight="600" fill="#ffffff">Download free</text>
+  <rect x="720" y="160" width="360" height="56" rx="8" fill="#f3f4f5" stroke="#c1c6d6"/>
+  <text x="740" y="196" font-family="ui-monospace, monospace" font-size="20" fill="#414754">node_modules  128.7 GB</text>
+  <rect x="720" y="232" width="360" height="56" rx="8" fill="#f3f4f5" stroke="#c1c6d6"/>
+  <text x="740" y="268" font-family="ui-monospace, monospace" font-size="20" fill="#414754">.next  24.1 GB</text>
+  <rect x="720" y="304" width="360" height="56" rx="8" fill="#f3f4f5" stroke="#c1c6d6"/>
+  <text x="740" y="340" font-family="ui-monospace, monospace" font-size="20" fill="#414754">Projects  842.3 GB</text>
+</svg>

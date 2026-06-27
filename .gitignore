@@ -5,6 +5,8 @@ node_modules/
 .vite/
 out/
 dist/
+website/dist/
+website/.astro/
 
 # Vite
 *.local
