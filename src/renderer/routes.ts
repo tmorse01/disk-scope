@@ -39,16 +39,16 @@ export const APP_ROUTES: NavRoute[] = [
     component: LargestFoldersView,
   },
   {
-    id: 'disk-map',
-    label: 'Disk Map',
-    icon: 'grid_view',
-    component: DiskMapView,
-  },
-  {
     id: 'largest-files',
     label: 'Largest Files',
     icon: 'description',
     component: LargestFilesView,
+  },
+  {
+    id: 'disk-map',
+    label: 'Disk Map',
+    icon: 'grid_view',
+    component: DiskMapView,
   },
   {
     id: 'file-types',

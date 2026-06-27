@@ -154,6 +154,7 @@ After `pnpm dev`, open DevTools in the renderer and verify:
 ## Documentation
 
 - [Product scope](docs/disk-scope-project-scope.md)
+- [Publishing and release](docs/publishing-and-release.md) — step-by-step release guide
 - [Agent task backlog](docs/tasks/)
 - [AGENTS.md](AGENTS.md) — conventions for coding agents
 
