@@ -21,12 +21,15 @@ DiskScope is a cleanup-focused disk usage analyzer for developers and power user
 | `pnpm test:e2e` | Run Playwright E2E tests |
 | `pnpm package` | Package the app (unpacked folder, no installer) |
 | `pnpm make` | Create installable Windows artifacts |
+| `pnpm release:ci` | Tag and push to trigger a GitHub Actions release |
+| `pnpm release` | Build locally and publish to GitHub Releases (requires `gh`) |
 
 ## Packaging (Windows)
 
 Build installable artifacts locally:
 
 ```powershell
+pnpm build:native
 pnpm make
 ```
 
@@ -49,6 +52,42 @@ After `pnpm make`, install from the Squirrel Setup exe (or run the unpacked exe)
 - Folder picker works
 - Scan completes and results views populate
 - Preferences persist under `%APPDATA%/DiskScope/`
+
+## Releasing (GitHub)
+
+Published builds appear on the repo **Releases** page with:
+
+- `DiskScope-<version>-Setup.exe` — Squirrel Windows installer
+- `DiskScope-<version>-win32-x64-portable.zip` — portable build (no installer)
+- `SHA256SUMS.txt` — checksums for verification
+
+### Recommended: CI release (no local upload)
+
+1. Bump `version` in [`package.json`](package.json).
+2. Commit and push to `master`.
+3. Tag and push (or use the helper script):
+
+```powershell
+pnpm release:ci
+```
+
+This pushes `v<version>` and triggers [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds on `windows-latest` and uploads assets.
+
+You can also run the workflow manually from **Actions → Release → Run workflow** (enter the semver that matches `package.json`).
+
+### Local release (build + upload from your machine)
+
+Requires [GitHub CLI](https://cli.github.com/) (`gh auth login`):
+
+```powershell
+pnpm release
+pnpm release -- -Notes "Short release summary"
+pnpm release -- -SkipTests   # faster iteration
+```
+
+### User download
+
+After a release completes, users install from the GitHub Release asset **DiskScope-*-Setup.exe**.
 
 ## Project layout
 

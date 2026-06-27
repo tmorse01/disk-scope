@@ -9,6 +9,8 @@
     "dev": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
+    "release": "powershell -ExecutionPolicy Bypass -File scripts/release-github.ps1",
+    "release:ci": "powershell -ExecutionPolicy Bypass -File scripts/release-github.ps1 -CiOnly",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
