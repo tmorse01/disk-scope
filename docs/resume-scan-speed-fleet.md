@@ -1,7 +1,7 @@
 # Resume — Scan Speed Fleet (Tiers 1–3)
 
-**Status:** Tier 2 complete on `task/014-scan-tier2-native` (`a2de3fe`) — Tier 1 + 2 awaiting merge; Tier 3 queued  
-**Master:** `5281e2b` (pre–scan-speed merges)  
+**Status:** Tiers 1–2 merged to `master` — Tier 3 (parallel pool) queued  
+**Master:** check `git log -1` for current tip  
 **Brainstorm:** `.cursor/plans/scan_speed_brainstorm_7d6208bd.plan.md`  
 **Pause after:** Task 015 merge — Tier 4 (MFT) and Tier 5 (cache/USN) are post-pause
 
