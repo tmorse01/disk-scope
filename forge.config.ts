@@ -14,7 +14,7 @@ const iconPath = path.resolve(__dirname, 'assets/icon');
 const config: ForgeConfig = {
   packagerConfig: {
     asar: {
-      unpack: '**/.vite/build/scan-worker.js',
+      unpack: ['**/.vite/build/scan-worker.js', '**/.vite/build/scan-slice-worker.js'],
     },
     icon: iconPath,
     executableName: 'DiskScope',
@@ -46,6 +46,11 @@ const config: ForgeConfig = {
         },
         {
           entry: 'src/scanner/scan-worker.ts',
+          config: 'vite.scanner.config.ts',
+          target: 'main',
+        },
+        {
+          entry: 'src/scanner/scan-slice-worker.ts',
           config: 'vite.scanner.config.ts',
           target: 'main',
         },

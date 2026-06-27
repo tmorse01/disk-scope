@@ -11,11 +11,22 @@ import type {
 } from '../../shared/types';
 import { randomUUID } from 'node:crypto';
 import type { WorkerInboundMessage, WorkerOutboundMessage } from '../../scanner/scan-types';
+import { resolveWorkerCount } from '../../scanner/scan-types';
+import { ScanWorkerPool } from '../../scanner/scan-worker-pool';
 import { getPreferencesSync } from './preferences-store';
 
-type ActiveScan = {
+type ActiveSingleScan = {
+  kind: 'single';
   worker: Worker;
 };
+
+type ActivePoolScan = {
+  kind: 'pool';
+  pool: ScanWorkerPool;
+  cancelRequested: boolean;
+};
+
+type ActiveScan = ActiveSingleScan | ActivePoolScan;
 
 const activeScans = new Map<ScanSessionId, ActiveScan>();
 const completedScans = new Map<ScanSessionId, ScanResult>();
@@ -58,23 +69,26 @@ function handleWorkerMessage(scanId: ScanSessionId, message: WorkerOutboundMessa
   }
 }
 
-function cleanupScan(scanId: ScanSessionId): void {
+async function cleanupScan(scanId: ScanSessionId): Promise<void> {
   const active = activeScans.get(scanId);
   if (!active) {
     return;
   }
 
-  active.worker.removeAllListeners();
-  void active.worker.terminate();
+  if (active.kind === 'single') {
+    active.worker.removeAllListeners();
+    await active.worker.terminate();
+  } else {
+    await active.pool.terminate();
+  }
+
   activeScans.delete(scanId);
 }
 
-export function startScan(rootPath: string): ScanSessionId {
-  completedScans.clear();
-  const scanId = randomUUID();
+function startSingleWorkerScan(scanId: ScanSessionId, rootPath: string, exclusions: import('../../shared/types').ScanExclusion[]): void {
   const worker = new Worker(getScanWorkerPath());
 
-  activeScans.set(scanId, { worker });
+  activeScans.set(scanId, { kind: 'single', worker });
 
   worker.on('message', (message: WorkerOutboundMessage) => {
     handleWorkerMessage(scanId, message);
@@ -86,7 +100,7 @@ export function startScan(rootPath: string): ScanSessionId {
       message: error.message,
       code: 'WORKER_ERROR',
     });
-    cleanupScan(scanId);
+    void cleanupScan(scanId);
   });
 
   worker.on('exit', (code) => {
@@ -96,16 +110,61 @@ export function startScan(rootPath: string): ScanSessionId {
         message: `Scanner worker exited with code ${code}`,
         code: 'WORKER_EXIT',
       });
-      cleanupScan(scanId);
+      void cleanupScan(scanId);
     }
   });
 
-  const exclusions = getPreferencesSync().exclusions;
   const startMessage: WorkerInboundMessage = {
     type: 'start',
     payload: { scanId, rootPath, exclusions },
   };
   worker.postMessage(startMessage);
+}
+
+function startPoolScan(scanId: ScanSessionId, rootPath: string, exclusions: import('../../shared/types').ScanExclusion[]): void {
+  const pool = new ScanWorkerPool({
+    scanId,
+    rootPath,
+    exclusions,
+    workerCount: resolveWorkerCount(),
+    onProgress: (event) => {
+      broadcastToRenderers<ScanProgressEvent>(IPC_CHANNELS.SCAN_PROGRESS, event);
+    },
+    shouldCancel: () => {
+      const active = activeScans.get(scanId);
+      return active?.kind === 'pool' ? active.cancelRequested : false;
+    },
+  });
+
+  activeScans.set(scanId, { kind: 'pool', pool, cancelRequested: false });
+
+  void pool.start().then(({ result }) => {
+    completedScans.set(scanId, result);
+    broadcastToRenderers<ScanCompleteEvent>(IPC_CHANNELS.SCAN_COMPLETE, {
+      scanId,
+      result,
+    });
+    void cleanupScan(scanId);
+  }).catch((error: Error) => {
+    broadcastToRenderers<ScanErrorEvent>(IPC_CHANNELS.SCAN_ERROR, {
+      scanId,
+      message: error.message,
+      code: 'POOL_ERROR',
+    });
+    void cleanupScan(scanId);
+  });
+}
+
+export function startScan(rootPath: string): ScanSessionId {
+  completedScans.clear();
+  const scanId = randomUUID();
+  const exclusions = getPreferencesSync().exclusions;
+
+  if (resolveWorkerCount() === 1) {
+    startSingleWorkerScan(scanId, rootPath, exclusions);
+  } else {
+    startPoolScan(scanId, rootPath, exclusions);
+  }
 
   return scanId;
 }
@@ -116,12 +175,18 @@ export function cancelScan(scanId: ScanSessionId): void {
     return;
   }
 
-  const cancelMessage: WorkerInboundMessage = { type: 'cancel' };
-  active.worker.postMessage(cancelMessage);
+  if (active.kind === 'single') {
+    const cancelMessage: WorkerInboundMessage = { type: 'cancel' };
+    active.worker.postMessage(cancelMessage);
+    return;
+  }
+
+  active.cancelRequested = true;
+  active.pool.cancel();
 }
 
 export function terminateAllScans(): void {
   for (const scanId of [...activeScans.keys()]) {
-    cleanupScan(scanId);
+    void cleanupScan(scanId);
   }
 }

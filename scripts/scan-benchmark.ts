@@ -8,7 +8,9 @@ import {
 import {
   DEFAULT_SCAN_ENGINE_TUNING,
   LEGACY_SCAN_ENGINE_TUNING,
+  resolveWorkerCount,
 } from '../src/scanner/scan-types';
+import { runScanParallel } from '../src/scanner/scan-engine-parallel';
 import { createBenchmarkFixture, type BenchmarkFixtureKind } from '../tests/scanner/benchmark/fixture-generator';
 import {
   formatMeasurement,
@@ -33,7 +35,7 @@ const CASES: BenchmarkCase[] = [
   { kind: 'deep-narrow', fileCount: 200, label: 'deep-narrow-200' },
 ];
 
-type Profile = 'legacy' | 'optimized' | 'compare' | 'per-opt' | 'native-compare';
+type Profile = 'legacy' | 'optimized' | 'compare' | 'per-opt' | 'native-compare' | 'parallel-compare';
 
 function parseProfile(): Profile {
   const arg = process.argv.find((value) => value.startsWith('--profile='));
@@ -43,7 +45,8 @@ function parseProfile(): Profile {
     profile === 'optimized' ||
     profile === 'compare' ||
     profile === 'per-opt' ||
-    profile === 'native-compare'
+    profile === 'native-compare' ||
+    profile === 'parallel-compare'
   ) {
     return profile;
   }
@@ -132,6 +135,31 @@ async function runCase(root: string, spec: BenchmarkCase, profile: Profile): Pro
     } else {
       console.log(`[bench] ${spec.label} native-enumerator: unavailable (build with pnpm build:native on Windows)`);
     }
+  }
+
+  if (profile === 'parallel-compare') {
+    const workerCount = resolveWorkerCount();
+    const { measurement: sequential } = await measureScan(
+      root,
+      DEFAULT_SCAN_ENGINE_TUNING,
+      `${spec.label}-sequential`,
+      { readDirectory: readDirectoryTypeScript },
+    );
+    const parallelStart = performance.now();
+    await runScanParallel({
+      scanId: `${spec.label}-parallel`,
+      rootPath: root,
+      readDirectory: readDirectoryTypeScript,
+      workerCount,
+    });
+    const parallelMs = performance.now() - parallelStart;
+    console.log(formatMeasurement(`${spec.label} sequential`, sequential));
+    console.log(
+      `[bench] ${spec.label} parallel (${workerCount} workers): ${parallelMs.toFixed(1)}ms | ${(sequential.fileCount / (parallelMs / 1000)).toFixed(0)} files/sec`,
+    );
+    console.log(
+      `[bench] ${spec.label} parallel speedup: ${speedupRatio(sequential.elapsedMs, parallelMs).toFixed(2)}×`,
+    );
   }
 }
 

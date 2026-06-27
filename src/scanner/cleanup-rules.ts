@@ -177,32 +177,43 @@ export class CleanupCandidateCollector {
   }
 
   finalize(directoriesById: Record<string, DirectoryNode>): CleanupCandidate[] {
-    const byPath = new Map<string, DirectoryNode>();
-    for (const node of Object.values(directoriesById)) {
-      byPath.set(normalizePath(node.path), node);
-    }
-
-    const candidates: CleanupCandidate[] = [];
-    for (const [folderPath, match] of this.matches) {
-      const node = byPath.get(folderPath);
-      if (!node) {
-        continue;
-      }
-
-      candidates.push({
-        path: node.path,
-        name: node.name,
-        label: match.label,
-        ruleId: match.ruleId,
-        sizeBytes: node.sizeBytes,
-        fileCount: node.fileCount,
-        risk: match.risk,
-        recommendation: match.recommendation,
-      });
-    }
-
-    return candidates.sort((left, right) => right.sizeBytes - left.sizeBytes);
+    return finalizeCleanupMatches(this.matches, directoriesById);
   }
+
+  exportMatches(): Map<string, CleanupRuleMatch> {
+    return new Map(this.matches);
+  }
+}
+
+export function finalizeCleanupMatches(
+  matches: Map<string, CleanupRuleMatch>,
+  directoriesById: Record<string, DirectoryNode>,
+): CleanupCandidate[] {
+  const byPath = new Map<string, DirectoryNode>();
+  for (const node of Object.values(directoriesById)) {
+    byPath.set(normalizePath(node.path), node);
+  }
+
+  const candidates: CleanupCandidate[] = [];
+  for (const [folderPath, match] of matches) {
+    const node = byPath.get(folderPath);
+    if (!node) {
+      continue;
+    }
+
+    candidates.push({
+      path: node.path,
+      name: node.name,
+      label: match.label,
+      ruleId: match.ruleId,
+      sizeBytes: node.sizeBytes,
+      fileCount: node.fileCount,
+      risk: match.risk,
+      recommendation: match.recommendation,
+    });
+  }
+
+  return candidates.sort((left, right) => right.sizeBytes - left.sizeBytes);
 }
 
 export function formatExtensionLabel(extension: string | null): string {
