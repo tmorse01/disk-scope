@@ -1,3 +1,4 @@
+import os from 'node:os';
 import type {
   ScanCompleteEvent,
   ScanErrorEvent,
@@ -86,3 +87,66 @@ export type WorkerOutboundMessage =
   | { type: 'progress'; payload: ScanProgressEvent }
   | { type: 'complete'; payload: ScanCompleteEvent }
   | { type: 'error'; payload: ScanErrorEvent };
+
+export type ExtensionAccumulator = {
+  extension: string | null;
+  sizeBytes: number;
+  fileCount: number;
+};
+
+export type ScanPartialResult = {
+  directoriesById: Record<string, import('../shared/types').DirectoryNode>;
+  fileCount: number;
+  directoryCount: number;
+  bytesDiscovered: number;
+  errorCount: number;
+  largestFileCandidates: import('./top-files-tracker').TopFileCandidate[];
+  extensionTotals: Map<string | null, ExtensionAccumulator>;
+  cleanupMatches: Map<string, import('./cleanup-rules').CleanupRuleMatch>;
+  errors: import('../shared/types').ScanFileError[];
+  childDirs: Array<{ dirPath: string; parentId: string; inodeKey: string }>;
+  currentPath: string;
+};
+
+export type DirectorySliceJob = {
+  dirPath: string;
+  parentId: string | null;
+  nodeId: string;
+};
+
+export type SliceWorkerStartPayload = {
+  exclusions: ScanExclusion[];
+};
+
+export type SliceWorkerInboundMessage =
+  | { type: 'init'; payload: SliceWorkerStartPayload }
+  | { type: 'process'; payload: DirectorySliceJob; jobId: number }
+  | { type: 'cancel' };
+
+export type SliceWorkerOutboundMessage =
+  | { type: 'ready' }
+  | { type: 'partial'; payload: ScanPartialResult; jobId: number }
+  | { type: 'error'; payload: { jobId: number; message: string } };
+
+export type ParallelScanOptions = ScanEngineOptions & {
+  workerCount?: number;
+};
+
+const DEFAULT_MAX_WORKERS = 4;
+
+export function resolveWorkerCount(override?: number): number {
+  if (override !== undefined) {
+    return Math.max(1, override);
+  }
+
+  const envValue = process.env.SCAN_WORKER_COUNT;
+  if (envValue !== undefined && envValue !== '') {
+    const parsed = Number.parseInt(envValue, 10);
+    if (!Number.isNaN(parsed) && parsed >= 1) {
+      return parsed;
+    }
+  }
+
+  const cpus = os.cpus().length;
+  return Math.max(1, Math.min(DEFAULT_MAX_WORKERS, cpus - 1));
+}

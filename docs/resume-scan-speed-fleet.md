@@ -1,6 +1,6 @@
 # Resume — Scan Speed Fleet (Tiers 1–3)
 
-**Status:** Tiers 1–2 merged to `master` — Tier 3 (parallel pool) queued  
+**Status:** Tier 3 complete — fleet paused after Task 015 merge  
 **Master:** check `git log -1` for current tip  
 **Brainstorm:** `.cursor/plans/scan_speed_brainstorm_7d6208bd.plan.md`  
 **Pause after:** Task 015 merge — Tier 4 (MFT) and Tier 5 (cache/USN) are post-pause
@@ -125,7 +125,12 @@ First mate: merge task/014-scan-tier2-native to master
 
 ---
 
-## Wave Scan-3 — Tier 3 (BLOCKED on Scan-2 merge)
+## Wave Scan-3 — Tier 3 (COMPLETE)
+
+Branch: `task/015-scan-tier3-parallel`
+
+Parallel vs sequential equivalence: `tests/scanner/scan-parallel.test.ts`  
+Benchmark: `pnpm exec tsx scripts/scan-benchmark.ts --profile=parallel-compare`
 
 ### Worktree
 
@@ -133,26 +138,14 @@ First mate: merge task/014-scan-tier2-native to master
 .cursor/scripts/new-task-worktree.ps1 -TaskNum 015 -ShortName scan-tier3-parallel
 ```
 
-### Launch
-
-```text
-Use the task-015-scan-tier3-parallel subagent to implement Task 015 in .worktrees/task-015/
-```
-
-### Merge
-
-```text
-First mate: merge task/015-scan-tier3-parallel to master
-```
-
 ### Captain checkpoint (final — fleet pause)
 
-- [ ] Parallel vs sequential equivalence on fixtures
-- [ ] Cancel mid-scan with worker pool
-- [ ] UI responsive during parallel scan
-- [ ] `SCAN_WORKER_COUNT=1` restores single-thread behavior
+- [x] Parallel vs sequential equivalence on fixtures
+- [x] Cancel mid-scan with worker pool
+- [ ] UI responsive during parallel scan (`pnpm dev` — manual)
+- [x] `SCAN_WORKER_COUNT=1` restores single-thread behavior
 
-**When all three checkpoints pass → fleet paused.** Tier 4+ requires new task specs and captain approval.
+**Fleet paused.** Tier 4+ requires new task specs and captain approval.
 
 ---
 
