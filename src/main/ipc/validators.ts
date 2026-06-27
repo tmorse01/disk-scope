@@ -26,13 +26,25 @@ export function validatePath(value: unknown): string {
   return assertNonEmptyString(value, 'path');
 }
 
-export function validateStartScanOptions(value: unknown): { rootPath: string } {
+export function validateStartScanOptions(value: unknown): {
+  rootPath: string;
+  useFilesystemCache: boolean;
+} {
   if (!value || typeof value !== 'object') {
     throw new ValidationError('options', 'startScan options must be an object');
   }
 
   const record = value as Record<string, unknown>;
-  return { rootPath: validatePath(record.rootPath) };
+  const useFilesystemCache = record.useFilesystemCache;
+
+  if (useFilesystemCache !== undefined && typeof useFilesystemCache !== 'boolean') {
+    throw new ValidationError('useFilesystemCache', 'useFilesystemCache must be a boolean');
+  }
+
+  return {
+    rootPath: validatePath(record.rootPath),
+    useFilesystemCache: useFilesystemCache !== false,
+  };
 }
 
 export function validateExportOptions(value: unknown): { format: ExportFormat } {

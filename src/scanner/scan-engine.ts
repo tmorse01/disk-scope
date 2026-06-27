@@ -526,12 +526,14 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
 
   const rootNode = directoriesById[rootNodeId];
   const completedAt = new Date().toISOString();
+  const durationMs = Date.now() - startMs;
 
   const result: ScanResult = {
     scanId: options.scanId,
     rootPath,
     startedAt,
     completedAt,
+    durationMs,
     totalSizeBytes: rootNode?.sizeBytes ?? 0,
     fileCount: totalFileCount,
     directoryCount: totalDirectoryCount,

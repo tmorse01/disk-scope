@@ -33,7 +33,27 @@ describe('IPC validators', () => {
     it('accepts valid options', () => {
       expect(validateStartScanOptions({ rootPath: 'C:\\Users' })).toEqual({
         rootPath: 'C:\\Users',
+        useFilesystemCache: true,
       });
+    });
+
+    it('defaults useFilesystemCache to true when omitted', () => {
+      expect(validateStartScanOptions({ rootPath: 'D:\\' }).useFilesystemCache).toBe(true);
+    });
+
+    it('accepts useFilesystemCache false', () => {
+      expect(
+        validateStartScanOptions({ rootPath: 'D:\\', useFilesystemCache: false }),
+      ).toEqual({
+        rootPath: 'D:\\',
+        useFilesystemCache: false,
+      });
+    });
+
+    it('rejects non-boolean useFilesystemCache', () => {
+      expect(() =>
+        validateStartScanOptions({ rootPath: 'D:\\', useFilesystemCache: 'no' }),
+      ).toThrow(ValidationError);
     });
 
     it('rejects missing rootPath', () => {

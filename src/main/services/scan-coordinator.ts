@@ -8,11 +8,13 @@ import type {
   ScanProgressEvent,
   ScanResult,
   ScanSessionId,
+  StartScanResponse,
 } from '../../shared/types';
 import { randomUUID } from 'node:crypto';
 import type { WorkerInboundMessage, WorkerOutboundMessage } from '../../scanner/scan-types';
 import { resolveWorkerCount } from '../../scanner/scan-types';
 import { ScanWorkerPool } from '../../scanner/scan-worker-pool';
+import { dropWindowsStandbyCache } from './filesystem-cache';
 import { getPreferencesSync } from './preferences-store';
 
 type ActiveSingleScan = {
@@ -155,18 +157,29 @@ function startPoolScan(scanId: ScanSessionId, rootPath: string, exclusions: impo
   });
 }
 
-export function startScan(rootPath: string): ScanSessionId {
+export async function startScan(options: {
+  rootPath: string;
+  useFilesystemCache: boolean;
+}): Promise<StartScanResponse> {
   completedScans.clear();
   const scanId = randomUUID();
   const exclusions = getPreferencesSync().exclusions;
 
-  if (resolveWorkerCount() === 1) {
-    startSingleWorkerScan(scanId, rootPath, exclusions);
-  } else {
-    startPoolScan(scanId, rootPath, exclusions);
+  let cacheWarning: string | undefined;
+  if (!options.useFilesystemCache) {
+    const dropResult = await dropWindowsStandbyCache();
+    if (!dropResult.ok) {
+      cacheWarning = dropResult.error.message;
+    }
   }
 
-  return scanId;
+  if (resolveWorkerCount() === 1) {
+    startSingleWorkerScan(scanId, options.rootPath, exclusions);
+  } else {
+    startPoolScan(scanId, options.rootPath, exclusions);
+  }
+
+  return { scanId, cacheWarning };
 }
 
 export function cancelScan(scanId: ScanSessionId): void {

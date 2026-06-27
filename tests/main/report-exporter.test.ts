@@ -23,6 +23,7 @@ function buildResult(overrides: Partial<ScanResult> = {}): ScanResult {
     rootPath: 'C:\\Demo',
     startedAt: '2026-01-01T00:00:00.000Z',
     completedAt: '2026-01-01T00:00:05.000Z',
+    durationMs: 5000,
     totalSizeBytes: 900,
     fileCount: 3,
     directoryCount: 2,
@@ -112,6 +113,8 @@ describe('report exporter', () => {
     expect(payload.fileCount).toBe(3);
     expect(payload.directoryCount).toBe(2);
     expect(payload.errorCount).toBe(1);
+    expect(payload.durationMs).toBe(5000);
+    expect(payload.filesPerSec).toBeCloseTo(0.6);
     expect(payload.topFolders.map((folder) => folder.path)).toEqual([
       'C:\\Demo\\Heavy',
       'C:\\Demo\\Light',

@@ -5,6 +5,11 @@ import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import type { ExportFormat } from '../../../shared/types';
 import { formatBytes } from '../../../shared/format-bytes';
+import {
+  computeFilesPerSec,
+  computeScanDurationMs,
+  formatFilesPerSec,
+} from '../../../shared/scan-duration';
 import { DsCard } from '../../components/DsCard';
 import { DsPageHeader } from '../../components/DsStatusChip';
 import { DsTabular } from '../../components/DsTabular';
@@ -13,6 +18,7 @@ import { useScanStore } from '../../hooks/useScanStore';
 import { APP_ROUTES } from '../../routes';
 import { exportReportFromStore } from '../../stores/scan-store';
 import { radii } from '../../theme/tokens';
+import { formatElapsed } from '../scan-progress/format-elapsed';
 import { OverviewLandingView } from './OverviewLandingView';
 import { ScanSessionControls } from '../scan-progress/ScanSessionControls';
 
@@ -41,6 +47,8 @@ export function OverviewView(_props: OverviewViewProps = {}) {
   const navChips = APP_ROUTES.filter((route) =>
     ['largest-folders', 'largest-files', 'file-types', 'cleanup-candidates'].includes(route.id),
   );
+  const durationMs = computeScanDurationMs(result);
+  const filesPerSec = computeFilesPerSec(result.fileCount, durationMs);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -87,6 +95,22 @@ export function OverviewView(_props: OverviewViewProps = {}) {
             </Typography>
             <DsTabular sx={{ display: 'block', fontSize: '22px', fontWeight: 600 }}>
               {result.cleanupCandidates.length}
+            </DsTabular>
+          </Box>
+          <Box>
+            <Typography variant="overline" color="text.secondary">
+              Completed in
+            </Typography>
+            <DsTabular sx={{ display: 'block', fontSize: '22px', fontWeight: 600 }}>
+              {formatElapsed(durationMs)}
+            </DsTabular>
+          </Box>
+          <Box>
+            <Typography variant="overline" color="text.secondary">
+              Throughput
+            </Typography>
+            <DsTabular sx={{ display: 'block', fontSize: '22px', fontWeight: 600 }}>
+              {formatFilesPerSec(filesPerSec)}
             </DsTabular>
           </Box>
         </Box>

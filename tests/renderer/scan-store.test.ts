@@ -147,19 +147,51 @@ describe('scan store scan lifecycle', () => {
   });
 
   it('starts a scan and stores the scan id', async () => {
-    startScan.mockResolvedValue('scan-1');
+    startScan.mockResolvedValue({ scanId: 'scan-1' });
 
     const { startScanFromStore, scanStore } = await import('../../src/renderer/stores/scan-store');
 
     await startScanFromStore();
 
-    expect(startScan).toHaveBeenCalledWith({ rootPath: 'C:\\Demo' });
+    expect(startScan).toHaveBeenCalledWith({
+      rootPath: 'C:\\Demo',
+      useFilesystemCache: true,
+    });
     expect(scanStore.status).toBe('scanning');
     expect(scanStore.scanId).toBe('scan-1');
   });
 
+  it('passes useFilesystemCache false when disabled in the store', async () => {
+    startScan.mockResolvedValue({ scanId: 'scan-1' });
+
+    const { startScanFromStore, setUseFilesystemCache } = await import(
+      '../../src/renderer/stores/scan-store'
+    );
+
+    setUseFilesystemCache(false);
+    await startScanFromStore();
+
+    expect(startScan).toHaveBeenCalledWith({
+      rootPath: 'C:\\Demo',
+      useFilesystemCache: false,
+    });
+  });
+
+  it('stores cache warnings from startScan', async () => {
+    startScan.mockResolvedValue({
+      scanId: 'scan-1',
+      cacheWarning: 'Could not clear filesystem cache.',
+    });
+
+    const { startScanFromStore, scanStore } = await import('../../src/renderer/stores/scan-store');
+
+    await startScanFromStore();
+
+    expect(scanStore.cacheWarning).toBe('Could not clear filesystem cache.');
+  });
+
   it('merges progress updates into the store', async () => {
-    startScan.mockResolvedValue('scan-1');
+    startScan.mockResolvedValue({ scanId: 'scan-1' });
 
     const { startScanFromStore, applyScanProgressForTest, scanStore } = await import(
       '../../src/renderer/stores/scan-store'
@@ -188,7 +220,7 @@ describe('scan store scan lifecycle', () => {
   });
 
   it('transitions to completed when scan completes', async () => {
-    startScan.mockResolvedValue('scan-1');
+    startScan.mockResolvedValue({ scanId: 'scan-1' });
 
     const { startScanFromStore, initScanStoreListeners, scanStore } = await import(
       '../../src/renderer/stores/scan-store'
@@ -204,6 +236,7 @@ describe('scan store scan lifecycle', () => {
         rootPath: 'C:\\Demo',
         startedAt: '2026-01-01T00:00:00.000Z',
         completedAt: '2026-01-01T00:00:05.000Z',
+        durationMs: 5000,
         totalSizeBytes: 8192,
         fileCount: 20,
         directoryCount: 4,
@@ -222,7 +255,7 @@ describe('scan store scan lifecycle', () => {
   });
 
   it('marks cancelled when user cancels before completion', async () => {
-    startScan.mockResolvedValue('scan-1');
+    startScan.mockResolvedValue({ scanId: 'scan-1' });
     cancelScan.mockResolvedValue(undefined);
 
     const { startScanFromStore, cancelScanFromStore, initScanStoreListeners, scanStore } =
@@ -239,6 +272,7 @@ describe('scan store scan lifecycle', () => {
         rootPath: 'C:\\Demo',
         startedAt: '2026-01-01T00:00:00.000Z',
         completedAt: '2026-01-01T00:00:02.000Z',
+        durationMs: 2000,
         totalSizeBytes: 1024,
         fileCount: 5,
         directoryCount: 1,

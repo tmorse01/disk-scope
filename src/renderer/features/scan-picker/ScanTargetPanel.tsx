@@ -1,7 +1,9 @@
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -16,13 +18,15 @@ import { useScanStore } from '../../hooks/useScanStore';
 import {
   pickScanTarget,
   removeSelectedPath,
+  setUseFilesystemCache,
   startScanFromStore,
 } from '../../stores/scan-store';
 import { radii } from '../../theme/tokens';
 import { isDriveRoot, targetIcon, targetTitle } from './scan-target-utils';
 
 export function ScanTargetPanel() {
-  const { status, selectedPaths, pickerError, scanError } = useScanStore();
+  const { status, selectedPaths, pickerError, scanError, useFilesystemCache, cacheWarning } =
+    useScanStore();
   const { exclusions } = usePreferencesStore();
   const isSelecting = status === 'selecting-target';
   const isScanning = status === 'scanning';
@@ -189,18 +193,39 @@ export function ScanTargetPanel() {
         </Box>
       ) : null}
 
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2, alignItems: 'center' }}>
-        <Button
-          variant="contained"
-          color="primary"
-          disabled={!canStart}
-          onClick={() => void startScanFromStore()}
-          startIcon={<MaterialIcon name="play_arrow" filled aria-hidden={false} />}
-          sx={{ borderRadius: `${radii.full}px`, textTransform: 'none', fontWeight: 600 }}
-        >
-          Start scan
-        </Button>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={useFilesystemCache}
+              disabled={isScanning}
+              onChange={(event) => setUseFilesystemCache(event.target.checked)}
+            />
+          }
+          label="Use filesystem cache"
+        />
+        <Typography variant="caption" color="text.secondary" sx={{ ml: 4.25, mt: -0.5 }}>
+          Uncheck for cold-scan benchmarks. Clearing cache may require running as Administrator.
+        </Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+          <Button
+            variant="contained"
+            color="primary"
+            disabled={!canStart}
+            onClick={() => void startScanFromStore()}
+            startIcon={<MaterialIcon name="play_arrow" filled aria-hidden={false} />}
+            sx={{ borderRadius: `${radii.full}px`, textTransform: 'none', fontWeight: 600 }}
+          >
+            Start scan
+          </Button>
+        </Box>
       </Box>
+
+      {cacheWarning ? (
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          {cacheWarning}
+        </Alert>
+      ) : null}
 
       {pickerError ? (
         <Alert severity="error" sx={{ mt: 2 }}>

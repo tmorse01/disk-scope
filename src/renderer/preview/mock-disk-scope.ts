@@ -29,7 +29,7 @@ export function createMockDiskScope(
           });
         }, 300);
       }
-      return scanId;
+      return { scanId };
     },
     cancelScan: async () => undefined,
     revealPath: async () => undefined,

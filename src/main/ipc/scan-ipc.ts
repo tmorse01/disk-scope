@@ -22,7 +22,7 @@ export function registerScanIpc(): void {
 
   ipcMain.handle(IPC_CHANNELS.START_SCAN, async (_event, options: unknown) => {
     const validated = validateStartScanOptions(options);
-    return startScan(validated.rootPath);
+    return startScan(validated);
   });
 
   ipcMain.handle(IPC_CHANNELS.CANCEL_SCAN, async (_event, scanId: unknown) => {

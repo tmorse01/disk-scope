@@ -23,6 +23,7 @@ function buildResult(overrides: Partial<ScanResult> = {}): ScanResult {
     rootPath: 'C:\\Demo',
     startedAt: '2026-01-01T00:00:00.000Z',
     completedAt: '2026-01-01T00:00:05.000Z',
+    durationMs: 5000,
     totalSizeBytes: 600,
     fileCount: 4,
     directoryCount: 1,

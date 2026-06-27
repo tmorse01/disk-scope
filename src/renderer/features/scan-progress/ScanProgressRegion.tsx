@@ -3,18 +3,17 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
 import { formatBytes } from '../../../shared/format-bytes';
-
+import {
+  computeFilesPerSec,
+  computeScanDurationMs,
+  formatFilesPerSec,
+} from '../../../shared/scan-duration';
 import { DsTabular } from '../../components/DsTabular';
-
 import { MaterialIcon } from '../../components/MaterialIcon';
-
 import { useScanStore } from '../../hooks/useScanStore';
-
 import { SCAN_STATUS_HEIGHT } from '../../theme/mui-theme';
-
 import { shellFooterBackgroundSx } from '../../theme/shell-chrome';
-
-import { shortenPath } from './format-elapsed';
+import { formatElapsed, shortenPath } from './format-elapsed';
 
 
 
@@ -85,11 +84,10 @@ export function ScanProgressRegion() {
 
 
   if (hasSummary && result) {
-
-    statsLine = `${result.fileCount.toLocaleString()} files · ${result.directoryCount.toLocaleString()} folders · ${formatBytes(result.totalSizeBytes)} · ${result.errorCount} errors`;
-
+    const durationMs = computeScanDurationMs(result);
+    const filesPerSec = computeFilesPerSec(result.fileCount, durationMs);
+    statsLine = `${result.fileCount.toLocaleString()} files · ${result.directoryCount.toLocaleString()} folders · ${formatBytes(result.totalSizeBytes)} · ${result.errorCount} errors · ${formatElapsed(durationMs)} · ${formatFilesPerSec(filesPerSec)}`;
     pathLine = result.rootPath;
-
   } else if (status === 'failed') {
 
     statsLine = scanError ?? 'The scan could not be completed.';

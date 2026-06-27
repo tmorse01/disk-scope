@@ -8,6 +8,10 @@ import type {
   ScanFileError,
   ScanResult,
 } from '../../shared/types';
+import {
+  computeFilesPerSec,
+  computeScanDurationMs,
+} from '../../shared/scan-duration';
 
 export const TOP_FOLDERS_LIMIT = 100;
 
@@ -23,6 +27,8 @@ export type ScanReportExport = {
   rootPath: string;
   startedAt: string;
   completedAt: string;
+  durationMs: number;
+  filesPerSec: number;
   totalSizeBytes: number;
   fileCount: number;
   directoryCount: number;
@@ -47,10 +53,14 @@ export function buildExportPayload(result: ScanResult): ScanReportExport {
       directoryCount: node.directoryCount,
     }));
 
+  const durationMs = computeScanDurationMs(result);
+
   return {
     rootPath: result.rootPath,
     startedAt: result.startedAt,
     completedAt: result.completedAt,
+    durationMs,
+    filesPerSec: computeFilesPerSec(result.fileCount, durationMs),
     totalSizeBytes: result.totalSizeBytes,
     fileCount: result.fileCount,
     directoryCount: result.directoryCount,
@@ -93,6 +103,8 @@ export function serializeCsv(payload: ScanReportExport): string {
       'rootPath',
       'startedAt',
       'completedAt',
+      'durationMs',
+      'filesPerSec',
       'totalSizeBytes',
       'fileCount',
       'directoryCount',
@@ -104,6 +116,8 @@ export function serializeCsv(payload: ScanReportExport): string {
       payload.rootPath,
       payload.startedAt,
       payload.completedAt,
+      payload.durationMs,
+      payload.filesPerSec,
       payload.totalSizeBytes,
       payload.fileCount,
       payload.directoryCount,

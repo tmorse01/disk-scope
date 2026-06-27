@@ -6,6 +6,7 @@ import type {
   ScanStatus,
   SelectedPath,
 } from '../../shared/types';
+import { computeScanDurationMs } from '../../shared/scan-duration';
 
 export type ScanProgressSnapshot = {
   filesScanned: number;
@@ -25,6 +26,8 @@ export type ScanStoreState = {
   pickerError: string | null;
   scanId: ScanSessionId | null;
   scanError: string | null;
+  cacheWarning: string | null;
+  useFilesystemCache: boolean;
   progress: ScanProgressSnapshot | null;
   result: ScanResult | null;
 };
@@ -35,6 +38,8 @@ export const scanStore: ScanStoreState = {
   pickerError: null,
   scanId: null,
   scanError: null,
+  cacheWarning: null,
+  useFilesystemCache: true,
   progress: null,
   result: null,
 };
@@ -136,7 +141,7 @@ function handleScanComplete(event: { scanId: ScanSessionId; result: ScanResult }
     bytesDiscovered: event.result.totalSizeBytes,
     currentPath: event.result.rootPath,
     errorCount: event.result.errorCount,
-    elapsedMs: Date.parse(event.result.completedAt) - Date.parse(event.result.startedAt),
+    elapsedMs: computeScanDurationMs(event.result),
   };
   scanStore.status = cancelRequestedByUser ? 'cancelled' : 'completed';
   cancelRequestedByUser = false;
@@ -192,6 +197,16 @@ export function setSelectedPath(selected: SelectedPath | null): void {
   }
 }
 
+export function setUseFilesystemCache(value: boolean): void {
+  scanStore.useFilesystemCache = value;
+  notifyScanStore();
+}
+
+export function clearCacheWarning(): void {
+  scanStore.cacheWarning = null;
+  notifyScanStore();
+}
+
 export function clearPickerError(): void {
   scanStore.pickerError = null;
   notifyScanStore();
@@ -243,6 +258,7 @@ export async function startScanFromStore(): Promise<void> {
   initScanStoreListeners();
 
   scanStore.scanError = null;
+  scanStore.cacheWarning = null;
   scanStore.result = null;
   scanStore.progress = null;
   cancelRequestedByUser = false;
@@ -252,8 +268,12 @@ export async function startScanFromStore(): Promise<void> {
   notifyScanStore();
 
   try {
-    const scanId = await window.diskScope.startScan({ rootPath });
-    scanStore.scanId = scanId;
+    const response = await window.diskScope.startScan({
+      rootPath,
+      useFilesystemCache: scanStore.useFilesystemCache,
+    });
+    scanStore.scanId = response.scanId;
+    scanStore.cacheWarning = response.cacheWarning ?? null;
     notifyScanStore();
   } catch (error) {
     scanStore.status = 'failed';
@@ -327,6 +347,7 @@ export function resetScanSessionForTest(): void {
   cancelRequestedByUser = false;
   scanStore.scanId = null;
   scanStore.scanError = null;
+  scanStore.cacheWarning = null;
   scanStore.progress = null;
   scanStore.result = null;
   scanStore.status = 'idle';

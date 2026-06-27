@@ -10,6 +10,7 @@ import type {
   ScanSessionId,
   SelectedPath,
   StartScanOptions,
+  StartScanResponse,
   Unsubscribe,
 } from '../shared/types';
 
@@ -33,7 +34,7 @@ const diskScopeAPI: DiskScopeAPI = {
     return ipcRenderer.invoke(IPC_CHANNELS.SELECT_DIRECTORY);
   },
 
-  startScan: (options: StartScanOptions): Promise<ScanSessionId> => {
+  startScan: (options: StartScanOptions): Promise<StartScanResponse> => {
     return ipcRenderer.invoke(IPC_CHANNELS.START_SCAN, options);
   },
 

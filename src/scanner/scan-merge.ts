@@ -8,6 +8,7 @@ import type {
 } from '../shared/types';
 import { finalizeCleanupMatches } from './cleanup-rules';
 import { normalizePath } from './path-utils';
+import { computeScanDurationMs } from '../shared/scan-duration';
 import type { ExtensionAccumulator, ScanPartialResult } from './scan-types';
 import { DEFAULT_TOP_FILES_LIMIT } from './scan-types';
 import { createTopFilesTracker, type TopFileCandidate } from './top-files-tracker';
@@ -138,11 +139,15 @@ export function mergeScanPartials(
 
   errors.sort((left, right) => left.path.localeCompare(right.path));
 
+  const completedAt = new Date().toISOString();
+  const durationMs = computeScanDurationMs({ startedAt: options.startedAt, completedAt });
+
   return {
     scanId: options.scanId,
     rootPath: normalizePath(options.rootPath),
     startedAt: options.startedAt,
-    completedAt: new Date().toISOString(),
+    completedAt,
+    durationMs,
     totalSizeBytes: rootNode?.sizeBytes ?? 0,
     fileCount,
     directoryCount,

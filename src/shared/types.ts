@@ -62,6 +62,7 @@ export type ScanResult = {
   rootPath: string;
   startedAt: string;
   completedAt: string;
+  durationMs: number;
   totalSizeBytes: number;
   fileCount: number;
   directoryCount: number;
@@ -93,6 +94,12 @@ export type AppPreferences = {
 
 export type StartScanOptions = {
   rootPath: string;
+  useFilesystemCache?: boolean;
+};
+
+export type StartScanResponse = {
+  scanId: ScanSessionId;
+  cacheWarning?: string;
 };
 
 export type ExportFormat = 'json' | 'csv';
@@ -126,7 +133,7 @@ export type Unsubscribe = () => void;
 
 export type DiskScopeAPI = {
   selectDirectory(): Promise<SelectedPath | null>;
-  startScan(options: StartScanOptions): Promise<ScanSessionId>;
+  startScan(options: StartScanOptions): Promise<StartScanResponse>;
   cancelScan(scanId: ScanSessionId): Promise<void>;
   revealPath(path: string): Promise<void>;
   copyPath(path: string): Promise<void>;
