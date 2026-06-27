@@ -87,9 +87,31 @@ export type ScanExclusion = {
   value: string;
 };
 
+export type DeleteMethod = 'recycle-bin' | 'permanent';
+
+export type DirectoryListingEntry = {
+  name: string;
+  path: string;
+  kind: 'file' | 'directory';
+  sizeBytes: number;
+  modifiedAt?: string;
+};
+
+export type DeletePathOptions = {
+  path: string;
+  method: DeleteMethod;
+};
+
+export type FileActionError = {
+  code: string;
+  message: string;
+};
+
 export type AppPreferences = {
   theme: 'light' | 'dark';
   exclusions: ScanExclusion[];
+  confirmBeforeDelete: boolean;
+  defaultDeleteMethod: DeleteMethod;
 };
 
 export type StartScanOptions = {
@@ -137,6 +159,8 @@ export type DiskScopeAPI = {
   cancelScan(scanId: ScanSessionId): Promise<void>;
   revealPath(path: string): Promise<void>;
   copyPath(path: string): Promise<void>;
+  listDirectoryContents(dirPath: string): Promise<import('./result').Result<DirectoryListingEntry[], FileActionError>>;
+  deletePath(options: DeletePathOptions): Promise<import('./result').Result<void, FileActionError>>;
   exportReport(scanId: ScanSessionId, options: ExportOptions): Promise<void>;
   getPreferences(): Promise<AppPreferences>;
   setPreferences(preferences: AppPreferences): Promise<AppPreferences>;

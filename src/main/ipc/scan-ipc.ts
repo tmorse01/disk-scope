@@ -1,12 +1,23 @@
-import { BrowserWindow, ipcMain } from 'electron';
+﻿import { BrowserWindow, ipcMain } from 'electron';
 import { IPC_CHANNELS } from '../../shared/ipc-channels';
 import { pickDirectory } from '../services/directory-picker';
 import { exportScanReport } from '../services/report-exporter';
-import { cancelScan, getCompletedScanResult, startScan } from '../services/scan-coordinator';
-import { copyPathToClipboard, revealPathInExplorer } from '../services/file-actions';
+import {
+  cancelScan,
+  getCompletedScanResult,
+  getProtectedScanRootPaths,
+  startScan,
+} from '../services/scan-coordinator';
+import {
+  copyPathToClipboard,
+  deletePath,
+  listDirectoryContents,
+  revealPathInExplorer,
+} from '../services/file-actions';
 import { getPreferencesSync, loadPreferences, savePreferences } from '../services/preferences-store';
 import {
   validateAppPreferences,
+  validateDeletePathOptions,
   validateExportOptions,
   validatePath,
   validateScanSessionId,
@@ -40,6 +51,16 @@ export function registerScanIpc(): void {
     await copyPathToClipboard(validated);
   });
 
+  ipcMain.handle(IPC_CHANNELS.LIST_DIRECTORY_CONTENTS, async (_event, dirPath: unknown) => {
+    const validated = validatePath(dirPath);
+    return listDirectoryContents(validated);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.DELETE_PATH, async (_event, options: unknown) => {
+    const validated = validateDeletePathOptions(options);
+    return deletePath(validated.path, validated.method, getProtectedScanRootPaths());
+  });
+
   ipcMain.handle(IPC_CHANNELS.EXPORT_REPORT, async (event, scanId: unknown, options: unknown) => {
     const validatedScanId = validateScanSessionId(scanId);
     const validatedOptions = validateExportOptions(options);
@@ -71,6 +92,8 @@ export function unregisterScanIpc(): void {
     IPC_CHANNELS.CANCEL_SCAN,
     IPC_CHANNELS.REVEAL_PATH,
     IPC_CHANNELS.COPY_PATH,
+    IPC_CHANNELS.LIST_DIRECTORY_CONTENTS,
+    IPC_CHANNELS.DELETE_PATH,
     IPC_CHANNELS.EXPORT_REPORT,
     IPC_CHANNELS.GET_PREFERENCES,
     IPC_CHANNELS.SET_PREFERENCES,

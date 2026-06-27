@@ -6,7 +6,9 @@
     "moduleResolution": "node",
     "noEmit": false,
     "outDir": ".tsbuild/main",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "src/main/**/*.ts",

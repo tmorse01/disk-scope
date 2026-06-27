@@ -3,7 +3,9 @@ import type { DirectoryNode, NodeId } from '../../src/shared/types';
 import {
   buildBreadcrumbPath,
   compareDirectoryNodes,
+  filesGroupId,
   flattenFolderTree,
+  flattenFolderTreeRows,
   percentOfRoot,
   sortDirectoryIds,
 } from '../../src/renderer/features/largest-folders/folder-tree-utils';
@@ -201,6 +203,66 @@ describe('flattenFolderTree', () => {
     );
 
     expect(rows.map((row) => row.nodeId)).toEqual([cycleA, cycleB]);
+  });
+});
+
+describe('flattenFolderTreeRows', () => {
+  it('includes a focus-level files group when the focused directory has files', () => {
+    const rows = flattenFolderTreeRows(
+      ROOT_ID,
+      directoriesById,
+      new Set(),
+      'sizeBytes',
+      'desc',
+      10_000,
+      new Map(),
+      new Set(),
+      0,
+      new Set(),
+      true,
+    );
+
+    expect(rows.some((row) => row.kind === 'files-group' && row.parentId === ROOT_ID)).toBe(true);
+  });
+
+  it('adds a files group after expanded child folders with files', () => {
+    const rows = flattenFolderTreeRows(
+      ROOT_ID,
+      directoriesById,
+      new Set([DOCS_ID]),
+      'sizeBytes',
+      'desc',
+      10_000,
+    );
+
+    expect(rows.some((row) => row.kind === 'files-group' && row.parentId === DOCS_ID)).toBe(true);
+  });
+
+  it('renders cached file rows when the files group is expanded', () => {
+    const groupId = filesGroupId(DOCS_ID);
+    const rows = flattenFolderTreeRows(
+      ROOT_ID,
+      directoriesById,
+      new Set([DOCS_ID, groupId]),
+      'sizeBytes',
+      'desc',
+      10_000,
+      new Map([
+        [
+          DOCS_ID,
+          [
+            {
+              name: 'readme.md',
+              path: 'C:\\project\\docs\\readme.md',
+              kind: 'file',
+              sizeBytes: 128,
+            },
+          ],
+        ],
+      ]),
+    );
+
+    expect(rows.some((row) => row.kind === 'file' && row.entry.name === 'readme.md')).toBe(true);
   });
 });
 

@@ -1,4 +1,4 @@
-import Box from '@mui/material/Box';
+﻿import Box from '@mui/material/Box';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import InputLabel from '@mui/material/InputLabel';
@@ -6,15 +6,21 @@ import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
+import Alert from '@mui/material/Alert';
+import type { DeleteMethod } from '../../../shared/types';
 import { DsCard } from '../../components/DsCard';
 import { DsPageHeader } from '../../components/DsStatusChip';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { usePreferencesStore } from '../../hooks/usePreferencesStore';
-import { setThemePreference } from '../../stores/preferences-store';
+import {
+  setConfirmBeforeDeletePreference,
+  setDefaultDeleteMethodPreference,
+  setThemePreference,
+} from '../../stores/preferences-store';
 import { radii } from '../../theme/tokens';
 
 export function SettingsView() {
-  const { theme } = usePreferencesStore();
+  const { theme, confirmBeforeDelete, defaultDeleteMethod } = usePreferencesStore();
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -46,9 +52,60 @@ export function SettingsView() {
         </FormControl>
 
         <FormControlLabel
-          control={<Switch checked={theme === 'dark'} onChange={(_, checked) => setThemePreference(checked ? 'dark' : 'light')} />}
+          control={
+            <Switch
+              checked={theme === 'dark'}
+              onChange={(_, checked) => setThemePreference(checked ? 'dark' : 'light')}
+            />
+          }
           label="Use dark mode"
         />
+      </DsCard>
+
+      <DsCard>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <MaterialIcon name="shield" style={{ color: 'var(--mui-palette-primary-main)' }} />
+          <Typography variant="h3" component="h3" sx={{ fontSize: '18px', fontWeight: 600 }}>
+            Safety
+          </Typography>
+        </Box>
+
+        <FormControlLabel
+          control={
+            <Switch
+              checked={confirmBeforeDelete}
+              onChange={(_, checked) => setConfirmBeforeDeletePreference(checked)}
+            />
+          }
+          label="Confirm before deleting"
+          sx={{ mb: 2, display: 'flex' }}
+        />
+
+        <FormControl sx={{ minWidth: 260, mb: defaultDeleteMethod === 'permanent' ? 2 : 0 }}>
+          <InputLabel id="delete-method-select-label">Default delete method</InputLabel>
+          <Select
+            labelId="delete-method-select-label"
+            value={defaultDeleteMethod}
+            label="Default delete method"
+            onChange={(event) =>
+              setDefaultDeleteMethodPreference(event.target.value as DeleteMethod)
+            }
+            sx={{ borderRadius: `${radii.md}px` }}
+          >
+            <MenuItem value="recycle-bin">Recycle Bin</MenuItem>
+            <MenuItem value="permanent">Permanent delete</MenuItem>
+          </Select>
+        </FormControl>
+
+        {defaultDeleteMethod === 'permanent' ? (
+          <Alert severity="warning" variant="outlined">
+            Files deleted with permanent delete are not recoverable from the Recycle Bin.
+          </Alert>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            Deleted items are moved to the Recycle Bin when that method is selected.
+          </Typography>
+        )}
       </DsCard>
 
       <DsCard sx={{ bgcolor: 'surfaceContainerLow.main' }}>

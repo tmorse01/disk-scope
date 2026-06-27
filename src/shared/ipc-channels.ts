@@ -4,6 +4,8 @@ export const IPC_CHANNELS = {
   CANCEL_SCAN: 'disk-scope:cancel-scan',
   REVEAL_PATH: 'disk-scope:reveal-path',
   COPY_PATH: 'disk-scope:copy-path',
+  LIST_DIRECTORY_CONTENTS: 'disk-scope:list-directory-contents',
+  DELETE_PATH: 'disk-scope:delete-path',
   EXPORT_REPORT: 'disk-scope:export-report',
   GET_PREFERENCES: 'disk-scope:get-preferences',
   SET_PREFERENCES: 'disk-scope:set-preferences',

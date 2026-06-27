@@ -1,10 +1,13 @@
 import type { AppPreferences, DiskScopeAPI, ScanProgressEvent } from '../../shared/types';
+import { ok } from '../../shared/result';
 
 const noopUnsubscribe = () => undefined;
 
 const mockPreferences: AppPreferences = {
   theme: 'light',
   exclusions: [],
+  confirmBeforeDelete: true,
+  defaultDeleteMethod: 'recycle-bin',
 };
 
 export function createMockDiskScope(
@@ -34,17 +37,41 @@ export function createMockDiskScope(
     cancelScan: async () => undefined,
     revealPath: async () => undefined,
     copyPath: async () => undefined,
+    listDirectoryContents: async () =>
+      ok([
+        {
+          name: 'example.txt',
+          path: 'C:\\Users\\Demo\\Projects\\example.txt',
+          kind: 'file',
+          sizeBytes: 2048,
+          modifiedAt: new Date().toISOString(),
+        },
+        {
+          name: 'node_modules',
+          path: 'C:\\Users\\Demo\\Projects\\node_modules',
+          kind: 'directory',
+          sizeBytes: 1024 * 1024 * 48,
+          modifiedAt: new Date().toISOString(),
+        },
+      ]),
+    deletePath: async () => ok(undefined),
     exportReport: async () => undefined,
     getPreferences: async () => ({
       theme: mockPreferences.theme,
       exclusions: mockPreferences.exclusions.map((entry) => ({ ...entry })),
+      confirmBeforeDelete: mockPreferences.confirmBeforeDelete,
+      defaultDeleteMethod: mockPreferences.defaultDeleteMethod,
     }),
     setPreferences: async (preferences) => {
       mockPreferences.theme = preferences.theme;
       mockPreferences.exclusions = preferences.exclusions.map((entry) => ({ ...entry }));
+      mockPreferences.confirmBeforeDelete = preferences.confirmBeforeDelete;
+      mockPreferences.defaultDeleteMethod = preferences.defaultDeleteMethod;
       return {
         theme: mockPreferences.theme,
         exclusions: mockPreferences.exclusions.map((entry) => ({ ...entry })),
+        confirmBeforeDelete: mockPreferences.confirmBeforeDelete,
+        defaultDeleteMethod: mockPreferences.defaultDeleteMethod,
       };
     },
     onScanProgress: (callback) => {

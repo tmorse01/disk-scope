@@ -8,6 +8,7 @@ import type {
   ScanErrorEvent,
   ScanProgressEvent,
   ScanSessionId,
+  DeletePathOptions,
   SelectedPath,
   StartScanOptions,
   StartScanResponse,
@@ -48,6 +49,14 @@ const diskScopeAPI: DiskScopeAPI = {
 
   copyPath: (path: string): Promise<void> => {
     return ipcRenderer.invoke(IPC_CHANNELS.COPY_PATH, path);
+  },
+
+  listDirectoryContents: (dirPath: string) => {
+    return ipcRenderer.invoke(IPC_CHANNELS.LIST_DIRECTORY_CONTENTS, dirPath);
+  },
+
+  deletePath: (options: DeletePathOptions) => {
+    return ipcRenderer.invoke(IPC_CHANNELS.DELETE_PATH, options);
   },
 
   exportReport: (scanId: ScanSessionId, options: ExportOptions): Promise<void> => {

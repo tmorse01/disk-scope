@@ -31,6 +31,8 @@ describe('preferences-store', () => {
     expect(preferences).toEqual({
       theme: 'light',
       exclusions: [],
+      confirmBeforeDelete: true,
+      defaultDeleteMethod: 'recycle-bin',
     });
   });
 
@@ -41,6 +43,8 @@ describe('preferences-store', () => {
         { id: 'ex-1', kind: 'folder-name', value: 'node_modules' },
         { id: 'ex-2', kind: 'path', value: 'C:\\Temp\\skip' },
       ],
+      confirmBeforeDelete: true,
+      defaultDeleteMethod: 'recycle-bin',
     });
 
     resetPreferencesFilePathConfiguration();
@@ -52,6 +56,22 @@ describe('preferences-store', () => {
       { id: 'ex-1', kind: 'folder-name', value: 'node_modules' },
       { id: 'ex-2', kind: 'path', value: 'C:\\Temp\\skip' },
     ]);
+  });
+
+  it('persists confirmBeforeDelete and defaultDeleteMethod', async () => {
+    await savePreferences({
+      theme: 'light',
+      exclusions: [],
+      confirmBeforeDelete: false,
+      defaultDeleteMethod: 'permanent',
+    });
+
+    resetPreferencesFilePathConfiguration();
+    configurePreferencesFilePath(() => preferencesFilePath);
+
+    const reloaded = await loadPreferences();
+    expect(reloaded.confirmBeforeDelete).toBe(false);
+    expect(reloaded.defaultDeleteMethod).toBe('permanent');
   });
 
   it('drops invalid exclusion entries when normalizing', () => {
@@ -67,6 +87,8 @@ describe('preferences-store', () => {
     ).toEqual({
       theme: 'light',
       exclusions: [{ id: 'ok', kind: 'path', value: 'C:\\valid' }],
+      confirmBeforeDelete: true,
+      defaultDeleteMethod: 'recycle-bin',
     });
   });
 });

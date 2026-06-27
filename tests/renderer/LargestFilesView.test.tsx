@@ -90,4 +90,13 @@ describe('LargestFilesView', () => {
     expect(rows()[0]).toHaveTextContent('large.bin');
     expect(rows()[1]).toHaveTextContent('readme');
   });
+
+  it('renders delete actions for each file row', () => {
+    scanStore.result = buildResult();
+    scanStore.status = 'completed';
+
+    renderView();
+
+    expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(2);
+  });
 });

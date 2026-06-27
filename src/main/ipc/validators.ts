@@ -1,4 +1,4 @@
-import type { ExportFormat, ScanSessionId } from '../../shared/types';
+import type { DeleteMethod, ExportFormat, ScanSessionId } from '../../shared/types';
 import { normalizePreferences } from '../services/preferences-store';
 
 export class ValidationError extends Error {
@@ -16,6 +16,10 @@ function assertNonEmptyString(value: unknown, field: string): string {
     throw new ValidationError(field, `${field} must be a non-empty string`);
   }
   return value;
+}
+
+function isDeleteMethod(value: unknown): value is DeleteMethod {
+  return value === 'recycle-bin' || value === 'permanent';
 }
 
 export function validateScanSessionId(value: unknown): ScanSessionId {
@@ -60,6 +64,22 @@ export function validateExportOptions(value: unknown): { format: ExportFormat } 
   }
 
   return { format };
+}
+
+export function validateDeletePathOptions(value: unknown): { path: string; method: DeleteMethod } {
+  if (!value || typeof value !== 'object') {
+    throw new ValidationError('options', 'deletePath options must be an object');
+  }
+
+  const record = value as Record<string, unknown>;
+  const targetPath = validatePath(record.path);
+  const method = record.method;
+
+  if (!isDeleteMethod(method)) {
+    throw new ValidationError('method', 'method must be "recycle-bin" or "permanent"');
+  }
+
+  return { path: targetPath, method };
 }
 
 export function validateAppPreferences(value: unknown): ReturnType<typeof normalizePreferences> {
