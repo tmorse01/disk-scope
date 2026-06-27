@@ -181,10 +181,19 @@ function Publish-LocalRelease {
 
     gh auth status | Out-Null
 
+    # Use --notes-file instead of --notes: PowerShell breaks embedded double quotes
+    # in native command lines, which makes gh treat words like "code" as asset paths.
+    $notesPath = Join-Path $RepoRoot "dist/release-notes-upload.md"
+    $notesDir = Split-Path $notesPath -Parent
+    if ($notesDir -and -not (Test-Path $notesDir)) {
+        New-Item -ItemType Directory -Path $notesDir -Force | Out-Null
+    }
+    Set-Content -Path $notesPath -Value $ReleaseNotes -Encoding utf8
+
     $releaseArgs = @(
         "release", "create", $Tag,
         "--title", "DiskScope $Version",
-        "--notes", $ReleaseNotes
+        "--notes-file", $notesPath
     )
 
     if ($IsDraft) {
