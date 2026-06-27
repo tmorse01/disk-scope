@@ -1069,7 +1069,7 @@ The app should feel safer and more focused than classic disk analyzers, even if 
 
 Only consider these after the MVP is stable:
 
-- Move selected items to Trash/Recycle Bin
+- ~~Move selected items to Trash/Recycle Bin~~ (shipped in Task 016 for file browser)
 - Cleanup basket with reclaimable total
 - Treemap visualization
 - Scan history

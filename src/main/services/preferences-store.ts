@@ -6,6 +6,8 @@ import type { AppPreferences, ExclusionKind, ScanExclusion } from '../../shared/
 export const DEFAULT_PREFERENCES: AppPreferences = {
   theme: 'light',
   exclusions: [],
+  confirmBeforeDelete: true,
+  defaultDeleteMethod: 'recycle-bin',
 };
 
 let cachedPreferences: AppPreferences | null = null;
@@ -67,7 +69,11 @@ export function normalizePreferences(value: unknown): AppPreferences {
         .filter((entry): entry is ScanExclusion => entry !== null)
     : [];
 
-  return { theme, exclusions };
+  const confirmBeforeDelete = record.confirmBeforeDelete !== false;
+  const defaultDeleteMethod =
+    record.defaultDeleteMethod === 'permanent' ? 'permanent' : 'recycle-bin';
+
+  return { theme, exclusions, confirmBeforeDelete, defaultDeleteMethod };
 }
 
 export async function loadPreferences(): Promise<AppPreferences> {

@@ -5,6 +5,7 @@ import TableCell from '@mui/material/TableCell';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
 import { useMemo, useState } from 'react';
+import type { LargestFileEntry } from '../../../shared/types';
 import { formatBytes } from '../../../shared/format-bytes';
 import {
   DsDataTable,
@@ -16,6 +17,8 @@ import { DsPageHeader } from '../../components/DsStatusChip';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { useScanStore } from '../../hooks/useScanStore';
+import { FileRowActions } from '../file-actions/FileRowActions';
+import type { DeleteTarget } from '../file-actions/delete-target';
 import { formatExtensionLabel } from '../file-types/extension-label';
 import { fileIconForExtension } from './file-icon-utils';
 import {
@@ -25,6 +28,15 @@ import {
   type LargestFileSortKey,
   type SortDirection,
 } from './largest-files-utils';
+
+function largestFileToDeleteTarget(file: LargestFileEntry): DeleteTarget {
+  return {
+    path: file.path,
+    name: file.name,
+    kind: 'file',
+    sizeBytes: file.sizeBytes,
+  };
+}
 
 export function LargestFilesView() {
   const { result, status } = useScanStore();
@@ -100,6 +112,7 @@ export function LargestFilesView() {
               <DsTableCell sortDirection={sortLabelProps('modifiedAt').direction}>
                 <TableSortLabel {...sortLabelProps('modifiedAt')}>Modified</TableSortLabel>
               </DsTableCell>
+              <DsTableCell align="right">Actions</DsTableCell>
             </DsTableHeadRow>
           }
         >
@@ -129,6 +142,9 @@ export function LargestFilesView() {
                 <TableCell>{formatExtensionLabel(file.extension)}</TableCell>
                 <TableCell>
                   <DsTabular>{formatModifiedAt(file.modifiedAt)}</DsTabular>
+                </TableCell>
+                <TableCell align="right">
+                  <FileRowActions target={largestFileToDeleteTarget(file)} />
                 </TableCell>
               </DsTableBodyRow>
             ))}

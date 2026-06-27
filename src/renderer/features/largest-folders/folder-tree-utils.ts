@@ -1,4 +1,18 @@
-import type { DirectoryNode, NodeId } from '../../../shared/types';
+import type { DirectoryListingEntry, DirectoryNode, NodeId } from '../../../shared/types';
+
+export const FILES_GROUP_SUFFIX = '::__files__';
+
+export function filesGroupId(parentId: NodeId): NodeId {
+  return `${parentId}${FILES_GROUP_SUFFIX}`;
+}
+
+export function isFilesGroupId(nodeId: NodeId): boolean {
+  return nodeId.endsWith(FILES_GROUP_SUFFIX);
+}
+
+export function parentIdFromFilesGroupId(filesGroupNodeId: NodeId): NodeId {
+  return filesGroupNodeId.slice(0, -FILES_GROUP_SUFFIX.length);
+}
 
 export type FolderSortColumn =
   | 'name'
@@ -17,6 +31,36 @@ export type FlatFolderRow = {
   hasChildren: boolean;
   isExpanded: boolean;
 };
+
+export type FlatDirectoryRow = {
+  kind: 'directory';
+  nodeId: NodeId;
+  node: DirectoryNode;
+  depth: number;
+  hasChildren: boolean;
+  isExpanded: boolean;
+};
+
+export type FlatFilesGroupRow = {
+  kind: 'files-group';
+  nodeId: NodeId;
+  parentId: NodeId;
+  parentPath: string;
+  fileCount: number;
+  depth: number;
+  isExpanded: boolean;
+  isLoading: boolean;
+};
+
+export type FlatFileRow = {
+  kind: 'file';
+  nodeId: NodeId;
+  parentId: NodeId;
+  entry: DirectoryListingEntry;
+  depth: number;
+};
+
+export type FlatTreeRow = FlatDirectoryRow | FlatFilesGroupRow | FlatFileRow;
 
 export const DEFAULT_FOLDER_SORT_COLUMN: FolderSortColumn = 'sizeBytes';
 export const DEFAULT_FOLDER_SORT_DIRECTION: SortDirection = 'desc';
@@ -153,6 +197,160 @@ export function flattenFolderTree(
         ),
       );
     }
+  }
+
+  return rows;
+}
+
+function directoryHasExpandableContent(node: DirectoryNode): boolean {
+  return node.childDirectoryIds.length > 0 || node.fileCount > 0;
+}
+
+function appendFilesGroupRows(
+  parentId: NodeId,
+  parent: DirectoryNode,
+  depth: number,
+  expandedIds: ReadonlySet<NodeId>,
+  fileCache: ReadonlyMap<NodeId, DirectoryListingEntry[]>,
+  loadingFilesGroupIds: ReadonlySet<NodeId>,
+): FlatTreeRow[] {
+  if (parent.fileCount <= 0) {
+    return [];
+  }
+
+  const groupId = filesGroupId(parentId);
+  const isExpanded = expandedIds.has(groupId);
+  const rows: FlatTreeRow[] = [
+    {
+      kind: 'files-group',
+      nodeId: groupId,
+      parentId,
+      parentPath: parent.path,
+      fileCount: parent.fileCount,
+      depth,
+      isExpanded,
+      isLoading: loadingFilesGroupIds.has(parentId),
+    },
+  ];
+
+  if (isExpanded) {
+    const cachedEntries = fileCache.get(parentId) ?? [];
+    for (const entry of cachedEntries) {
+      if (entry.kind !== 'file') {
+        continue;
+      }
+
+      rows.push({
+        kind: 'file',
+        nodeId: entry.path,
+        parentId,
+        entry,
+        depth: depth + 1,
+      });
+    }
+  }
+
+  return rows;
+}
+
+export function flattenFolderTreeRows(
+  parentId: NodeId,
+  directoriesById: Record<NodeId, DirectoryNode>,
+  expandedIds: ReadonlySet<NodeId>,
+  column: FolderSortColumn,
+  direction: SortDirection,
+  rootTotalBytes: number,
+  fileCache: ReadonlyMap<NodeId, DirectoryListingEntry[]> = new Map(),
+  loadingFilesGroupIds: ReadonlySet<NodeId> = new Set(),
+  depth = 0,
+  visitedOnPath: ReadonlySet<NodeId> = new Set(),
+  includeFocusFilesGroup = false,
+): FlatTreeRow[] {
+  if (visitedOnPath.has(parentId)) {
+    return [];
+  }
+
+  const parent = directoriesById[parentId];
+  if (!parent) {
+    return [];
+  }
+
+  const nextVisited = new Set(visitedOnPath);
+  nextVisited.add(parentId);
+
+  const sortedChildIds = sortDirectoryIds(
+    parent.childDirectoryIds,
+    directoriesById,
+    column,
+    direction,
+    rootTotalBytes,
+  );
+
+  const rows: FlatTreeRow[] = [];
+
+  for (const childId of sortedChildIds) {
+    const node = directoriesById[childId];
+    if (!node) {
+      continue;
+    }
+
+    if (nextVisited.has(childId)) {
+      continue;
+    }
+
+    const hasChildren = directoryHasExpandableContent(node);
+    const isExpanded = expandedIds.has(childId);
+
+    rows.push({
+      kind: 'directory',
+      nodeId: childId,
+      node,
+      depth,
+      hasChildren,
+      isExpanded,
+    });
+
+    if (isExpanded) {
+      rows.push(
+        ...flattenFolderTreeRows(
+          childId,
+          directoriesById,
+          expandedIds,
+          column,
+          direction,
+          rootTotalBytes,
+          fileCache,
+          loadingFilesGroupIds,
+          depth + 1,
+          nextVisited,
+          false,
+        ),
+      );
+
+      rows.push(
+        ...appendFilesGroupRows(
+          childId,
+          node,
+          depth + 1,
+          expandedIds,
+          fileCache,
+          loadingFilesGroupIds,
+        ),
+      );
+    }
+  }
+
+  if (includeFocusFilesGroup) {
+    rows.push(
+      ...appendFilesGroupRows(
+        parentId,
+        parent,
+        0,
+        expandedIds,
+        fileCache,
+        loadingFilesGroupIds,
+      ),
+    );
   }
 
   return rows;

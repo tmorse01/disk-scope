@@ -37,6 +37,10 @@ export function getCompletedScanResult(scanId: ScanSessionId): ScanResult | unde
   return completedScans.get(scanId);
 }
 
+export function getProtectedScanRootPaths(): string[] {
+  return [...completedScans.values()].map((result) => path.normalize(result.rootPath));
+}
+
 function broadcastToRenderers<T>(channel: string, payload: T): void {
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) {

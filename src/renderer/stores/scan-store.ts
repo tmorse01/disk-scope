@@ -1,5 +1,7 @@
 import type {
+  DirectoryNode,
   ExportFormat,
+  NodeId,
   ScanProgressEvent,
   ScanResult,
   ScanSessionId,
@@ -7,6 +9,7 @@ import type {
   SelectedPath,
 } from '../../shared/types';
 import { computeScanDurationMs } from '../../shared/scan-duration';
+import type { DeleteTarget } from '../features/file-actions/delete-target';
 
 export type ScanProgressSnapshot = {
   filesScanned: number;
@@ -339,6 +342,153 @@ export function applyScanProgressForTest(event: ScanProgressEvent): void {
   applyProgressSnapshot(event);
   notifyScanStore();
 }
+
+
+function pathsEqual(a: string, b: string): boolean {
+  return a.replace(/\/$/, '').toLowerCase() === b.replace(/\/$/, '').toLowerCase();
+}
+
+function isPathInsideDirectory(targetPath: string, directoryPath: string): boolean {
+  const normalizedTarget = targetPath.replace(/\/$/, '');
+  const normalizedDirectory = directoryPath.replace(/\/$/, '');
+  if (!normalizedDirectory) {
+    return false;
+  }
+
+  const prefix = normalizedDirectory.endsWith('\\')
+    ? normalizedDirectory
+    : `${normalizedDirectory}\\`;
+  return normalizedTarget.toLowerCase().startsWith(prefix.toLowerCase());
+}
+
+function findDirectoryNodeIdByPath(result: ScanResult, targetPath: string): NodeId | null {
+  for (const node of Object.values(result.directoriesById)) {
+    if (pathsEqual(node.path, targetPath)) {
+      return node.id;
+    }
+  }
+
+  return null;
+}
+
+function collectSubtreeNodeIds(result: ScanResult, rootId: NodeId): NodeId[] {
+  const collected: NodeId[] = [];
+  const stack: NodeId[] = [rootId];
+
+  while (stack.length > 0) {
+    const nodeId = stack.pop();
+    if (!nodeId) {
+      continue;
+    }
+
+    collected.push(nodeId);
+    const node = result.directoriesById[nodeId];
+    if (!node) {
+      continue;
+    }
+
+    for (const childId of node.childDirectoryIds) {
+      stack.push(childId);
+    }
+  }
+
+  return collected;
+}
+
+function subtractFileSizeFromAncestors(result: ScanResult, startNodeId: NodeId, sizeBytes: number): void {
+  let currentId: NodeId | null = startNodeId;
+
+  while (currentId) {
+    const node: DirectoryNode | undefined = result.directoriesById[currentId];
+    if (!node) {
+      break;
+    }
+
+    node.sizeBytes = Math.max(0, node.sizeBytes - sizeBytes);
+    currentId = node.parentId;
+  }
+}
+
+function parentDirectoryPath(filePath: string): string | null {
+  const normalized = filePath.replace(/\/$/, '');
+  const index = Math.max(normalized.lastIndexOf('\\'), normalized.lastIndexOf('/'));
+  if (index <= 0) {
+    return null;
+  }
+
+  return normalized.slice(0, index);
+}
+
+/** Best-effort scan summary patch after a successful delete. */
+export function removeDeletedPathFromScanResult(target: DeleteTarget): void {
+  if (!scanStore.result) {
+    return;
+  }
+
+  const result = scanStore.result;
+  const targetPath = target.path;
+
+  result.largestFiles = result.largestFiles.filter((entry) => !pathsEqual(entry.path, targetPath));
+  result.cleanupCandidates = result.cleanupCandidates.filter((entry) => !pathsEqual(entry.path, targetPath));
+
+  if (target.kind === 'file') {
+    result.fileCount = Math.max(0, result.fileCount - 1);
+    result.totalSizeBytes = Math.max(0, result.totalSizeBytes - target.sizeBytes);
+
+    const parentPath = parentDirectoryPath(targetPath);
+    if (parentPath) {
+      const parentId = findDirectoryNodeIdByPath(result, parentPath);
+      if (parentId) {
+        const parentNode = result.directoriesById[parentId];
+        if (parentNode) {
+          parentNode.fileCount = Math.max(0, parentNode.fileCount - 1);
+          subtractFileSizeFromAncestors(result, parentId, target.sizeBytes);
+        }
+      }
+    }
+  } else {
+    const nodeId = findDirectoryNodeIdByPath(result, targetPath);
+    if (nodeId) {
+      const node = result.directoriesById[nodeId];
+      const subtreeIds = collectSubtreeNodeIds(result, nodeId);
+      let subtreeFileCount = 0;
+
+      for (const id of subtreeIds) {
+        const subtreeNode = result.directoriesById[id];
+        if (subtreeNode) {
+          subtreeFileCount += subtreeNode.fileCount;
+        }
+      }
+
+      result.fileCount = Math.max(0, result.fileCount - subtreeFileCount);
+      result.directoryCount = Math.max(0, result.directoryCount - subtreeIds.length);
+      result.totalSizeBytes = Math.max(0, result.totalSizeBytes - (node?.sizeBytes ?? target.sizeBytes));
+
+      if (node?.parentId) {
+        const parentNode = result.directoriesById[node.parentId];
+        if (parentNode) {
+          parentNode.childDirectoryIds = parentNode.childDirectoryIds.filter((childId) => childId !== nodeId);
+          parentNode.directoryCount = Math.max(0, parentNode.directoryCount - 1);
+          subtractFileSizeFromAncestors(result, node.parentId, node.sizeBytes);
+        }
+      }
+
+      for (const id of subtreeIds) {
+        delete result.directoriesById[id];
+      }
+    }
+
+    result.largestFiles = result.largestFiles.filter(
+      (entry) => !isPathInsideDirectory(entry.path, targetPath) && !pathsEqual(entry.path, targetPath),
+    );
+    result.cleanupCandidates = result.cleanupCandidates.filter(
+      (entry) => !isPathInsideDirectory(entry.path, targetPath) && !pathsEqual(entry.path, targetPath),
+    );
+  }
+
+  notifyScanStore();
+}
+
 
 /** Test helper — reset scan lifecycle fields. */
 export function resetScanSessionForTest(): void {

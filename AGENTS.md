@@ -118,6 +118,7 @@ Before marking a task done:
 | Cleanup rules | 009 | `src/scanner/cleanup-rules.ts`, `cleanup-candidates/` |
 | Exclusions | 010 | `src/scanner/exclusions.ts`, `exclusions/`, preferences |
 | Export | 011 | `src/main/services/report-exporter.ts` |
+| File browser / safe delete | 016 | `src/main/services/file-actions.ts`, `src/renderer/features/file-actions/`, `src/renderer/features/largest-folders/FilesInFolderPanel.tsx`, settings safety prefs |
 | Packaging | 012 | `forge.config.ts`, assets |
 | Shared types | all | `src/shared/` — coordinate before changing |
 

@@ -1,12 +1,9 @@
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import IconButton from '@mui/material/IconButton';
-import Stack from '@mui/material/Stack';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
-import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import type { RiskLevel } from '../../../shared/types';
+import type { CleanupCandidate, RiskLevel } from '../../../shared/types';
 import { formatBytes } from '../../../shared/format-bytes';
 import { DsCard } from '../../components/DsCard';
 import {
@@ -20,6 +17,7 @@ import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { useScanStore } from '../../hooks/useScanStore';
 import { radii } from '../../theme/tokens';
+import { FileRowActions } from '../file-actions/FileRowActions';
 
 const RISK_LABELS: Record<RiskLevel, string> = {
   low: 'Minimal',
@@ -35,49 +33,19 @@ const RISK_VARIANTS: Record<RiskLevel, 'success' | 'warning' | 'error' | 'neutra
   'do-not-touch': 'neutral',
 };
 
-async function revealCandidatePath(candidatePath: string): Promise<void> {
-  if (typeof window.diskScope === 'undefined') {
-    return;
-  }
-
-  await window.diskScope.revealPath(candidatePath);
+function candidateToDeleteTarget(candidate: CleanupCandidate) {
+  return {
+    path: candidate.path,
+    name: candidate.name,
+    kind: 'directory' as const,
+    sizeBytes: candidate.sizeBytes,
+    childFileCount: candidate.fileCount,
+    risk: candidate.risk,
+  };
 }
 
-async function copyCandidatePath(candidatePath: string): Promise<void> {
-  if (typeof window.diskScope === 'undefined') {
-    return;
-  }
-
-  await window.diskScope.copyPath(candidatePath);
-}
-
-function CandidateActions({ candidatePath }: { candidatePath: string }) {
-  return (
-    <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
-      <Tooltip title="Reveal in file explorer">
-        <IconButton
-          size="small"
-          aria-label="Reveal in file explorer"
-          onClick={() => {
-            void revealCandidatePath(candidatePath);
-          }}
-        >
-          <MaterialIcon name="folder_open" />
-        </IconButton>
-      </Tooltip>
-      <Tooltip title="Copy path">
-        <IconButton
-          size="small"
-          aria-label="Copy path"
-          onClick={() => {
-            void copyCandidatePath(candidatePath);
-          }}
-        >
-          <MaterialIcon name="content_copy" />
-        </IconButton>
-      </Tooltip>
-    </Stack>
-  );
+function CandidateActions({ candidate }: { candidate: CleanupCandidate }) {
+  return <FileRowActions target={candidateToDeleteTarget(candidate)} />;
 }
 
 export function CleanupCandidatesView() {
@@ -192,7 +160,7 @@ export function CleanupCandidatesView() {
                     </Typography>
                   </TableCell>
                   <TableCell align="right">
-                    <CandidateActions candidatePath={candidate.path} />
+                    <CandidateActions candidate={candidate} />
                   </TableCell>
                 </DsTableBodyRow>
               ))}

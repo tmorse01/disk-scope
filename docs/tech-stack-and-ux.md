@@ -213,7 +213,7 @@ Prioritize **sortable tree tables**, breadcrumbs, and compact size bars over cha
 | Lit, web components, `@material/web` for new UI | React + MUI |
 | Vanilla TS DOM in feature views | React components |
 | Filesystem APIs in renderer | `window.diskScope` preload API |
-| Permanent delete in MVP | Reveal, copy, exclude only |
+| Casual permanent delete | Recycle Bin default; permanent only via explicit method + Settings; confirm before delete on by default |
 | Heavy global state libraries | Small stores / context |
 | Random icon fonts or heroicons | Material Symbols only |
 

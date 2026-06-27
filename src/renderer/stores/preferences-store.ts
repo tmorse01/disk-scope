@@ -5,6 +5,8 @@ export type PreferencesStoreState = AppPreferences;
 export const preferencesStore: PreferencesStoreState = {
   theme: 'light',
   exclusions: [],
+  confirmBeforeDelete: true,
+  defaultDeleteMethod: 'recycle-bin',
 };
 
 type PreferencesStoreListener = (state: PreferencesStoreState) => void;
@@ -37,6 +39,8 @@ function notifyPreferencesStore(): void {
 function applyPreferences(preferences: AppPreferences): void {
   preferencesStore.theme = preferences.theme;
   preferencesStore.exclusions = [...preferences.exclusions];
+  preferencesStore.confirmBeforeDelete = preferences.confirmBeforeDelete;
+  preferencesStore.defaultDeleteMethod = preferences.defaultDeleteMethod;
 }
 
 function persistPreferences(): void {
@@ -47,6 +51,8 @@ function persistPreferences(): void {
   const snapshot: AppPreferences = {
     theme: preferencesStore.theme,
     exclusions: preferencesStore.exclusions.map((entry) => ({ ...entry })),
+    confirmBeforeDelete: preferencesStore.confirmBeforeDelete,
+    defaultDeleteMethod: preferencesStore.defaultDeleteMethod,
   };
 
   saveQueue = saveQueue
@@ -104,6 +110,18 @@ export function setThemePreference(theme: AppPreferences['theme']): void {
   persistPreferences();
 }
 
+export function setConfirmBeforeDeletePreference(confirmBeforeDelete: boolean): void {
+  preferencesStore.confirmBeforeDelete = confirmBeforeDelete;
+  notifyPreferencesStore();
+  persistPreferences();
+}
+
+export function setDefaultDeleteMethodPreference(defaultDeleteMethod: AppPreferences['defaultDeleteMethod']): void {
+  preferencesStore.defaultDeleteMethod = defaultDeleteMethod;
+  notifyPreferencesStore();
+  persistPreferences();
+}
+
 export function setPreferencesForTest(preferences: AppPreferences): void {
   applyPreferences(preferences);
   notifyPreferencesStore();
@@ -112,6 +130,8 @@ export function setPreferencesForTest(preferences: AppPreferences): void {
 export function resetPreferencesStoreForTest(): void {
   preferencesStore.theme = 'light';
   preferencesStore.exclusions = [];
+  preferencesStore.confirmBeforeDelete = true;
+  preferencesStore.defaultDeleteMethod = 'recycle-bin';
   notifyPreferencesStore();
 }
 

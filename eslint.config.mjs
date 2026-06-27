@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['.vite/**', 'out/**', 'dist/**', 'node_modules/**', '.tsbuild/**', '.worktrees/**', 'native/scanner-win/**'],
+    ignores: ['scripts/**/*.cjs', '.vite/**', 'out/**', 'dist/**', 'node_modules/**', '.tsbuild/**', '.worktrees/**', 'native/scanner-win/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

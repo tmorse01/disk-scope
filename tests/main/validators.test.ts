@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ValidationError } from '../../src/main/ipc/validators';
 import {
+  validateDeletePathOptions,
   validateExportOptions,
   validatePath,
   validateScanSessionId,
@@ -69,6 +70,24 @@ describe('IPC validators', () => {
 
     it('rejects unknown formats', () => {
       expect(() => validateExportOptions({ format: 'xml' })).toThrow(ValidationError);
+    });
+  });
+
+  describe('validateDeletePathOptions', () => {
+    it('accepts recycle-bin and permanent methods', () => {
+      expect(
+        validateDeletePathOptions({ path: 'C:\\Temp\\file.txt', method: 'recycle-bin' }),
+      ).toEqual({ path: 'C:\\Temp\\file.txt', method: 'recycle-bin' });
+      expect(
+        validateDeletePathOptions({ path: '/tmp/file.txt', method: 'permanent' }),
+      ).toEqual({ path: '/tmp/file.txt', method: 'permanent' });
+    });
+
+    it('rejects missing path or invalid method', () => {
+      expect(() => validateDeletePathOptions({ method: 'recycle-bin' })).toThrow(ValidationError);
+      expect(() =>
+        validateDeletePathOptions({ path: 'C:\\Temp', method: 'shred' }),
+      ).toThrow(ValidationError);
     });
   });
 });
