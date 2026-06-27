@@ -131,6 +131,18 @@ export type ScanErrorEvent = {
 
 export type Unsubscribe = () => void;
 
+export type WindowMaximizeChangedEvent = {
+  isMaximized: boolean;
+};
+
+export type WindowControlsAPI = {
+  minimize(): Promise<void>;
+  toggleMaximize(): Promise<boolean>;
+  close(): Promise<void>;
+  isMaximized(): Promise<boolean>;
+  onMaximizeChanged(callback: (event: WindowMaximizeChangedEvent) => void): Unsubscribe;
+};
+
 export type DiskScopeAPI = {
   selectDirectory(): Promise<SelectedPath | null>;
   startScan(options: StartScanOptions): Promise<StartScanResponse>;
@@ -143,4 +155,5 @@ export type DiskScopeAPI = {
   onScanProgress(callback: (event: ScanProgressEvent) => void): Unsubscribe;
   onScanComplete(callback: (event: ScanCompleteEvent) => void): Unsubscribe;
   onScanError(callback: (event: ScanErrorEvent) => void): Unsubscribe;
+  windowControls?: WindowControlsAPI;
 };

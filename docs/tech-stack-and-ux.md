@@ -46,6 +46,7 @@ Optional app-owned wrappers (e.g. `DsButton`, `DsDialog`) may wrap MUI for consi
 ### Theme
 
 - Central theme: [`src/renderer/theme/`](src/renderer/theme/) — MUI `createTheme` with Stitch design tokens from [`src/stitch_diskscope_material_ui/diskscope/DESIGN.md`](../src/stitch_diskscope_material_ui/diskscope/DESIGN.md).
+- **Product branding & window chrome:** [`docs/DESIGN.md`](DESIGN.md) — logo, title bar spec, app vs website assets.
 - Token files: `tokens.ts` (colors, spacing, radii), `typography.ts` (Geist + JetBrains Mono scale), `mui-theme.ts` (MUI palette + component overrides).
 - **Fonts:** Geist (UI), JetBrains Mono (tabular sizes/paths) — loaded in `index.html` / `preview.html`.
 - **Palette:** Blue corporate M3 (`#005bbf` primary, `#1a73e8` primary-container, surface-container tiers). See `stitchColors` in `tokens.ts`.

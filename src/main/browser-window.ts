@@ -1,14 +1,29 @@
 import { BrowserWindow } from 'electron';
 import path from 'node:path';
+import { brandColors } from '../shared/branding';
+import { attachWindowChromeListeners } from './ipc/window-ipc';
 
 const DEFAULT_WIDTH = 1200;
 const DEFAULT_HEIGHT = 800;
+const MIN_WIDTH = 960;
+const MIN_HEIGHT = 640;
+
+const USE_CUSTOM_WINDOW_FRAME = process.platform === 'win32';
 
 export function createMainWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
     width: DEFAULT_WIDTH,
     height: DEFAULT_HEIGHT,
+    minWidth: MIN_WIDTH,
+    minHeight: MIN_HEIGHT,
     show: false,
+    ...(USE_CUSTOM_WINDOW_FRAME
+      ? {
+          frame: false,
+          autoHideMenuBar: true,
+          backgroundColor: brandColors.backgroundLight,
+        }
+      : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -17,6 +32,10 @@ export function createMainWindow(): BrowserWindow {
       webSecurity: true,
     },
   });
+
+  if (USE_CUSTOM_WINDOW_FRAME) {
+    attachWindowChromeListeners(mainWindow);
+  }
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 

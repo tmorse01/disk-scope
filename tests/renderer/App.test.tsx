@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from '../../src/renderer/App';
+import '../../src/renderer/preview/mock-disk-scope';
 import { muiTheme } from '../../src/renderer/theme/mui-theme';
 
 function renderApp() {
@@ -39,6 +40,17 @@ describe('App', () => {
 
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Overview' })).not.toBeInTheDocument();
+  });
+
+  it('toggles sidebar collapse', async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    const collapseButton = screen.getByRole('button', { name: 'Collapse sidebar' });
+    await user.click(collapseButton);
+
+    expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Scan folder' })).not.toBeInTheDocument();
   });
 
   it('shows scan status footer', () => {

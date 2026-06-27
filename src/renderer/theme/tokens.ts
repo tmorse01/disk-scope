@@ -83,6 +83,7 @@ export const layout = {
   marginMobile: 16,
   marginDesktop: 32,
   topAppBarHeight: 64,
+  titleBarHeight: 40,
   scanStatusHeight: 48,
   contentMaxWidth: 1600,
 } as const;
