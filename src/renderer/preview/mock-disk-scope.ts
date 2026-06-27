@@ -1,7 +1,15 @@
-import type { AppPreferences, DiskScopeAPI, ScanProgressEvent } from '../../shared/types';
+import type { AppPreferences, DiskScopeAPI, ScanProgressEvent, WindowControlsAPI } from '../../shared/types';
 import { ok } from '../../shared/result';
 
 const noopUnsubscribe = () => undefined;
+
+const mockWindowControls: WindowControlsAPI = {
+  minimize: async () => undefined,
+  toggleMaximize: async () => false,
+  close: async () => undefined,
+  isMaximized: async () => false,
+  onMaximizeChanged: () => noopUnsubscribe,
+};
 
 const mockPreferences: AppPreferences = {
   theme: 'light',
@@ -80,6 +88,7 @@ export function createMockDiskScope(
     },
     onScanComplete: () => noopUnsubscribe,
     onScanError: () => noopUnsubscribe,
+    windowControls: mockWindowControls,
     ...overrides,
   };
 

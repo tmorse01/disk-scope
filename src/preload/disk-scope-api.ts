@@ -13,6 +13,8 @@ import type {
   StartScanOptions,
   StartScanResponse,
   Unsubscribe,
+  WindowControlsAPI,
+  WindowMaximizeChangedEvent,
 } from '../shared/types';
 
 function createEventSubscription<T>(
@@ -29,6 +31,33 @@ function createEventSubscription<T>(
     ipcRenderer.removeListener(channel, listener);
   };
 }
+
+const windowControlsAPI: WindowControlsAPI | undefined =
+  process.platform === 'win32'
+    ? {
+        minimize: (): Promise<void> => {
+          return ipcRenderer.invoke(IPC_CHANNELS.WINDOW_MINIMIZE);
+        },
+
+        toggleMaximize: (): Promise<boolean> => {
+          return ipcRenderer.invoke(IPC_CHANNELS.WINDOW_TOGGLE_MAXIMIZE);
+        },
+
+        close: (): Promise<void> => {
+          return ipcRenderer.invoke(IPC_CHANNELS.WINDOW_CLOSE);
+        },
+
+        isMaximized: (): Promise<boolean> => {
+          return ipcRenderer.invoke(IPC_CHANNELS.WINDOW_IS_MAXIMIZED);
+        },
+
+        onMaximizeChanged: (
+          callback: (event: WindowMaximizeChangedEvent) => void,
+        ): Unsubscribe => {
+          return createEventSubscription(IPC_CHANNELS.WINDOW_MAXIMIZE_CHANGED, callback);
+        },
+      }
+    : undefined;
 
 const diskScopeAPI: DiskScopeAPI = {
   selectDirectory: (): Promise<SelectedPath | null> => {
@@ -82,6 +111,8 @@ const diskScopeAPI: DiskScopeAPI = {
   onScanError: (callback: (event: ScanErrorEvent) => void): Unsubscribe => {
     return createEventSubscription(IPC_CHANNELS.SCAN_ERROR, callback);
   },
+
+  windowControls: windowControlsAPI,
 };
 
 contextBridge.exposeInMainWorld('diskScope', diskScopeAPI);

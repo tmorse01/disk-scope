@@ -180,6 +180,7 @@ export const muiTheme = createTheme({
 export const NAV_RAIL_WIDTH = layout.sidebarRail;
 export const SIDEBAR_WIDTH = layout.sidebarWidth;
 export const TOP_APP_BAR_HEIGHT = layout.topAppBarHeight;
+export const TITLE_BAR_HEIGHT = layout.titleBarHeight;
 export const SCAN_STATUS_HEIGHT = layout.scanStatusHeight;
 export const CONTENT_GUTTER = layout.gutter;
 export const CONTENT_MAX_WIDTH = layout.contentMaxWidth;

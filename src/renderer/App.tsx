@@ -1,32 +1,22 @@
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Typography from '@mui/material/Typography';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
 import { useMemo, useState } from 'react';
-import { BrandMark } from './components/BrandMark';
 import { DsContextBar } from './components/DsContextBar';
 import { DsErrorBoundary } from './components/DsErrorBoundary';
-import { DsNavItem } from './components/DsNavItem';
-import { MaterialIcon } from './components/MaterialIcon';
+import { DsSidebar } from './components/DsSidebar';
+import { DsTitleBar } from './components/DsTitleBar';
 import { ShellProvider, useShellContext } from './components/ShellContext';
 import { ScanProgressRegion } from './features/scan-progress/ScanProgressRegion';
 import { useScanStore } from './hooks/useScanStore';
-import { getPrimarySelectedPath, pickScanTarget } from './stores/scan-store';
+import { getPrimarySelectedPath } from './stores/scan-store';
 import {
-  APP_ROUTES,
   DEFAULT_ROUTE,
   getRouteById,
-  isAppRoute,
   type AppRoute,
 } from './routes';
 import {
   CONTENT_GUTTER,
   CONTENT_MAX_WIDTH,
-  NAV_RAIL_WIDTH,
-  SIDEBAR_WIDTH,
 } from './theme/mui-theme';
-import { radii } from './theme/tokens';
 
 function pathToSegments(path: string): { id: string; label: string }[] {
   const normalized = path.replace(/\\/g, '/').replace(/\/+$/, '');
@@ -53,8 +43,6 @@ function pathToSegments(path: string): { id: string; label: string }[] {
 }
 
 function AppLayout() {
-  const theme = useTheme();
-  const expanded = useMediaQuery(theme.breakpoints.up('lg'));
   const [activeRoute, setActiveRoute] = useState<AppRoute>(DEFAULT_ROUTE);
   const { result, status } = useScanStore();
   const { breadcrumbSegments, contextActions } = useShellContext();
@@ -74,132 +62,48 @@ function AppLayout() {
   }, [result?.rootPath, status]);
 
   const segments = breadcrumbSegments.length > 0 ? breadcrumbSegments : defaultSegments;
-  const sidebarWidth = expanded ? SIDEBAR_WIDTH : NAV_RAIL_WIDTH;
 
   return (
     <Box
       sx={{
         display: 'flex',
+        flexDirection: 'column',
         minHeight: '100vh',
         bgcolor: 'background.default',
         color: 'text.primary',
       }}
     >
-      <Box
-        component="nav"
-        aria-label="Primary"
-        sx={{
-          width: sidebarWidth,
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          bgcolor: 'surfaceContainerLow.main',
-          borderRight: 1,
-          borderColor: 'outlineVariant.main',
-          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          position: 'sticky',
-          top: 0,
-          height: '100vh',
-          zIndex: 40,
-        }}
-      >
-        <Box sx={{ p: expanded ? 3 : 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <BrandMark size={40} />
+      <DsTitleBar />
+
+      <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        <DsSidebar activeRoute={activeRoute} onRouteChange={setActiveRoute} />
+
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <DsContextBar segments={segments} actions={contextActions} />
+
           <Box
+            component="main"
+            aria-label={route.label}
+            className="ds-custom-scrollbar"
             sx={{
-              overflow: 'hidden',
-              ...(!expanded
-                ? {
-                    position: 'absolute',
-                    width: 1,
-                    height: 1,
-                    padding: 0,
-                    margin: -1,
-                    overflow: 'hidden',
-                    clip: 'rect(0, 0, 0, 0)',
-                    whiteSpace: 'nowrap',
-                    border: 0,
-                  }
-                : {}),
+              flex: 1,
+              overflow: 'auto',
+              p: `${CONTENT_GUTTER}px`,
             }}
           >
-            <Typography
-              component="h1"
-              variant="h6"
-              sx={{ fontWeight: 700, color: 'primary.main', lineHeight: 1.2, whiteSpace: 'nowrap' }}
-            >
-              DiskScope
-            </Typography>
-            {expanded ? (
-              <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.8 }}>
-                System Utility
-              </Typography>
-            ) : null}
+            <Box sx={{ maxWidth: CONTENT_MAX_WIDTH, mx: 'auto' }}>
+              <DsErrorBoundary
+                resetKeys={[activeRoute]}
+                onBackToSafety={() => setActiveRoute(DEFAULT_ROUTE)}
+                title={`${route.label} ran into a problem`}
+              >
+                <ActiveView />
+              </DsErrorBoundary>
+            </Box>
           </Box>
+
+          {status !== 'scanning' ? <ScanProgressRegion /> : null}
         </Box>
-
-        <Box sx={{ flex: 1, px: expanded ? 1.5 : 0.5, py: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          {APP_ROUTES.map((navRoute) => (
-            <DsNavItem
-              key={navRoute.id}
-              icon={navRoute.icon}
-              label={navRoute.label}
-              active={activeRoute === navRoute.id}
-              expanded={expanded}
-              onClick={() => {
-                if (isAppRoute(navRoute.id)) {
-                  setActiveRoute(navRoute.id);
-                }
-              }}
-            />
-          ))}
-        </Box>
-
-        <Box sx={{ p: expanded ? 2 : 1, borderTop: 1, borderColor: 'outlineVariant.main' }}>
-          <Button
-            variant="contained"
-            color="primary"
-            fullWidth
-            onClick={() => void pickScanTarget()}
-            startIcon={<MaterialIcon name="add" aria-hidden={false} />}
-            sx={{
-              borderRadius: `${radii.lg}px`,
-              py: 1.25,
-              justifyContent: 'center',
-              minWidth: expanded ? undefined : 48,
-              '& .MuiButton-startIcon': expanded ? undefined : { mx: 0 },
-            }}
-          >
-            {expanded ? 'Scan folder' : null}
-          </Button>
-        </Box>
-      </Box>
-
-      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <DsContextBar segments={segments} actions={contextActions} />
-
-        <Box
-          component="main"
-          aria-label={route.label}
-          className="ds-custom-scrollbar"
-          sx={{
-            flex: 1,
-            overflow: 'auto',
-            p: `${CONTENT_GUTTER}px`,
-          }}
-        >
-          <Box sx={{ maxWidth: CONTENT_MAX_WIDTH, mx: 'auto' }}>
-            <DsErrorBoundary
-              resetKeys={[activeRoute]}
-              onBackToSafety={() => setActiveRoute(DEFAULT_ROUTE)}
-              title={`${route.label} ran into a problem`}
-            >
-              <ActiveView />
-            </DsErrorBoundary>
-          </Box>
-        </Box>
-
-        {status !== 'scanning' ? <ScanProgressRegion /> : null}
       </Box>
     </Box>
   );

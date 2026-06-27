@@ -12,4 +12,9 @@ export const IPC_CHANNELS = {
   SCAN_PROGRESS: 'disk-scope:scan-progress',
   SCAN_COMPLETE: 'disk-scope:scan-complete',
   SCAN_ERROR: 'disk-scope:scan-error',
+  WINDOW_MINIMIZE: 'disk-scope:window-minimize',
+  WINDOW_TOGGLE_MAXIMIZE: 'disk-scope:window-toggle-maximize',
+  WINDOW_CLOSE: 'disk-scope:window-close',
+  WINDOW_IS_MAXIMIZED: 'disk-scope:window-is-maximized',
+  WINDOW_MAXIMIZE_CHANGED: 'disk-scope:window-maximize-changed',
 } as const;
