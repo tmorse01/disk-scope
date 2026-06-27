@@ -5,6 +5,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { useMemo, useState } from 'react';
 import { DsContextBar } from './components/DsContextBar';
+import { DsErrorBoundary } from './components/DsErrorBoundary';
 import { DsNavItem } from './components/DsNavItem';
 import { MaterialIcon } from './components/MaterialIcon';
 import { ShellProvider, useShellContext } from './components/ShellContext';
@@ -201,7 +202,13 @@ function AppLayout() {
           }}
         >
           <Box sx={{ maxWidth: CONTENT_MAX_WIDTH, mx: 'auto' }}>
-            <ActiveView />
+            <DsErrorBoundary
+              resetKeys={[activeRoute]}
+              onBackToSafety={() => setActiveRoute(DEFAULT_ROUTE)}
+              title={`${route.label} ran into a problem`}
+            >
+              <ActiveView />
+            </DsErrorBoundary>
           </Box>
         </Box>
 

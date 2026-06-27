@@ -15,12 +15,22 @@ Summary:
 
 Main process, scanner, preload, and shared types remain plain TypeScript (no React).
 
-## Before coding
+## Task docs and worktrees
 
-Write a short plan:
+**Every task gets a markdown spec in `docs/tasks/` before implementation starts.** Do not code against an informal prompt alone — write or update the task doc first, then implement from it.
+
+### Task doc (required)
+
+- **Path:** `docs/tasks/NNN-short-name.md` (e.g. `006-scan-progress-ui.md`)
+- **When:** Create for new work; read and follow for assigned work; update when scope or decisions change
+- **Template** (match existing task docs in that folder):
 
 ```md
+# Task NNN — Short title
+
 ## Goal
+
+## Dependencies (must be complete first)
 
 ## Files likely to change
 
@@ -32,6 +42,28 @@ Write a short plan:
 
 ## Risks / assumptions
 ```
+
+### Worktree (required for large or parallel tasks)
+
+Use an isolated git worktree so big tasks do not collide with other in-flight work on `master`.
+
+```powershell
+.cursor/scripts/new-task-worktree.ps1 -TaskNum NNN -ShortName short-name
+```
+
+- **Work only inside** `.worktrees/task-NNN/` on branch `task/NNN-short-name`
+- Run `pnpm install` in the worktree before the quality gate
+- Remove the worktree after merge: `git worktree remove .worktrees/task-NNN`
+
+For multi-agent parallel waves, see [`docs/agent-fleet-playbook.md`](docs/agent-fleet-playbook.md).
+
+## Before coding
+
+1. Confirm a task doc exists in `docs/tasks/` (create one if missing — see above)
+2. For large or parallel tasks, create or switch to the task worktree
+3. Write a short implementation plan in chat if the task doc needs refinement
+
+Keep scope narrow to the assigned task doc.
 
 ## After coding
 
@@ -60,7 +92,8 @@ Before marking a task done:
 
 ## Guardrails
 
-- Keep scope narrow to the assigned task file in `docs/tasks/`
+- **Always** have a task doc in `docs/tasks/`; use a worktree for large or parallel tasks
+- Keep scope narrow to the assigned task doc
 - Do not add permanent delete or destructive filesystem features unless explicitly assigned
 - Do not expose broad filesystem APIs to the renderer
 - **Renderer UI must be React + MUI** — follow `docs/tech-stack-and-ux.md`; do not add Lit or `@material/web` for new code

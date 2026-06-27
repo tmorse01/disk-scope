@@ -17,7 +17,7 @@ Sequential waves (each gates the next — all touch `scan-engine.ts`):
 | **Scan-2** | 014 Tier 2 native | `task-014-scan-tier2-native` | `task/014-scan-tier2-native` | 5–20× (Windows) |
 | **Scan-3** | 015 Tier 3 parallel | `task-015-scan-tier3-parallel` | `task/015-scan-tier3-parallel` | 2–8× on top |
 
-**Not in this fleet:** Tier 4 NTFS MFT, Tier 5 SQLite/USN incremental.
+**Not in this fleet:** Tier 4 NTFS MFT ([Task 017](tasks/017-scan-tier4-mft.md)), Tier 5 SQLite/USN incremental ([Task 018](tasks/018-scan-tier5-incremental-cache.md)).
 
 ---
 
@@ -145,7 +145,7 @@ Benchmark: `pnpm exec tsx scripts/scan-benchmark.ts --profile=parallel-compare`
 - [ ] UI responsive during parallel scan (`pnpm dev` — manual)
 - [x] `SCAN_WORKER_COUNT=1` restores single-thread behavior
 
-**Fleet paused.** Tier 4+ requires new task specs and captain approval.
+**Fleet paused.** Tier 4+ requires captain approval. Task specs: [017 MFT](tasks/017-scan-tier4-mft.md), [018 incremental cache](tasks/018-scan-tier5-incremental-cache.md).
 
 ---
 
@@ -175,6 +175,6 @@ Halt if:
 
 ## Related docs
 
-- Task specs: [`docs/tasks/013-scan-tier1-hotpath.md`](tasks/013-scan-tier1-hotpath.md), [014](tasks/014-scan-tier2-native.md), [015](tasks/015-scan-tier3-parallel.md)
+- Task specs: [`docs/tasks/013-scan-tier1-hotpath.md`](tasks/013-scan-tier1-hotpath.md), [014](tasks/014-scan-tier2-native.md), [015](tasks/015-scan-tier3-parallel.md), [017 Tier 4 MFT](tasks/017-scan-tier4-mft.md), [018 Tier 5 cache/USN](tasks/018-scan-tier5-incremental-cache.md)
 - Agents: [`.cursor/agents/task-013-scan-tier1-hotpath.md`](../.cursor/agents/task-013-scan-tier1-hotpath.md), [014](../.cursor/agents/task-014-scan-tier2-native.md), [015](../.cursor/agents/task-015-scan-tier3-parallel.md)
 - General fleet playbook: [`docs/agent-fleet-playbook.md`](agent-fleet-playbook.md)

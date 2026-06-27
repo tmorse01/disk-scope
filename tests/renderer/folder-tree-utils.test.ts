@@ -163,6 +163,45 @@ describe('flattenFolderTree', () => {
 
     expect(rows.some((row) => row.nodeId === LIB_ID)).toBe(false);
   });
+
+  it('does not recurse into cyclic child links', () => {
+    const cycleA = 'cycle-a';
+    const cycleB = 'cycle-b';
+    const cyclicDirectories: Record<NodeId, DirectoryNode> = {
+      [ROOT_ID]: makeNode(ROOT_ID, {
+        name: 'project',
+        path: 'C:\\project',
+        parentId: null,
+        sizeBytes: 10_000,
+        childDirectoryIds: [cycleA],
+      }),
+      [cycleA]: makeNode(cycleA, {
+        name: 'a',
+        path: 'C:\\project\\a',
+        parentId: ROOT_ID,
+        sizeBytes: 5_000,
+        childDirectoryIds: [cycleB],
+      }),
+      [cycleB]: makeNode(cycleB, {
+        name: 'b',
+        path: 'C:\\project\\b',
+        parentId: cycleA,
+        sizeBytes: 5_000,
+        childDirectoryIds: [cycleA],
+      }),
+    };
+
+    const rows = flattenFolderTree(
+      ROOT_ID,
+      cyclicDirectories,
+      new Set([cycleA, cycleB]),
+      'sizeBytes',
+      'desc',
+      10_000,
+    );
+
+    expect(rows.map((row) => row.nodeId)).toEqual([cycleA, cycleB]);
+  });
 });
 
 describe('buildBreadcrumbPath', () => {
@@ -178,5 +217,26 @@ describe('buildBreadcrumbPath', () => {
       SRC_ID,
       LIB_ID,
     ]);
+  });
+
+  it('stops when parent chain contains a cycle', () => {
+    const cycleA = 'cycle-a';
+    const cycleB = 'cycle-b';
+    const cyclicDirectories: Record<NodeId, DirectoryNode> = {
+      [cycleA]: makeNode(cycleA, {
+        name: 'a',
+        path: 'C:\\a',
+        parentId: cycleB,
+      }),
+      [cycleB]: makeNode(cycleB, {
+        name: 'b',
+        path: 'C:\\b',
+        parentId: cycleA,
+      }),
+    };
+
+    expect(
+      buildBreadcrumbPath(cycleA, cyclicDirectories, ROOT_ID).map((node) => node.id),
+    ).toEqual([cycleB, cycleA]);
   });
 });

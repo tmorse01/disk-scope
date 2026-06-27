@@ -100,11 +100,19 @@ export function flattenFolderTree(
   direction: SortDirection,
   rootTotalBytes: number,
   depth = 0,
+  visitedOnPath: ReadonlySet<NodeId> = new Set(),
 ): FlatFolderRow[] {
+  if (visitedOnPath.has(parentId)) {
+    return [];
+  }
+
   const parent = directoriesById[parentId];
   if (!parent) {
     return [];
   }
+
+  const nextVisited = new Set(visitedOnPath);
+  nextVisited.add(parentId);
 
   const sortedChildIds = sortDirectoryIds(
     parent.childDirectoryIds,
@@ -119,6 +127,10 @@ export function flattenFolderTree(
   for (const childId of sortedChildIds) {
     const node = directoriesById[childId];
     if (!node) {
+      continue;
+    }
+
+    if (nextVisited.has(childId)) {
       continue;
     }
 
@@ -137,6 +149,7 @@ export function flattenFolderTree(
           direction,
           rootTotalBytes,
           depth + 1,
+          nextVisited,
         ),
       );
     }
@@ -152,9 +165,16 @@ export function buildBreadcrumbPath(
   rootNodeId: NodeId,
 ): DirectoryNode[] {
   const breadcrumb: DirectoryNode[] = [];
+  const visited = new Set<NodeId>();
   let currentId: NodeId | null = focusNodeId;
 
   while (currentId) {
+    if (visited.has(currentId)) {
+      break;
+    }
+
+    visited.add(currentId);
+
     const node: DirectoryNode | undefined = directoriesById[currentId];
     if (!node) {
       break;
