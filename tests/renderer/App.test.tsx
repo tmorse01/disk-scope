@@ -17,12 +17,13 @@ function renderApp() {
 }
 
 describe('App', () => {
-  it('renders the app title and seven nav labels', () => {
+  it('renders the app title and eight nav labels', () => {
     renderApp();
 
     expect(screen.getByRole('heading', { name: 'DiskScope' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Overview/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Largest Folders/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Disk Map/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Largest Files/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /File Types/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Cleanup/i })).toBeInTheDocument();

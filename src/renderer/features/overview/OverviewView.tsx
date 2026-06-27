@@ -45,7 +45,9 @@ export function OverviewView(_props: OverviewViewProps = {}) {
   }
 
   const navChips = APP_ROUTES.filter((route) =>
-    ['largest-folders', 'largest-files', 'file-types', 'cleanup-candidates'].includes(route.id),
+    ['largest-folders', 'disk-map', 'largest-files', 'file-types', 'cleanup-candidates'].includes(
+      route.id,
+    ),
   );
   const durationMs = computeScanDurationMs(result);
   const filesPerSec = computeFilesPerSec(result.fileCount, durationMs);

@@ -8,8 +8,9 @@ import {
 } from '../../src/renderer/routes.js';
 
 describe('routes', () => {
-  it('defines seven MVP navigation sections', () => {
-    expect(APP_ROUTES).toHaveLength(7);
+  it('defines eight navigation sections including disk map', () => {
+    expect(APP_ROUTES).toHaveLength(8);
+    expect(getRouteById('disk-map').label).toBe('Disk Map');
   });
 
   it('uses overview as the default route', () => {

@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import { CleanupCandidatesView } from './features/cleanup-candidates/CleanupCandidatesView';
+import { DiskMapView } from './features/disk-map/DiskMapView';
 import { ExclusionsView } from './features/exclusions/ExclusionsView';
 import { FileTypesView } from './features/file-types/FileTypesView';
 import { LargestFilesView } from './features/largest-files/LargestFilesView';
@@ -10,6 +11,7 @@ import { SettingsView } from './features/settings/SettingsView';
 export type AppRoute =
   | 'overview'
   | 'largest-folders'
+  | 'disk-map'
   | 'largest-files'
   | 'file-types'
   | 'cleanup-candidates'
@@ -35,6 +37,12 @@ export const APP_ROUTES: NavRoute[] = [
     label: 'Largest Folders',
     icon: 'folder',
     component: LargestFoldersView,
+  },
+  {
+    id: 'disk-map',
+    label: 'Disk Map',
+    icon: 'grid_view',
+    component: DiskMapView,
   },
   {
     id: 'largest-files',
