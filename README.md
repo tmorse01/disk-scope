@@ -19,8 +19,36 @@ DiskScope is a cleanup-focused disk usage analyzer for developers and power user
 | `pnpm test` | Run unit tests (Vitest) |
 | `pnpm test:watch` | Run tests in watch mode |
 | `pnpm test:e2e` | Run Playwright E2E tests |
-| `pnpm package` | Package the app |
-| `pnpm make` | Create installable artifacts |
+| `pnpm package` | Package the app (unpacked folder, no installer) |
+| `pnpm make` | Create installable Windows artifacts |
+
+## Packaging (Windows)
+
+Build installable artifacts locally:
+
+```powershell
+pnpm make
+```
+
+Output locations:
+
+| Artifact | Path |
+| --- | --- |
+| Unpacked app | `out/DiskScope-win32-x64/DiskScope.exe` |
+| Squirrel installer | `out/make/squirrel.windows/x64/DiskScope-<version> Setup.exe` |
+
+For a faster packaging check without an installer, run `pnpm package` and launch `DiskScope.exe` from the unpacked folder.
+
+Windows SmartScreen may warn on first launch because the build is not code-signed. That is expected for local MVP builds.
+
+### Packaged smoke test
+
+After `pnpm make`, install from the Squirrel Setup exe (or run the unpacked exe) and verify:
+
+- The app opens without auto-opening DevTools
+- Folder picker works
+- Scan completes and results views populate
+- Preferences persist under `%APPDATA%/DiskScope/`
 
 ## Project layout
 

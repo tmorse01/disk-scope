@@ -27,7 +27,10 @@ function broadcastToRenderers<T>(channel: string, payload: T): void {
 }
 
 function getScanWorkerPath(): string {
-  return path.join(__dirname, 'scan-worker.js');
+  const workerDir = __dirname.includes('app.asar')
+    ? __dirname.replace('app.asar', 'app.asar.unpacked')
+    : __dirname;
+  return path.join(workerDir, 'scan-worker.js');
 }
 
 function handleWorkerMessage(scanId: ScanSessionId, message: WorkerOutboundMessage): void {
