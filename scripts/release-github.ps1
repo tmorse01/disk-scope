@@ -159,7 +159,13 @@ function Ensure-ReleaseTagOnRemote {
             throw "Could not resolve local tag $Tag."
         }
         if ($tagCommit -ne $head) {
-            throw "Tag $Tag exists locally at $tagCommit but HEAD is $head. Delete or move the tag before releasing."
+            throw @"
+Tag $Tag exists locally at $tagCommit but HEAD is $head.
+The tag must point at the commit you are releasing. Common cause: 'pnpm version' created the tag, then more commits were added.
+Fix: git tag -d $Tag
+Then re-run release (the script will recreate the tag on HEAD).
+See docs/publishing-and-release.md#why-not-pnpm-version
+"@
         }
         Write-Host "Tag $Tag already exists locally on HEAD."
     }

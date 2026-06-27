@@ -2,6 +2,69 @@
 
 Step-by-step instructions for building DiskScope for Windows and publishing installable artifacts to GitHub Releases.
 
+## Quick release — 5 steps
+
+Use **one** publish path per version (CI **or** local — not both). CI is recommended.
+
+### CI release (recommended)
+
+Run from repo root on `master` with a clean working tree.
+
+1. **Pass the quality gate**
+
+   ```powershell
+   pnpm lint; pnpm typecheck; pnpm test
+   ```
+
+2. **Bump version in `package.json`** — edit `version` only (e.g. `0.2.0` → `0.2.1`). Do **not** use `pnpm version`; it creates a git tag immediately and will break release if you commit anything afterward.
+
+   ```powershell
+   git add package.json
+   git commit -m "chore: release v0.2.1"
+   ```
+
+3. **Push the release commit**
+
+   ```powershell
+   git push origin master
+   ```
+
+4. **Tag and publish via CI** — creates tag `v<version>` on `HEAD` and pushes it; triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml)
+
+   ```powershell
+   pnpm release:ci
+   ```
+
+   The release script creates the tag at publish time so it always matches the commit you are releasing.
+
+5. **Verify** — open **Actions → Release**, wait for green, then check your repo's **Releases** page for:
+
+   - `DiskScope-<version>-Setup.exe`
+   - `DiskScope-<version>-win32-x64-portable.zip`
+   - `SHA256SUMS.txt`
+
+   See [Verify a release succeeded](#verify-a-release-succeeded) for details.
+
+**Optional before step 4:** smoke-test the installer locally (`pnpm build:native && pnpm make`).
+
+### Local release (alternative)
+
+Same steps 1–3, then replace step 4 with:
+
+```powershell
+pnpm release
+```
+
+Requires [GitHub CLI](https://cli.github.com/) (`gh auth login`). Builds on your machine and uploads via `gh`. **Do not** run `pnpm release:ci` afterward — pushing the tag triggers CI and you would publish twice.
+
+To retry after a failed local upload (assets already built):
+
+```powershell
+pnpm release -- -SkipBuild -SkipTests
+```
+
+---
+
 ## Prerequisites
 
 | Requirement | Notes |
@@ -31,7 +94,7 @@ Release notes include a download guide that warns users not to use the source-co
 
 ## Pre-release checklist
 
-Complete these before tagging or publishing:
+The [Quick release — 5 steps](#quick-release--5-steps) section above is the normal path. Use this checklist if you prefer manual steps or need to debug:
 
 1. **Quality gate** — all must pass on the commit you are releasing:
 
@@ -41,9 +104,9 @@ Complete these before tagging or publishing:
    pnpm test
    ```
 
-2. **Bump version** — edit `version` in [`package.json`](../package.json) (semver, e.g. `0.2.0`).
+2. **Bump version** — edit `version` in [`package.json`](../package.json) and commit. Do not use `pnpm version` (see [Why not `pnpm version`?](#why-not-pnpm-version) below).
 
-3. **Commit and push** — the tagged commit must be on `master` (or whatever branch you release from) with the updated `package.json` version.
+3. **Commit and push** — the release commit must be on `master` (or whatever branch you release from) with the updated `package.json` version. The git tag is created later by `pnpm release` or `pnpm release:ci`.
 
 4. **Optional smoke test locally** — build and install once before publishing:
 
@@ -58,15 +121,16 @@ Complete these before tagging or publishing:
 
 ## Recommended: CI release (no local build upload)
 
-GitHub Actions builds on `windows-latest`, runs tests, stages assets, and creates the release. You only bump the version, commit, and push a tag.
+GitHub Actions builds on `windows-latest`, runs tests, stages assets, and creates the release. Follow [Quick release — 5 steps](#quick-release--5-steps) for the normal flow.
 
-### Steps
+### Steps (detail)
 
-1. Bump `version` in `package.json` and commit:
+1. Bump version and commit (if not already done):
 
    ```powershell
+   # Edit version in package.json, then:
    git add package.json
-   git commit -m "chore: release v0.2.0"
+   git commit -m "chore: release v0.2.1"
    git push origin master
    ```
 
@@ -76,7 +140,7 @@ GitHub Actions builds on `windows-latest`, runs tests, stages assets, and create
    pnpm release:ci
    ```
 
-   This runs [`scripts/release-github.ps1`](../scripts/release-github.ps1) with `-CiOnly`: creates annotated tag `v<version>` on `HEAD` and pushes it to `origin`.
+   This runs [`scripts/release-github.ps1`](../scripts/release-github.ps1) with `-CiOnly`: ensures annotated tag `v<version>` exists on `HEAD` and pushes it to `origin`.
 
 3. **Watch the workflow** — open **Actions → Release** (or the URL printed by the script). Workflow file: [`.github/workflows/release.yml`](../.github/workflows/release.yml).
 
@@ -105,11 +169,18 @@ Use this when a previous CI run failed or assets were missing. If the release al
 
 ## Local release (build + upload from your machine)
 
-Use when you want full control or CI is unavailable. Requires `gh auth login`.
+Use when you want full control or CI is unavailable. Requires `gh auth login`. See [Quick release — 5 steps](#quick-release--5-steps) (local alternative).
 
 ### Steps
 
-1. Bump `version` in `package.json` and commit (same as CI path).
+1. Bump version and push (if not already done):
+
+   ```powershell
+   # Edit version in package.json, then:
+   git add package.json
+   git commit -m "chore: release v0.2.1"
+   git push origin master
+   ```
 
 2. Run the release script:
 
@@ -122,8 +193,9 @@ Use when you want full control or CI is unavailable. Requires `gh auth login`.
    - Assert `package.json` version matches the release
    - Run lint, typecheck, and tests (unless skipped)
    - Run `pnpm build:native` and `pnpm make`
+   - Ensure tag `v<version>` is on GitHub (creates and pushes if needed)
    - Stage assets via [`scripts/stage-release-assets.ps1`](../scripts/stage-release-assets.ps1) into `dist/release/`
-   - Create the GitHub release and upload assets via `gh release create`
+   - Create the GitHub release and upload assets via `gh release create` (notes passed via file to avoid Windows quoting issues)
 
 ### Useful options
 
@@ -238,14 +310,40 @@ pnpm preview:website
 
 ---
 
+## Why not `pnpm version`?
+
+`pnpm version patch` (and `npm version`) bumps `package.json` **and creates a local git tag in the same step**. The release scripts also create tag `v<version>` on `HEAD` when you publish.
+
+If you make **any commit after** `pnpm version` — even a doc fix — `HEAD` moves but the tag stays on the old commit. Release then fails with:
+
+```text
+Tag v0.2.1 exists locally at <old-sha> but HEAD is <new-sha>. Delete or move the tag before releasing.
+```
+
+**Use this instead:** edit `version` in `package.json`, commit, push, then run `pnpm release:ci` or `pnpm release`. The tag is created at publish time on the commit you actually release.
+
+If you already ran `pnpm version` and hit this error, delete the stale local tag and re-run release:
+
+```powershell
+git tag -d v0.2.1
+pnpm release -- -SkipBuild -SkipTests   # local, if assets already built
+# or
+pnpm release:ci                         # CI path
+```
+
+---
+
 ## Troubleshooting
 
 | Problem | What to do |
 | --- | --- |
 | **Version mismatch** | Tag/workflow input must match `package.json` `version` exactly (workflow compares them). |
+| **Tag / HEAD mismatch** | Usually a stale tag from `pnpm version`. Delete it: `git tag -d v0.2.1`, then re-run release. See [Why not `pnpm version`?](#why-not-pnpm-version). |
+| **Tag exists locally but release failed** | Re-run `pnpm release` — the script pushes the tag before uploading. Or push manually: `git push origin v0.2.0`. |
 | **Tag already on origin** | `pnpm release:ci` skips push. Delete the remote tag only if you intend to rebuild the same version: `git push origin :refs/tags/v0.2.0`, then re-tag and push. Prefer bumping patch version instead. |
+| **Published twice (CI + local)** | Pick one path per version. Cancel the extra Actions run or delete the duplicate release. |
 | **Missing `out/` artifacts** | Run `pnpm build:native` then `pnpm make`. Staging fails if Squirrel Setup exe or unpacked exe is missing. |
-| **`gh` not authenticated** | Run `gh auth login` for local releases. |
+| **`gh` not found or not authenticated** | Install from [cli.github.com](https://cli.github.com/), then `gh auth login` (local releases only). |
 | **CI release failed mid-run** | Fix the failure, then re-run the workflow (dispatch) or push a new tag after a patch bump. |
 | **Users download source zip** | Point them to **DiskScope-*-Setup.exe** on the Releases page, not "Source code (zip)". |
 
@@ -255,7 +353,7 @@ pnpm preview:website
 
 | Goal | Command |
 | --- | --- |
-| CI release (recommended) | Bump version → commit → `pnpm release:ci` |
+| **Full CI release** | Edit `package.json` version → commit → `git push origin master` → `pnpm release:ci` |
 | Local build + publish | `pnpm release` |
 | Build installers only | `pnpm build:native && pnpm make` |
 | Preview staged assets | `pnpm make && pnpm stage:release` |
