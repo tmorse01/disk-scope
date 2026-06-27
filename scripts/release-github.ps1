@@ -94,6 +94,9 @@ function Get-ReleaseNotes {
     }
 
     $previousTag = git describe --tags --abbrev=0 "HEAD~1" 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        $previousTag = $null
+    }
     if ($previousTag) {
         $log = git log "$previousTag..HEAD" --pretty=format:"- %s (%h)" 2>$null
         if ($log) {
@@ -101,7 +104,7 @@ function Get-ReleaseNotes {
         }
     }
 
-    return "DiskScope $Tag — Windows installer and portable build."
+    return "DiskScope $Tag - Windows installer and portable build."
 }
 
 function New-ReleaseAssets {
@@ -245,8 +248,6 @@ if ($packageVersion -ne $Version) {
     throw "Requested version '$Version' does not match package.json version '$packageVersion'. Update package.json first."
 }
 
-$releaseNotes = Get-ReleaseNotes -RepoRoot $repoRoot -Tag $tag -InlineNotes $Notes -NotesPath $NotesFile
-
 Write-Host "DiskScope release: $tag"
 
 if ($CiOnly) {
@@ -256,6 +257,8 @@ if ($CiOnly) {
     Write-Host "  $(Get-GitHubActionsUrl)"
     exit 0
 }
+
+$releaseNotes = Get-ReleaseNotes -RepoRoot $repoRoot -Tag $tag -InlineNotes $Notes -NotesPath $NotesFile
 
 if (-not $SkipTests) {
     Invoke-RepoCommand -WorkingDirectory $repoRoot pnpm lint
