@@ -139,7 +139,7 @@ function Get-GitHubActionsUrl {
     return "https://github.com (open your repo Actions tab)"
 }
 
-function Publish-TagForCi {
+function Ensure-ReleaseTagOnRemote {
     param(
         [string]$RepoRoot,
         [string]$Tag
@@ -147,24 +147,58 @@ function Publish-TagForCi {
 
     Set-Location $RepoRoot
 
+    $head = git rev-parse HEAD
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not resolve HEAD."
+    }
+
     $existingLocal = git tag --list $Tag
     if ($existingLocal) {
-        Write-Host "Tag $Tag already exists locally."
+        $tagCommit = git rev-parse $Tag
+        if ($LASTEXITCODE -ne 0) {
+            throw "Could not resolve local tag $Tag."
+        }
+        if ($tagCommit -ne $head) {
+            throw "Tag $Tag exists locally at $tagCommit but HEAD is $head. Delete or move the tag before releasing."
+        }
+        Write-Host "Tag $Tag already exists locally on HEAD."
     }
     else {
         Write-Host "Creating tag $Tag on HEAD."
         git tag -a $Tag -m "Release $Tag"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to create tag $Tag."
+        }
     }
 
     $remoteTag = git ls-remote --tags origin "refs/tags/$Tag"
     if ($remoteTag) {
-        Write-Host "Tag $Tag already exists on origin. Push skipped."
-        Write-Host "If you need a rebuild, delete the remote tag and re-run, or push a new version."
+        Write-Host "Tag $Tag already exists on origin."
         return
     }
 
-    Write-Host "Pushing $Tag to origin (this triggers .github/workflows/release.yml)."
+    Write-Host "Pushing $Tag to origin."
     git push origin $Tag
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to push tag $Tag to origin."
+    }
+}
+
+function Publish-TagForCi {
+    param(
+        [string]$RepoRoot,
+        [string]$Tag
+    )
+
+    $remoteBefore = git ls-remote --tags origin "refs/tags/$Tag"
+    Ensure-ReleaseTagOnRemote -RepoRoot $RepoRoot -Tag $Tag
+
+    if ($remoteBefore) {
+        Write-Host "If you need a rebuild, delete the remote tag and re-run, or push a new version."
+    }
+    else {
+        Write-Host "Tag push triggers .github/workflows/release.yml."
+    }
 }
 
 function Publish-LocalRelease {
@@ -180,6 +214,8 @@ function Publish-LocalRelease {
     Assert-CommandExists -Name "gh" -InstallHint "Install from https://cli.github.com/ and run 'gh auth login'."
 
     gh auth status | Out-Null
+
+    Ensure-ReleaseTagOnRemote -RepoRoot $RepoRoot -Tag $Tag
 
     # Use --notes-file instead of --notes: PowerShell breaks embedded double quotes
     # in native command lines, which makes gh treat words like "code" as asset paths.
