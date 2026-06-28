@@ -16,12 +16,12 @@ import { MaterialIcon } from '../../components/MaterialIcon';
 import { usePreferencesStore } from '../../hooks/usePreferencesStore';
 import { useScanStore } from '../../hooks/useScanStore';
 import {
-  pickScanTarget,
   removeSelectedPath,
   setUseFilesystemCache,
   startScanFromStore,
 } from '../../stores/scan-store';
 import { radii } from '../../theme/tokens';
+import { PickScanTargetButton } from './PickScanTargetButton';
 import { isDriveRoot, targetIcon, targetTitle } from './scan-target-utils';
 
 export function ScanTargetPanel() {
@@ -53,21 +53,15 @@ export function ScanTargetPanel() {
             Add folders or drives, then start a scan.
           </Typography>
         </Box>
-        <Button
-          variant="contained"
+        <PickScanTargetButton
+          variant="panel"
           size="medium"
-          disabled={isSelecting || isScanning}
-          onClick={() => void pickScanTarget()}
-          startIcon={<MaterialIcon name="add_circle" filled aria-hidden={false} />}
-          sx={{
-            borderRadius: `${radii.lg}px`,
-            textTransform: 'none',
-            fontWeight: 600,
-            flexShrink: 0,
-          }}
+          idleIcon="add_circle"
+          idleIconFilled
+          disabled={isScanning}
         >
           {isSelecting ? 'Opening picker…' : 'Add folder or drive'}
-        </Button>
+        </PickScanTargetButton>
       </Box>
 
       {selectedPaths.length === 0 ? (

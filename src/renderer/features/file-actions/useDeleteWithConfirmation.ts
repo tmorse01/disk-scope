@@ -3,6 +3,7 @@ import Snackbar from '@mui/material/Snackbar';
 import { createElement, Fragment, useCallback, useState } from 'react';
 import type { DeleteMethod } from '../../../shared/types';
 import { isErr } from '../../../shared/result';
+import { DELETE_DUST_MS } from '../../components/delete-dust-sx';
 import { DsDeleteConfirmDialog } from '../../components/DsDeleteConfirmDialog';
 import { usePreferencesStore } from '../../hooks/usePreferencesStore';
 import { removeDeletedPathFromScanResult } from '../../stores/scan-store';
@@ -12,15 +13,53 @@ export type UseDeleteWithConfirmationOptions = {
   onDeleteSuccess?: (target: DeleteTarget) => void;
 };
 
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 export function useDeleteWithConfirmation(options: UseDeleteWithConfirmationOptions = {}) {
   const { confirmBeforeDelete, defaultDeleteMethod } = usePreferencesStore();
   const [pendingTarget, setPendingTarget] = useState<DeleteTarget | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [dissolvingPaths, setDissolvingPaths] = useState<ReadonlySet<string>>(() => new Set());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const closeDialog = useCallback(() => {
+    setDialogOpen(false);
+    setPendingTarget(null);
+  }, []);
+
+  const finishSuccessfulDelete = useCallback(
+    async (target: DeleteTarget, playDialogSuccess: boolean) => {
+      setDissolvingPaths((current) => new Set(current).add(target.path));
+      setIsDeleting(false);
+
+      if (playDialogSuccess) {
+        closeDialog();
+      }
+
+      await wait(DELETE_DUST_MS);
+
+      removeDeletedPathFromScanResult(target);
+      options.onDeleteSuccess?.(target);
+      setDissolvingPaths((current) => {
+        const next = new Set(current);
+        next.delete(target.path);
+        return next;
+      });
+
+      if (!playDialogSuccess) {
+        closeDialog();
+      }
+    },
+    [closeDialog, options],
+  );
+
   const performDelete = useCallback(
-    async (target: DeleteTarget, method: DeleteMethod) => {
+    async (target: DeleteTarget, method: DeleteMethod, playDialogSuccess: boolean) => {
       if (typeof window.diskScope === 'undefined') {
         setErrorMessage('DiskScope API is not available yet.');
         return;
@@ -34,17 +73,14 @@ export function useDeleteWithConfirmation(options: UseDeleteWithConfirmationOpti
           return;
         }
 
-        removeDeletedPathFromScanResult(target);
-        options.onDeleteSuccess?.(target);
-        setDialogOpen(false);
-        setPendingTarget(null);
+        await finishSuccessfulDelete(target, playDialogSuccess);
       } catch (error) {
         setErrorMessage(error instanceof Error ? error.message : 'Delete failed.');
       } finally {
         setIsDeleting(false);
       }
     },
-    [options],
+    [finishSuccessfulDelete],
   );
 
   const requestDelete = useCallback(
@@ -55,7 +91,7 @@ export function useDeleteWithConfirmation(options: UseDeleteWithConfirmationOpti
         return;
       }
 
-      void performDelete(target, defaultDeleteMethod);
+      void performDelete(target, defaultDeleteMethod, false);
     },
     [confirmBeforeDelete, defaultDeleteMethod, performDelete],
   );
@@ -65,16 +101,15 @@ export function useDeleteWithConfirmation(options: UseDeleteWithConfirmationOpti
       return;
     }
 
-    setDialogOpen(false);
-    setPendingTarget(null);
-  }, [isDeleting]);
+    closeDialog();
+  }, [closeDialog, isDeleting]);
 
   const handleConfirmDialog = useCallback(() => {
     if (!pendingTarget) {
       return;
     }
 
-    void performDelete(pendingTarget, defaultDeleteMethod);
+    void performDelete(pendingTarget, defaultDeleteMethod, true);
   }, [defaultDeleteMethod, pendingTarget, performDelete]);
 
   const deleteConfirmationUi = createElement(
@@ -85,6 +120,7 @@ export function useDeleteWithConfirmation(options: UseDeleteWithConfirmationOpti
       target: pendingTarget,
       method: defaultDeleteMethod,
       isDeleting,
+      showSuccess: false,
       onClose: handleCloseDialog,
       onConfirm: handleConfirmDialog,
     }),
@@ -113,5 +149,6 @@ export function useDeleteWithConfirmation(options: UseDeleteWithConfirmationOpti
     requestDelete,
     deleteConfirmationUi,
     isDeleting,
+    dissolvingPaths,
   };
 }

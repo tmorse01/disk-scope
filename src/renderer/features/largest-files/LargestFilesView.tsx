@@ -16,6 +16,7 @@ import {
 } from '../../components/DsResizableColumns';
 import { DsPageHeader } from '../../components/DsStatusChip';
 import { DsViewLayout } from '../../components/DsViewLayout';
+import { DeleteDustIcon } from '../../components/delete-dust-sx';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { useScanStore } from '../../hooks/useScanStore';
@@ -152,10 +153,12 @@ export function LargestFilesView() {
                     <DsTableBodyRow key={file.path} {...rowProps}>
                       <DsResizableBodyCell columnId="name" title={file.name}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
-                          <MaterialIcon
-                            name={fileIconForExtension(file.extension)}
-                            style={{ fontSize: 20, color: 'var(--mui-palette-text-secondary)', flexShrink: 0 }}
-                          />
+                          <DeleteDustIcon dissolving={Boolean(rowProps.dissolving)}>
+                            <MaterialIcon
+                              name={fileIconForExtension(file.extension)}
+                              style={{ fontSize: 20, color: 'var(--mui-palette-text-secondary)', flexShrink: 0 }}
+                            />
+                          </DeleteDustIcon>
                           <Typography
                             variant="body2"
                             noWrap

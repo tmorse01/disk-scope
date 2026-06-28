@@ -1,4 +1,5 @@
 ﻿import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -9,6 +10,10 @@ import Typography from '@mui/material/Typography';
 import type { DeleteMethod } from '../../shared/types';
 import { formatBytes } from '../../shared/format-bytes';
 import type { DeleteTarget } from '../features/file-actions/delete-target';
+import {
+  getDeleteConfirmButtonSx,
+  getDeleteConfirmDialogPaperSx,
+} from './delete-confirm-button-sx';
 import { DsTabular } from './DsTabular';
 import { MaterialIcon } from './MaterialIcon';
 import { radii } from '../theme/tokens';
@@ -18,6 +23,7 @@ export type DsDeleteConfirmDialogProps = {
   target: DeleteTarget | null;
   method: DeleteMethod;
   isDeleting?: boolean;
+  showSuccess?: boolean;
   onClose: () => void;
   onConfirm: () => void;
 };
@@ -25,6 +31,11 @@ export type DsDeleteConfirmDialogProps = {
 const METHOD_TITLES: Record<DeleteMethod, string> = {
   'recycle-bin': 'Move to Recycle Bin?',
   permanent: 'Delete permanently?',
+};
+
+const CONFIRM_LABELS: Record<DeleteMethod, string> = {
+  'recycle-bin': 'Move to Recycle Bin',
+  permanent: 'Delete permanently',
 };
 
 const RISK_WARNINGS: Record<NonNullable<DeleteTarget['risk']>, string> = {
@@ -39,22 +50,41 @@ export function DsDeleteConfirmDialog({
   target,
   method,
   isDeleting = false,
+  showSuccess = false,
   onClose,
   onConfirm,
 }: DsDeleteConfirmDialogProps) {
   const isPermanent = method === 'permanent';
   const isFolder = target?.kind === 'directory';
+  const isBusy = isDeleting || showSuccess;
   const showFolderPermanentWarning =
     isPermanent &&
     isFolder &&
     ((target.childFileCount ?? 0) > 0 || (target.childDirectoryCount ?? 0) > 0);
 
+  const confirmIconName = showSuccess ? 'check_circle' : isDeleting ? 'progress_activity' : 'delete';
+  const confirmLabel = showSuccess
+    ? 'Deleted'
+    : isDeleting
+      ? 'Deleting…'
+      : CONFIRM_LABELS[method];
+
   return (
-    <Dialog open={open} onClose={isDeleting ? undefined : onClose} maxWidth="sm" fullWidth>
+    <Dialog
+      open={open}
+      onClose={isBusy ? undefined : onClose}
+      maxWidth="sm"
+      fullWidth
+      slotProps={{
+        paper: {
+          sx: getDeleteConfirmDialogPaperSx(showSuccess),
+        },
+      }}
+    >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <MaterialIcon
           name={isPermanent ? 'delete_forever' : 'delete'}
-          style={{ color: isPermanent ? 'var(--mui-palette-error-main)' : undefined }}
+          style={{ color: 'var(--mui-palette-error-main)' }}
         />
         {target ? METHOD_TITLES[method] : 'Delete item?'}
       </DialogTitle>
@@ -91,17 +121,29 @@ export function DsDeleteConfirmDialog({
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={isDeleting} sx={{ borderRadius: `${radii.md}px` }}>
+        <Button onClick={onClose} disabled={isBusy} sx={{ borderRadius: `${radii.md}px`, textTransform: 'none' }}>
           Cancel
         </Button>
         <Button
           variant="contained"
-          color={isPermanent ? 'error' : 'primary'}
+          color="error"
           onClick={onConfirm}
-          disabled={isDeleting || !target}
-          sx={{ borderRadius: `${radii.md}px` }}
+          disabled={isBusy || !target}
+          startIcon={
+            <Box
+              component="span"
+              className={isDeleting ? 'ds-delete-confirm-icon-loading' : undefined}
+              sx={{ display: 'inline-flex', alignItems: 'center' }}
+            >
+              <MaterialIcon name={confirmIconName} filled={showSuccess} style={{ fontSize: 20 }} />
+            </Box>
+          }
+          sx={{
+            borderRadius: `${radii.md}px`,
+            ...getDeleteConfirmButtonSx({ isDeleting, showSuccess }),
+          }}
         >
-          {isDeleting ? 'Deleting…' : isPermanent ? 'Delete permanently' : 'Move to Recycle Bin'}
+          {confirmLabel}
         </Button>
       </DialogActions>
     </Dialog>

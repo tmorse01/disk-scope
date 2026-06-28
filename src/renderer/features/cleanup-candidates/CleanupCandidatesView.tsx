@@ -19,6 +19,7 @@ import {
 } from '../../components/DsResizableColumns';
 import { DsPageHeader, DsStatusChip } from '../../components/DsStatusChip';
 import { DsViewLayout } from '../../components/DsViewLayout';
+import { DeleteDustIcon } from '../../components/delete-dust-sx';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { useShellContext } from '../../components/ShellContext';
@@ -160,20 +161,22 @@ export function CleanupCandidatesView() {
                       <DsTableBodyRow key={candidate.path} {...rowProps}>
                         <DsResizableBodyCell columnId="folder" multiline title={candidate.path}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
-                            <Box
-                              sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: `${radii.lg}px`,
-                                bgcolor: 'surfaceContainerHighest.main',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0,
-                              }}
-                            >
-                              <MaterialIcon name="folder_zip" style={{ color: 'var(--mui-palette-primary-main)' }} />
-                            </Box>
+                            <DeleteDustIcon dissolving={Boolean(rowProps.dissolving)}>
+                              <Box
+                                sx={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: `${radii.lg}px`,
+                                  bgcolor: 'surfaceContainerHighest.main',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <MaterialIcon name="folder_zip" style={{ color: 'var(--mui-palette-primary-main)' }} />
+                              </Box>
+                            </DeleteDustIcon>
                             <Box sx={{ minWidth: 0 }}>
                               <Typography variant="body2" noWrap sx={{ fontWeight: rowProps.selected ? 700 : 400 }}>
                                 {candidate.name}

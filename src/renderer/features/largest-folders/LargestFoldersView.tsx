@@ -103,6 +103,7 @@ export function LargestFoldersView() {
     toolbar,
     contextMenu,
     deleteConfirmationUi,
+    dissolvingPaths,
   } = useSelectableFileActions({
     onDeleteSuccess: (target) => {
       for (const [parentId, entries] of fileCache) {
@@ -308,6 +309,7 @@ export function LargestFoldersView() {
                     key={row.nodeId}
                     row={row}
                     selectedPath={selectedPath}
+                    dissolvingPaths={dissolvingPaths}
                     totalSizeBytes={result.totalSizeBytes}
                     riskReferenceDate={riskReferenceDate}
                     cleanupCandidatesByPath={cleanupCandidatesByPath}

@@ -51,7 +51,8 @@ describe('App', () => {
     await user.click(collapseButton);
 
     expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Scan folder' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Scan folder' })).toBeInTheDocument();
+    expect(screen.queryByText('Scan folder')).not.toBeInTheDocument();
   });
 
   it('shows scan status footer', () => {

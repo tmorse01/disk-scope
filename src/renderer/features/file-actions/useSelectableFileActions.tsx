@@ -11,6 +11,7 @@ export type UseSelectableFileActionsOptions = {
 
 export type SelectableRowProps = {
   selected: boolean;
+  dissolving?: boolean;
   onClick: () => void;
   onContextMenu: (event: MouseEvent) => void;
 };
@@ -20,7 +21,7 @@ export function useSelectableFileActions(options: UseSelectableFileActionsOption
   const [contextMenuAnchor, setContextMenuAnchor] = useState<{ mouseX: number; mouseY: number } | null>(
     null,
   );
-  const { requestDelete, deleteConfirmationUi, isDeleting } = useDeleteWithConfirmation({
+  const { requestDelete, deleteConfirmationUi, isDeleting, dissolvingPaths } = useDeleteWithConfirmation({
     onDeleteSuccess: (target) => {
       setSelectedTarget((current) => (current?.path === target.path ? null : current));
       options.onDeleteSuccess?.(target);
@@ -64,10 +65,11 @@ export function useSelectableFileActions(options: UseSelectableFileActionsOption
   const getRowProps = useCallback(
     (target: DeleteTarget): SelectableRowProps => ({
       selected: selectedTarget?.path === target.path,
+      dissolving: dissolvingPaths.has(target.path),
       onClick: () => selectTarget(target),
       onContextMenu: (event) => openContextMenu(event, target),
     }),
-    [openContextMenu, selectTarget, selectedTarget?.path],
+    [dissolvingPaths, openContextMenu, selectTarget, selectedTarget?.path],
   );
 
   const toolbar = (
@@ -125,5 +127,6 @@ export function useSelectableFileActions(options: UseSelectableFileActionsOption
     contextMenu,
     deleteConfirmationUi,
     isDeleting,
+    dissolvingPaths,
   };
 }

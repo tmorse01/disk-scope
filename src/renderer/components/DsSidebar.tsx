@@ -6,11 +6,10 @@ import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import { DsNavItem } from './DsNavItem';
 import { MaterialIcon } from './MaterialIcon';
+import { PickScanTargetButton } from '../features/scan-picker/PickScanTargetButton';
 import { useUpdateStatus } from '../hooks/useUpdateStatus';
 import { APP_ROUTES, isAppRoute, type AppRoute } from '../routes';
 import { NAV_RAIL_WIDTH, SIDEBAR_WIDTH } from '../theme/mui-theme';
-import { radii } from '../theme/tokens';
-import { pickScanTarget } from '../stores/scan-store';
 
 const SIDEBAR_HEADER_HEIGHT = 48;
 
@@ -21,9 +20,9 @@ type DsSidebarProps = {
 
 export function DsSidebar({ activeRoute, onRouteChange }: DsSidebarProps) {
   const [expanded, setExpanded] = useState(true);
-  const { status, hasUpdateReady } = useUpdateStatus();
+  const { status: updateStatus, hasUpdateReady } = useUpdateStatus();
   const sidebarWidth = expanded ? SIDEBAR_WIDTH : NAV_RAIL_WIDTH;
-  const versionLabel = status?.currentVersion ? `v${status.currentVersion}` : null;
+  const versionLabel = updateStatus?.currentVersion ? `v${updateStatus.currentVersion}` : null;
 
   const openUpdatesSettings = () => {
     onRouteChange('settings');
@@ -172,22 +171,15 @@ export function DsSidebar({ activeRoute, onRouteChange }: DsSidebarProps) {
           )
         ) : null}
 
-        <Button
-          variant="contained"
-          color="primary"
+        <PickScanTargetButton
+          variant="sidebar"
+          expanded={expanded}
           fullWidth
-          onClick={() => void pickScanTarget()}
-          startIcon={<MaterialIcon name="add" aria-hidden={false} />}
-          sx={{
-            borderRadius: `${radii.lg}px`,
-            py: 1.25,
-            justifyContent: 'center',
-            minWidth: expanded ? undefined : 48,
-            '& .MuiButton-startIcon': expanded ? undefined : { mx: 0 },
-          }}
+          idleIcon="add"
+          aria-label="Scan folder"
         >
           {expanded ? 'Scan folder' : null}
-        </Button>
+        </PickScanTargetButton>
       </Box>
     </Box>
   );

@@ -5,6 +5,7 @@ import { memo, type MouseEvent } from 'react';
 import type { DirectoryNode } from '../../../shared/types';
 import { formatBytes } from '../../../shared/format-bytes';
 import { DsTableBodyRow } from '../../components/DsDataTable';
+import { DeleteDustIcon } from '../../components/delete-dust-sx';
 import { DsResizableBodyCell } from '../../components/DsResizableColumns';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
@@ -30,6 +31,7 @@ import {
 
 type RowSelectionProps = {
   selected: boolean;
+  dissolving?: boolean;
   onSelect: () => void;
   onContextMenu: (event: MouseEvent) => void;
 };
@@ -79,6 +81,7 @@ function FolderTreeContentsEmptyCell() {
 export const FolderTreeDirectoryRow = memo(function FolderTreeDirectoryRow({
   row,
   selected,
+  dissolving = false,
   totalSizeBytes,
   riskReferenceDate,
   cleanupCandidatesByPath,
@@ -99,6 +102,7 @@ export const FolderTreeDirectoryRow = memo(function FolderTreeDirectoryRow({
   return (
     <DsTableBodyRow
       selected={selected}
+      dissolving={dissolving}
       onClick={onSelect}
       onContextMenu={onContextMenu}
       onDoubleClick={() => onDrillDown(nodeId)}
@@ -117,7 +121,9 @@ export const FolderTreeDirectoryRow = memo(function FolderTreeDirectoryRow({
           ) : (
             <FolderTreeExpandSpacer />
           )}
-          <MaterialIcon name="folder" style={{ fontSize: 18, flexShrink: 0 }} />
+          <DeleteDustIcon dissolving={dissolving}>
+            <MaterialIcon name="folder" style={{ fontSize: 18, flexShrink: 0 }} />
+          </DeleteDustIcon>
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography
               variant="body2"
@@ -206,6 +212,7 @@ export const FolderTreeFilesGroupRow = memo(function FolderTreeFilesGroupRow({
 export const FolderTreeFileRow = memo(function FolderTreeFileRow({
   row,
   selected,
+  dissolving = false,
   riskReferenceDate,
   cleanupCandidatesByPath,
   onSelect,
@@ -220,14 +227,21 @@ export const FolderTreeFileRow = memo(function FolderTreeFileRow({
   });
 
   return (
-    <DsTableBodyRow selected={selected} onClick={onSelect} onContextMenu={onContextMenu}>
+    <DsTableBodyRow
+      selected={selected}
+      dissolving={dissolving}
+      onClick={onSelect}
+      onContextMenu={onContextMenu}
+    >
       <DsResizableBodyCell columnId="name" title={row.entry.path}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: row.depth * 2, minWidth: 0 }}>
           <FolderTreeExpandSpacer />
-          <MaterialIcon
-            name={fileIconForExtension(extension)}
-            style={{ fontSize: 18, flexShrink: 0 }}
-          />
+          <DeleteDustIcon dissolving={dissolving}>
+            <MaterialIcon
+              name={fileIconForExtension(extension)}
+              style={{ fontSize: 18, flexShrink: 0 }}
+            />
+          </DeleteDustIcon>
           <Typography variant="body2" noWrap sx={{ fontWeight: selected ? 600 : 400 }}>
             {row.entry.name}
           </Typography>
@@ -285,6 +299,7 @@ export const FolderTreeFilesTruncatedRow = memo(function FolderTreeFilesTruncate
 export type FolderTreeRowProps = {
   row: FlatTreeRow;
   selectedPath: string | null;
+  dissolvingPaths?: ReadonlySet<string>;
   totalSizeBytes: number;
   riskReferenceDate: Date | undefined;
   cleanupCandidatesByPath: Map<string, import('../../../shared/types').CleanupCandidate>;
@@ -302,6 +317,7 @@ export type FolderTreeRowProps = {
 export const FolderTreeRow = memo(function FolderTreeRow({
   row,
   selectedPath,
+  dissolvingPaths,
   totalSizeBytes,
   riskReferenceDate,
   cleanupCandidatesByPath,
@@ -320,6 +336,7 @@ export const FolderTreeRow = memo(function FolderTreeRow({
       <FolderTreeDirectoryRow
         row={row}
         selected={selectedPath === row.node.path}
+        dissolving={dissolvingPaths?.has(row.node.path) ?? false}
         totalSizeBytes={totalSizeBytes}
         riskReferenceDate={riskReferenceDate}
         cleanupCandidatesByPath={cleanupCandidatesByPath}
@@ -345,6 +362,7 @@ export const FolderTreeRow = memo(function FolderTreeRow({
     <FolderTreeFileRow
       row={row}
       selected={selectedPath === row.entry.path}
+      dissolving={dissolvingPaths?.has(row.entry.path) ?? false}
       riskReferenceDate={riskReferenceDate}
       cleanupCandidatesByPath={cleanupCandidatesByPath}
       onSelect={() => onSelectTarget(target)}

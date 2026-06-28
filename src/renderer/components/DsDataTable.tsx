@@ -6,6 +6,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import type { MouseEvent, ReactNode } from 'react';
 import { DsCard } from './DsCard';
+import { getDeleteDustRowSx } from './delete-dust-sx';
 import { useOptionalResizableColumns } from './DsResizableColumns';
 
 type DsDataTableProps = {
@@ -105,32 +106,35 @@ export function DsTableHeadRow({ children }: { children: ReactNode }) {
 export function DsTableBodyRow({
   children,
   selected,
+  dissolving = false,
   onClick,
   onDoubleClick,
   onContextMenu,
 }: {
   children: ReactNode;
   selected?: boolean;
+  dissolving?: boolean;
   onClick?: () => void;
   onDoubleClick?: () => void;
   onContextMenu?: (event: MouseEvent<HTMLTableRowElement>) => void;
 }) {
   return (
     <TableRow
-      hover
-      selected={selected}
-      onClick={onClick}
-      onDoubleClick={onDoubleClick}
-      onContextMenu={onContextMenu}
+      hover={!dissolving}
+      selected={selected && !dissolving}
+      onClick={dissolving ? undefined : onClick}
+      onDoubleClick={dissolving ? undefined : onDoubleClick}
+      onContextMenu={dissolving ? undefined : onContextMenu}
       sx={{
-        cursor: onClick || onDoubleClick || onContextMenu ? 'pointer' : 'default',
-        '&:hover': { bgcolor: 'surfaceContainerHigh.main' },
+        cursor: dissolving ? 'default' : onClick || onDoubleClick || onContextMenu ? 'pointer' : 'default',
+        '&:hover': { bgcolor: dissolving ? undefined : 'surfaceContainerHigh.main' },
         '&.Mui-selected': { bgcolor: 'secondary.light' },
         '& .MuiTableCell-root': {
           borderBottom: 1,
           borderColor: 'divider',
           py: 1.75,
         },
+        ...getDeleteDustRowSx(dissolving),
       }}
     >
       {children}
