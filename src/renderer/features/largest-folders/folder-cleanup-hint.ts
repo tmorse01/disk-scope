@@ -66,7 +66,7 @@ export function getFolderGridRiskHint(options: {
   cleanupCandidatesByPath: Map<string, CleanupCandidate>;
   path: string;
   modifiedAt?: string;
-  referenceDate?: string;
+  referenceDate?: string | Date;
 }): FolderGridRiskHint | null {
   const { cleanupCandidatesByPath, path, modifiedAt, referenceDate } = options;
   const candidate =
@@ -80,7 +80,12 @@ export function getFolderGridRiskHint(options: {
     };
   }
 
-  const reference = referenceDate ? new Date(referenceDate) : new Date();
+  const reference =
+    referenceDate instanceof Date
+      ? referenceDate
+      : referenceDate
+        ? new Date(referenceDate)
+        : new Date();
   return staleAccessHint(modifiedAt, reference);
 }
 

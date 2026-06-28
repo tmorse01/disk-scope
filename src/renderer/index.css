@@ -46,6 +46,7 @@ body {
 .ds-custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: var(--mui-palette-outlineVariant-main, #c1c6d6) transparent;
+  scrollbar-gutter: stable;
 }
 
 .ds-custom-scrollbar::-webkit-scrollbar {

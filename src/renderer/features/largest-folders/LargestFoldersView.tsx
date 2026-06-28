@@ -1,58 +1,42 @@
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
-import CircularProgress from '@mui/material/CircularProgress';
-import IconButton from '@mui/material/IconButton';
-import LinearProgress from '@mui/material/LinearProgress';
 import TableBody from '@mui/material/TableBody';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
 import { useCallback, useMemo, useState } from 'react';
-import type { DirectoryNode, NodeId } from '../../../shared/types';
-import { formatBytes } from '../../../shared/format-bytes';
+import type { CleanupCandidate, DirectoryNode, NodeId } from '../../../shared/types';
 import { DsCard } from '../../components/DsCard';
 import {
   DsDataTable,
-  DsTableBodyRow,
   DsTableHeadRow,
 } from '../../components/DsDataTable';
 import {
-  DsResizableBodyCell,
   DsResizableColumnsProvider,
   DsResizableHeaderCell,
   type ResizableColumnDef,
 } from '../../components/DsResizableColumns';
 import { DsPageHeader } from '../../components/DsStatusChip';
 import { DsViewLayout } from '../../components/DsViewLayout';
-import {
-  buildCleanupCandidatePathIndex,
-  getCleanupCandidateForPath,
-  getFolderGridRiskHint,
-} from './folder-cleanup-hint';
-import { FolderRiskHintCell } from './FolderRiskHintCell';
-import { DsTabular } from '../../components/DsTabular';
-import { MaterialIcon } from '../../components/MaterialIcon';
+import { buildCleanupCandidatePathIndex } from './folder-cleanup-hint';
 import { useShellOverrides } from '../../components/ShellContext';
 import { useScanStore } from '../../hooks/useScanStore';
 import type { DeleteTarget } from '../file-actions/delete-target';
 import { useSelectableFileActions } from '../file-actions/useSelectableFileActions';
-import { fileIconForExtension } from '../largest-files/file-icon-utils';
+import { FolderTreeRow } from './FolderTreeRow';
 import {
   buildBreadcrumbPath,
   DEFAULT_FOLDER_SORT_COLUMN,
   DEFAULT_FOLDER_SORT_DIRECTION,
-  flattenFolderTreeRows,
-  formatPercentOfRoot,
   isFilesGroupId,
   parentIdFromFilesGroupId,
-  percentOfRoot,
-  type FlatTreeRow,
+  type FlatFileRow,
   type FolderSortColumn,
   type SortDirection,
 } from './folder-tree-utils';
+import { useFolderTreeRows } from './useFolderTreeRows';
 import { useLazyFolderFiles } from './useLazyFolderFiles';
 
 type ColumnDef = {
-  id: FolderSortColumn | 'risk';
+  id: FolderSortColumn | 'contents' | 'risk';
   label: string;
   sortable: boolean;
   align?: 'left' | 'right';
@@ -62,6 +46,7 @@ const COLUMNS: ColumnDef[] = [
   { id: 'name', label: 'Folder', sortable: true },
   { id: 'sizeBytes', label: 'Size', sortable: true, align: 'right' },
   { id: 'percentOfRoot', label: '% of root', sortable: true, align: 'right' },
+  { id: 'contents', label: 'Folders / files', sortable: false, align: 'right' },
   { id: 'risk', label: 'Risk', sortable: false, align: 'right' },
 ];
 
@@ -69,12 +54,17 @@ const FOLDER_TREE_COLUMNS: ResizableColumnDef[] = [
   { id: 'name', defaultWidth: 300, minWidth: 160 },
   { id: 'sizeBytes', defaultWidth: 108, minWidth: 72 },
   { id: 'percentOfRoot', defaultWidth: 96, minWidth: 72 },
+  { id: 'contents', defaultWidth: 112, minWidth: 88 },
   { id: 'risk', defaultWidth: 120, minWidth: 88 },
 ];
 
+const EMPTY_DIRECTORIES: Record<NodeId, DirectoryNode> = {};
+const EMPTY_FILE_CACHE = new Map<NodeId, never>();
+const EMPTY_LOADING_PARENT_IDS = new Set<NodeId>();
+
 function directoryToDeleteTarget(
   node: DirectoryNode,
-  cleanupCandidate?: ReturnType<typeof getCleanupCandidateForPath>,
+  cleanupCandidate?: CleanupCandidate,
 ) {
   return {
     path: node.path,
@@ -87,7 +77,7 @@ function directoryToDeleteTarget(
   };
 }
 
-function fileEntryToDeleteTarget(entry: FlatTreeRow & { kind: 'file' }): DeleteTarget {
+function fileEntryToDeleteTarget(entry: FlatFileRow): DeleteTarget {
   return {
     path: entry.entry.path,
     name: entry.entry.name,
@@ -105,29 +95,51 @@ export function LargestFoldersView() {
   const { fileCache, loadingParentIds, loadFilesForDirectory, refreshFilesForDirectory } =
     useLazyFolderFiles();
 
-  const { getRowProps, clearSelection, toolbar, contextMenu, deleteConfirmationUi } =
-    useSelectableFileActions({
-      onDeleteSuccess: (target) => {
-        for (const [parentId, entries] of fileCache) {
-          if (entries.some((entry) => entry.path === target.path)) {
-            const parent = result?.directoriesById[parentId];
-            if (parent) {
-              void refreshFilesForDirectory(parentId, parent.path);
-            }
-            return;
+  const {
+    selectedTarget,
+    clearSelection,
+    selectTarget,
+    openContextMenu,
+    toolbar,
+    contextMenu,
+    deleteConfirmationUi,
+  } = useSelectableFileActions({
+    onDeleteSuccess: (target) => {
+      for (const [parentId, entries] of fileCache) {
+        if (entries.some((entry) => entry.path === target.path)) {
+          const parent = result?.directoriesById[parentId];
+          if (parent) {
+            void refreshFilesForDirectory(parentId, parent.path);
           }
+          return;
         }
-      },
-    });
+      }
+    },
+  });
 
   const effectiveFocusId = focusNodeId ?? result?.rootNodeId ?? null;
+  const selectedPath = selectedTarget?.path ?? null;
 
   const cleanupCandidatesByPath = useMemo(
     () => buildCleanupCandidatePathIndex(result?.cleanupCandidates ?? []),
     [result?.cleanupCandidates],
   );
 
-  const riskReferenceDate = result?.completedAt;
+  const riskReferenceDate = useMemo(
+    () => (result?.completedAt ? new Date(result.completedAt) : undefined),
+    [result?.completedAt],
+  );
+
+  const { rows, patchExpandedIdsChange } = useFolderTreeRows({
+    focusId: effectiveFocusId,
+    directoriesById: result?.directoriesById ?? EMPTY_DIRECTORIES,
+    expandedIds,
+    sortColumn,
+    sortDirection,
+    totalSizeBytes: result?.totalSizeBytes ?? 0,
+    fileCache: result ? fileCache : EMPTY_FILE_CACHE,
+    loadingParentIds: result ? loadingParentIds : EMPTY_LOADING_PARENT_IDS,
+  });
 
   const breadcrumb = useMemo(() => {
     if (!result || !effectiveFocusId) {
@@ -136,26 +148,6 @@ export function LargestFoldersView() {
 
     return buildBreadcrumbPath(effectiveFocusId, result.directoriesById, result.rootNodeId);
   }, [effectiveFocusId, result]);
-
-  const rows = useMemo(() => {
-    if (!result || !effectiveFocusId) {
-      return [];
-    }
-
-    return flattenFolderTreeRows(
-      effectiveFocusId,
-      result.directoriesById,
-      expandedIds,
-      sortColumn,
-      sortDirection,
-      result.totalSizeBytes,
-      fileCache,
-      loadingParentIds,
-      0,
-      new Set(),
-      true,
-    );
-  }, [effectiveFocusId, expandedIds, fileCache, loadingParentIds, result, sortColumn, sortDirection]);
 
   const handleSort = useCallback(
     (column: FolderSortColumn) => {
@@ -182,16 +174,16 @@ export function LargestFoldersView() {
   const handleToggleExpand = useCallback(
     (nodeId: NodeId, parentPath?: string) => {
       const expanding = !expandedIds.has(nodeId);
+      const next = new Set(expandedIds);
 
-      setExpandedIds((current) => {
-        const next = new Set(current);
-        if (next.has(nodeId)) {
-          next.delete(nodeId);
-        } else {
-          next.add(nodeId);
-        }
-        return next;
-      });
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      } else {
+        next.add(nodeId);
+      }
+
+      patchExpandedIdsChange(expandedIds, next);
+      setExpandedIds(next);
 
       if (isFilesGroupId(nodeId) && expanding) {
         const parentId = parentIdFromFilesGroupId(nodeId);
@@ -201,7 +193,7 @@ export function LargestFoldersView() {
         }
       }
     },
-    [expandedIds, loadFilesForDirectory, result?.directoriesById],
+    [expandedIds, loadFilesForDirectory, patchExpandedIdsChange, result?.directoriesById],
   );
 
   const handleDrillDown = useCallback(
@@ -310,178 +302,25 @@ export function LargestFoldersView() {
                 </DsTableHeadRow>
               }
             >
-            <TableBody>
-              {rows.map((row) => {
-                if (row.kind === 'directory') {
-                  const { nodeId, node, depth, hasChildren, isExpanded } = row;
-                  const cleanupCandidate = getCleanupCandidateForPath(cleanupCandidatesByPath, node.path);
-                  const rowProps = getRowProps(directoryToDeleteTarget(node, cleanupCandidate));
-                  const percent = percentOfRoot(node.sizeBytes, result.totalSizeBytes);
-                  const riskHint = getFolderGridRiskHint({
-                    cleanupCandidatesByPath,
-                    path: node.path,
-                    modifiedAt: node.modifiedAt,
-                    referenceDate: riskReferenceDate,
-                  });
-
-                  return (
-                    <DsTableBodyRow
-                      key={nodeId}
-                      {...rowProps}
-                      onDoubleClick={() => handleDrillDown(nodeId)}
-                    >
-                      <DsResizableBodyCell columnId="name" multiline title={node.path}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: depth * 2, minWidth: 0 }}>
-                          {hasChildren ? (
-                            <IconButton
-                              size="small"
-                              aria-label={isExpanded ? 'Collapse folder' : 'Expand folder'}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleToggleExpand(nodeId);
-                              }}
-                              sx={{ p: 0.25 }}
-                            >
-                              <MaterialIcon
-                                name={isExpanded ? 'expand_more' : 'chevron_right'}
-                                style={{ fontSize: 20 }}
-                              />
-                            </IconButton>
-                          ) : (
-                            <Box sx={{ width: 28, flexShrink: 0 }} />
-                          )}
-                          <MaterialIcon name="folder" style={{ fontSize: 18, flexShrink: 0 }} />
-                          <Box sx={{ minWidth: 0, flex: 1 }}>
-                            <Typography
-                              variant="body2"
-                              noWrap
-                              title={node.path}
-                              sx={{ fontWeight: rowProps.selected ? 600 : 400 }}
-                            >
-                              {node.name}
-                            </Typography>
-                            <LinearProgress
-                              variant="determinate"
-                              value={Math.min(100, percent)}
-                              aria-hidden
-                              sx={{
-                                mt: 0.5,
-                                height: 4,
-                                borderRadius: 999,
-                                bgcolor: 'surfaceContainer.main',
-                                '& .MuiLinearProgress-bar': { borderRadius: 999 },
-                              }}
-                            />
-                          </Box>
-                        </Box>
-                      </DsResizableBodyCell>
-                      <DsResizableBodyCell columnId="sizeBytes" align="right">
-                        <DsTabular sx={{ fontWeight: 600 }}>{formatBytes(node.sizeBytes)}</DsTabular>
-                      </DsResizableBodyCell>
-                      <DsResizableBodyCell columnId="percentOfRoot" align="right">
-                        <DsTabular>{formatPercentOfRoot(node.sizeBytes, result.totalSizeBytes)}</DsTabular>
-                      </DsResizableBodyCell>
-                      <DsResizableBodyCell columnId="risk" align="right">
-                        <FolderRiskHintCell hint={riskHint} />
-                      </DsResizableBodyCell>
-                    </DsTableBodyRow>
-                  );
-                }
-
-                if (row.kind === 'files-group') {
-                  return (
-                    <DsTableBodyRow
-                      key={row.nodeId}
-                      onClick={() => handleToggleExpand(row.nodeId, row.parentPath)}
-                    >
-                      <DsResizableBodyCell columnId="name" multiline>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: row.depth * 2 }}>
-                          <IconButton
-                            size="small"
-                            aria-label={row.isExpanded ? 'Collapse files group' : 'Expand files group'}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleToggleExpand(row.nodeId, row.parentPath);
-                            }}
-                            sx={{ p: 0.25 }}
-                          >
-                            {row.isLoading ? (
-                              <CircularProgress size={16} aria-label="Loading files" />
-                            ) : (
-                              <MaterialIcon
-                                name={row.isExpanded ? 'expand_more' : 'chevron_right'}
-                                style={{ fontSize: 20 }}
-                              />
-                            )}
-                          </IconButton>
-                          <MaterialIcon name="draft" style={{ fontSize: 18, flexShrink: 0 }} />
-                          <Typography variant="body2" sx={{ fontWeight: 500, fontStyle: 'italic' }}>
-                            &lt;Files&gt;
-                          </Typography>
-                        </Box>
-                      </DsResizableBodyCell>
-                      <DsResizableBodyCell columnId="sizeBytes" align="right">
-                        <Typography variant="body2" color="text.disabled">
-                          —
-                        </Typography>
-                      </DsResizableBodyCell>
-                      <DsResizableBodyCell columnId="percentOfRoot" align="right">
-                        <Typography variant="body2" color="text.disabled">
-                          —
-                        </Typography>
-                      </DsResizableBodyCell>
-                      <DsResizableBodyCell columnId="risk" align="right">
-                        <FolderRiskHintCell hint={null} />
-                      </DsResizableBodyCell>
-                    </DsTableBodyRow>
-                  );
-                }
-
-                const extension = row.entry.name.includes('.')
-                  ? `.${row.entry.name.split('.').pop()}`
-                  : null;
-                const rowProps = getRowProps(fileEntryToDeleteTarget(row));
-                const riskHint = getFolderGridRiskHint({
-                  cleanupCandidatesByPath,
-                  path: row.entry.path,
-                  modifiedAt: row.entry.modifiedAt,
-                  referenceDate: riskReferenceDate,
-                });
-
-                return (
-                  <DsTableBodyRow key={row.nodeId} {...rowProps}>
-                    <DsResizableBodyCell columnId="name" title={row.entry.path}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pl: row.depth * 2, minWidth: 0 }}>
-                        <Box sx={{ width: 28, flexShrink: 0 }} />
-                        <MaterialIcon
-                          name={fileIconForExtension(extension)}
-                          style={{ fontSize: 18, flexShrink: 0 }}
-                        />
-                        <Typography
-                          variant="body2"
-                          noWrap
-                          sx={{ fontWeight: rowProps.selected ? 600 : 400 }}
-                        >
-                          {row.entry.name}
-                        </Typography>
-                      </Box>
-                    </DsResizableBodyCell>
-                    <DsResizableBodyCell columnId="sizeBytes" align="right">
-                      <DsTabular sx={{ fontWeight: 600 }}>{formatBytes(row.entry.sizeBytes)}</DsTabular>
-                    </DsResizableBodyCell>
-                    <DsResizableBodyCell columnId="percentOfRoot" align="right">
-                      <Typography variant="body2" color="text.disabled">
-                        —
-                      </Typography>
-                    </DsResizableBodyCell>
-                    <DsResizableBodyCell columnId="risk" align="right">
-                      <FolderRiskHintCell hint={riskHint} />
-                    </DsResizableBodyCell>
-                  </DsTableBodyRow>
-                );
-              })}
-            </TableBody>
-          </DsDataTable>
+              <TableBody>
+                {rows.map((row) => (
+                  <FolderTreeRow
+                    key={row.nodeId}
+                    row={row}
+                    selectedPath={selectedPath}
+                    totalSizeBytes={result.totalSizeBytes}
+                    riskReferenceDate={riskReferenceDate}
+                    cleanupCandidatesByPath={cleanupCandidatesByPath}
+                    onToggleExpand={handleToggleExpand}
+                    onDrillDown={handleDrillDown}
+                    onSelectTarget={selectTarget}
+                    onRowContextMenu={openContextMenu}
+                    directoryToDeleteTarget={directoryToDeleteTarget}
+                    fileEntryToDeleteTarget={fileEntryToDeleteTarget}
+                  />
+                ))}
+              </TableBody>
+            </DsDataTable>
           </DsResizableColumnsProvider>
           {contextMenu}
           {deleteConfirmationUi}

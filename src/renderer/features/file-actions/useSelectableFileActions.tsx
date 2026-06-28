@@ -119,6 +119,7 @@ export function useSelectableFileActions(options: UseSelectableFileActionsOption
     setSelectedTarget,
     clearSelection,
     selectTarget,
+    openContextMenu,
     getRowProps,
     toolbar,
     contextMenu,
