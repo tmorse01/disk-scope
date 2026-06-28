@@ -48,12 +48,52 @@ First mate: status report and launch Wave 2
 | 3 | 007, 008, 009, 010 | Yes (4) | lint + typecheck + test; results views |
 | 4 | 011 | No | export JSON/CSV works |
 | 5 | 012 | No | `pnpm make` + packaged smoke test |
+| 6 | 022, 025, 026 | Yes (3) | lint + typecheck + test; E2E passes; manual persist + update checks |
+
+## Wave 6 — Production readiness (Tasks 022, 025, 026)
+
+Parallel deck mates for auto-update, E2E smoke tests, and persisted scan history.
+
+**Prerequisites:** Task 024 merged (session scan history). Tasks 012 + release pipeline stable.
+
+**Launch:**
+
+```text
+Use diskscope-first-mate to launch Wave 6 (tasks 022, 025, 026)
+```
+
+**Worktrees:**
+
+```powershell
+.cursor/scripts/new-task-worktree.ps1 -TaskNum 026 -ShortName persist-scan-history
+.cursor/scripts/new-task-worktree.ps1 -TaskNum 022 -ShortName auto-update
+.cursor/scripts/new-task-worktree.ps1 -TaskNum 025 -ShortName e2e-smoke-test
+```
+
+**Merge order (captain approval required — shared types + release pipeline):**
+
+1. `task/026-persist-scan-history` — scan history store, scan-store hydration
+2. `task/022-auto-update` — updater service, release assets, Settings Updates card
+3. `task/025-e2e-smoke-test` — E2E + CI job last
+
+**Gate before marking Wave 6 done:**
+
+```powershell
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm test:e2e
+```
+
+Plus manual: scan → quit → relaunch (026); packaged update check (022).
+
+**Task specs:** [`022-auto-update.md`](tasks/022-auto-update.md), [`025-e2e-smoke-test.md`](tasks/025-e2e-smoke-test.md), [`026-persist-scan-history.md`](tasks/026-persist-scan-history.md)
 
 ## Captain commands
 
 | Intent | Example message |
 | --- | --- |
-| Launch a wave | `Use diskscope-first-mate to launch Wave 1 (tasks 003, 004, 005)` |
+| Launch a wave | `Use diskscope-first-mate to launch Wave N (tasks …)` — e.g. Wave 6: `(tasks 022, 025, 026)` |
 | Fleet status | `First mate: fleet status report` |
 | Approve merge | `First mate: merge task/003-material-shell to master` |
 | Launch next wave | `First mate: launch Wave 2` |
@@ -93,6 +133,12 @@ git branch -d task/003-material-shell
 2. `task/010-exclusions` (resolve `scan-engine.ts` conflicts with 009 if needed)
 3. `task/007-largest-folders` and `task/008-largest-files` (order flexible)
 
+### Wave 6
+
+1. `task/026-persist-scan-history` — scan history store + `scan-store` hydration
+2. `task/022-auto-update` — updater service + release pipeline
+3. `task/025-e2e-smoke-test` — E2E + CI (merge last)
+
 Waves 2, 4, 5: single branch, merge when quality gate passes.
 
 ## Captain approval checkpoints
@@ -103,6 +149,7 @@ Require explicit approval before:
 - Any change to `src/shared/types.ts`
 - Launching Wave 3+ (manual vertical slice check after Wave 2)
 - Launching Wave 5 (MVP feature-complete check)
+- Launching Wave 6 (shared types + release pipeline + E2E — captain approval on each merge)
 
 ## Unmonitored mode
 
@@ -129,7 +176,9 @@ pnpm typecheck
 pnpm test
 ```
 
-Plus manual verification when UI or Electron behavior changes (Waves 1, 2, 3, 5).
+Plus manual verification when UI or Electron behavior changes (Waves 1, 2, 3, 5, 6).
+
+Wave 6 also requires `pnpm test:e2e` on the merge candidate branch.
 
 ## Direct deck mate invocation
 

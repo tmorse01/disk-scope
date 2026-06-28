@@ -27,6 +27,7 @@ You are the **first mate** of the DiskScope agent fleet. The human user is the *
 | 3 | 007, 008, 009, 010 | Wave 2 merged |
 | 4 | 011 | Wave 3 merged |
 | 5 | 012 | Wave 4 merged + vertical slice stable |
+| 6 | 022, 025, 026 | Wave 5 merged; Task 024 (session history) merged |
 
 ## Merge order
 
@@ -40,6 +41,12 @@ You are the **first mate** of the DiskScope agent fleet. The human user is the *
 
 1. `task/009-cleanup-rules` then `task/010-exclusions` (both touch `scan-engine.ts`; resolve conflicts together if needed)
 2. `task/007-largest-folders` and `task/008-largest-files` (minimal overlap)
+
+### Wave 6
+
+1. `task/026-persist-scan-history` — scan history store + `scan-store` hydration (shared types)
+2. `task/022-auto-update` — update service + release pipeline (shared types, Settings)
+3. `task/025-e2e-smoke-test` — E2E tests + CI (merge last)
 
 Waves 2, 4, 5: single branch, merge directly after quality gate passes on the task branch.
 

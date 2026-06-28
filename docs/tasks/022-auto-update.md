@@ -124,3 +124,61 @@ Auto-update works without signing for early adopters, but Windows SmartScreen an
 - macOS / Linux auto-update (when those makers ship)
 - Staged rollouts or beta channel
 - In-app release notes viewer
+
+---
+
+## Fleet handoff (Wave 6)
+
+| Field | Value |
+| --- | --- |
+| **Wave** | 6 (parallel with Tasks 025, 026) |
+| **Worktree** | `.worktrees/task-022/` |
+| **Branch** | `task/022-auto-update` |
+| **Deck mate** | `.cursor/agents/task-022-auto-update.md` |
+| **Create worktree** | `.cursor/scripts/new-task-worktree.ps1 -TaskNum 022 -ShortName auto-update` |
+
+### Owned paths
+
+- `src/main/services/update-service.ts` (new)
+- `src/main/ipc/update-ipc.ts` (new)
+- `src/main/main.ts` (initialize service only)
+- `src/preload/disk-scope-api.ts` (update API slice)
+- `src/shared/types.ts` — `UpdateStatus*` types and `AppPreferences` update fields only
+- `src/shared/ipc-channels.ts` — update channels only
+- `src/main/services/preferences-store.ts` — auto-check preference normalization only
+- `src/renderer/features/settings/SettingsView.tsx` — Updates card only
+- `src/renderer/stores/preferences-store.ts` — update preference setters only
+- `forge.config.ts`, `scripts/stage-release-assets.ps1`, `.github/workflows/release.yml`
+- `docs/publishing-and-release.md`, `package.json` (`repository`, optional updater dep)
+- `tests/main/update-service.test.ts` (new)
+
+### Do not touch
+
+- `src/scanner/**`, scan-store scan history logic (Task 026)
+- `tests/e2e/**` (Task 025)
+- Portable zip install flow beyond documenting out-of-scope
+
+### Merge order (Wave 6)
+
+Merge **after** Task 026, **before** Task 025:
+
+1. `task/026-persist-scan-history` — shared types + scan IPC first
+2. **`task/022-auto-update`** — this task
+3. `task/025-e2e-smoke-test` — integration tests last
+
+**Captain approval required** before merge — changes `src/shared/types.ts` and release pipeline.
+
+### Quality gate (task branch)
+
+```powershell
+pnpm lint
+pnpm typecheck
+pnpm test
+```
+
+Plus manual: packaged build checks for updates (or mocked feed in unit tests + documented manual checklist).
+
+### Stop conditions
+
+- Do not merge until spike decision (Squirrel feed vs `electron-updater`) is recorded in this doc under **Chosen approach**
+- Halt if release asset upload changes break existing GitHub Release workflow

@@ -122,6 +122,8 @@ Before marking a task done:
 | File browser / safe delete | 016           | `src/main/services/file-actions.ts`, `src/renderer/features/file-actions/`, `src/renderer/features/largest-folders/FilesInFolderPanel.tsx`, settings safety prefs |
 | Packaging                  | 012           | `forge.config.ts`, assets                                                                                                                                         |
 | Auto-update                | 022           | `src/main/services/update-service.ts`, update IPC, settings UI, release staging                                                                                   |
+| Scan history persistence   | 026           | `src/main/services/scan-history-store.ts`, scan IPC hydrate, `scan-store`, scan-picker UI                                                                         |
+| E2E tests                  | 025           | `tests/e2e/`, `playwright.config.ts`, CI E2E job                                                                                                                  |
 | Shared types               | all           | `src/shared/` — coordinate before changing                                                                                                                        |
 
 ## Parallel work

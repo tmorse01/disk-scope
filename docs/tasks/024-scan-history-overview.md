@@ -38,4 +38,4 @@ Let users return to the folder-picker overview after a scan and switch between r
 
 ## Risks / assumptions
 
-- History is session-only (not persisted to disk in this task)
+- History is session-only (not persisted to disk in this task) — **Task 026** adds persistence
