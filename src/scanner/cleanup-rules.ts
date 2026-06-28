@@ -13,6 +13,8 @@ export type CleanupRuleOptions = {
   developerCleanupEnabled: boolean;
 };
 
+type PathSegmentMatchMode = 'consecutive' | 'ordered';
+
 type CleanupRule = {
   id: string;
   folderName: string;
@@ -24,6 +26,7 @@ type CleanupRule = {
   requiresDevProjectContext?: boolean;
   requiresDotNetContext?: boolean;
   requiresPathSegments?: string[];
+  pathSegmentMatch?: PathSegmentMatchMode;
 };
 
 const CLEANUP_RULES: CleanupRule[] = [
@@ -36,6 +39,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     recommendation: 'Often safe to clear; close apps first and review contents.',
     category: 'general',
     requiresPathSegments: ['AppData', 'Local', 'Temp'],
+    pathSegmentMatch: 'consecutive',
   },
   {
     id: 'steam-downloading',
@@ -47,12 +51,64 @@ const CLEANUP_RULES: CleanupRule[] = [
     category: 'general',
   },
   {
+    id: 'npm-user-cache',
+    folderName: 'npm-cache',
+    label: 'npm download cache',
+    risk: 'low',
+    recommendation: 'Safe to clear; npm will re-download packages when needed.',
+    category: 'general',
+    requiresPathSegments: ['AppData', 'Local', 'npm-cache'],
+    pathSegmentMatch: 'consecutive',
+  },
+  {
+    id: 'pip-cache',
+    folderName: 'Cache',
+    parentFolderName: 'pip',
+    label: 'pip download cache',
+    risk: 'low',
+    recommendation: 'Safe to clear; pip will re-download packages when needed.',
+    category: 'general',
+    requiresPathSegments: ['AppData', 'Local', 'pip', 'Cache'],
+    pathSegmentMatch: 'consecutive',
+  },
+  {
+    id: 'chrome-cache',
+    folderName: 'Cache',
+    label: 'Chrome browser cache',
+    risk: 'medium',
+    recommendation: 'Close Chrome first; cache rebuilds on next launch.',
+    category: 'general',
+    requiresPathSegments: ['Google', 'Chrome', 'User Data'],
+    pathSegmentMatch: 'ordered',
+  },
+  {
+    id: 'edge-cache',
+    folderName: 'Cache',
+    label: 'Edge browser cache',
+    risk: 'medium',
+    recommendation: 'Close Edge first; cache rebuilds on next launch.',
+    category: 'general',
+    requiresPathSegments: ['Microsoft', 'Edge', 'User Data'],
+    pathSegmentMatch: 'ordered',
+  },
+  {
+    id: 'firefox-cache',
+    folderName: 'cache2',
+    label: 'Firefox browser cache',
+    risk: 'medium',
+    recommendation: 'Close Firefox first; cache rebuilds on next launch.',
+    category: 'general',
+    requiresPathSegments: ['Mozilla', 'Firefox', 'Profiles'],
+    pathSegmentMatch: 'ordered',
+  },
+  {
     id: 'node_modules',
     folderName: 'node_modules',
     label: 'Node dependencies',
     risk: 'low',
     recommendation: 'Safe to remove; reinstall with your package manager.',
     category: 'developer',
+    requiresDevProjectContext: true,
   },
   {
     id: 'next',
@@ -61,6 +117,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     risk: 'low',
     recommendation: 'Rebuild with next build.',
     category: 'developer',
+    requiresDevProjectContext: true,
   },
   {
     id: 'dist',
@@ -87,6 +144,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     risk: 'low',
     recommendation: 'Safe to remove; Turborepo will rebuild cache entries.',
     category: 'developer',
+    requiresDevProjectContext: true,
   },
   {
     id: 'vite',
@@ -95,6 +153,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     risk: 'low',
     recommendation: 'Safe to remove; Vite will recreate cache on next dev/build.',
     category: 'developer',
+    requiresDevProjectContext: true,
   },
   {
     id: 'pnpm-store',
@@ -103,6 +162,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     risk: 'medium',
     recommendation: 'Removing may force re-downloads; use pnpm store prune when unsure.',
     category: 'developer',
+    requiresDevProjectContext: true,
   },
   {
     id: 'nuget-packages',
@@ -138,6 +198,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     risk: 'low',
     recommendation: 'Safe to remove; pytest recreates cache on next run.',
     category: 'developer',
+    requiresDevProjectContext: true,
   },
   {
     id: 'venv',
@@ -146,6 +207,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     risk: 'medium',
     recommendation: 'Recreate with your environment manager before deleting.',
     category: 'developer',
+    requiresDevProjectContext: true,
   },
   {
     id: 'coverage',
@@ -216,9 +278,70 @@ export function parentHasDevProjectContext(
   });
 }
 
-function pathContainsSegments(folderPath: string, segments: string[]): boolean {
-  const normalized = normalizePath(folderPath).toLowerCase();
-  return segments.every((segment) => normalized.includes(segment.toLowerCase()));
+function splitPathSegments(folderPath: string): string[] {
+  return normalizePath(folderPath)
+    .split(/[\\/]+/)
+    .filter((segment) => segment.length > 0);
+}
+
+export function pathContainsConsecutiveSegments(folderPath: string, segments: string[]): boolean {
+  if (segments.length === 0) {
+    return true;
+  }
+
+  const pathSegments = splitPathSegments(folderPath).map((segment) => segment.toLowerCase());
+  const normalizedSegments = segments.map((segment) => segment.toLowerCase());
+
+  if (pathSegments.length < normalizedSegments.length) {
+    return false;
+  }
+
+  for (let start = 0; start <= pathSegments.length - normalizedSegments.length; start += 1) {
+    let matched = true;
+    for (let index = 0; index < normalizedSegments.length; index += 1) {
+      if (pathSegments[start + index] !== normalizedSegments[index]) {
+        matched = false;
+        break;
+      }
+    }
+    if (matched) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function pathContainsOrderedSegments(folderPath: string, segments: string[]): boolean {
+  if (segments.length === 0) {
+    return true;
+  }
+
+  const pathSegments = splitPathSegments(folderPath).map((segment) => segment.toLowerCase());
+  const normalizedSegments = segments.map((segment) => segment.toLowerCase());
+
+  let segmentIndex = 0;
+  for (const pathSegment of pathSegments) {
+    if (pathSegment === normalizedSegments[segmentIndex]) {
+      segmentIndex += 1;
+      if (segmentIndex === normalizedSegments.length) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function pathMatchesSegments(
+  folderPath: string,
+  segments: string[],
+  mode: PathSegmentMatchMode = 'consecutive',
+): boolean {
+  if (mode === 'ordered') {
+    return pathContainsOrderedSegments(folderPath, segments);
+  }
+  return pathContainsConsecutiveSegments(folderPath, segments);
 }
 
 export function matchCleanupRule(
@@ -253,7 +376,10 @@ export function matchCleanupRule(
       continue;
     }
 
-    if (rule.requiresPathSegments && !pathContainsSegments(folderPath, rule.requiresPathSegments)) {
+    if (
+      rule.requiresPathSegments &&
+      !pathMatchesSegments(folderPath, rule.requiresPathSegments, rule.pathSegmentMatch ?? 'consecutive')
+    ) {
       continue;
     }
 

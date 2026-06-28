@@ -5,6 +5,8 @@ import {
   matchCleanupRule,
   parentHasDevProjectContext,
   parentHasDotNetProject,
+  pathContainsConsecutiveSegments,
+  pathContainsOrderedSegments,
 } from '../../src/scanner/cleanup-rules';
 import type { DirectoryNode } from '../../src/shared/types';
 
@@ -30,6 +32,38 @@ function createDirectoryNode(
 }
 
 describe('cleanup-rules', () => {
+  describe('path segment matching', () => {
+    it('matches consecutive AppData\\Local\\Temp segments only', () => {
+      const valid = path.join('C:', 'Users', 'alice', 'AppData', 'Local', 'Temp');
+      const invalid = path.join('C:', 'Users', 'alice', 'AppData', 'Other', 'Local', 'Temp');
+
+      expect(pathContainsConsecutiveSegments(valid, ['AppData', 'Local', 'Temp'])).toBe(true);
+      expect(pathContainsConsecutiveSegments(invalid, ['AppData', 'Local', 'Temp'])).toBe(false);
+    });
+
+    it('matches ordered browser profile segments with a profile folder in between', () => {
+      const chromeCache = path.join(
+        'C:',
+        'Users',
+        'alice',
+        'AppData',
+        'Local',
+        'Google',
+        'Chrome',
+        'User Data',
+        'Default',
+        'Cache',
+      );
+
+      expect(
+        pathContainsOrderedSegments(chromeCache, ['Google', 'Chrome', 'User Data']),
+      ).toBe(true);
+      expect(pathContainsConsecutiveSegments(chromeCache, ['Google', 'Chrome', 'User Data'])).toBe(
+        true,
+      );
+    });
+  });
+
   describe('parentHasDotNetProject', () => {
     it('recognizes .NET project marker files among siblings', () => {
       expect(parentHasDotNetProject(['App.csproj', 'Program.cs'])).toBe(true);
@@ -69,15 +103,28 @@ describe('cleanup-rules', () => {
       ['.pnpm-store', 'pnpm-store'],
       ['.pytest_cache', 'pytest-cache'],
       ['.venv', 'venv'],
-    ])('matches developer rule %s when developer mode is on', (folderName, ruleId) => {
-      const match = matchCleanupRule(folderName, folderName, null, false, false, DEV_OPTS);
+    ])('matches developer rule %s when developer mode is on and project context exists', (folderName, ruleId) => {
+      const match = matchCleanupRule(folderName, folderName, null, true, false, DEV_OPTS);
       expect(match?.ruleId).toBe(ruleId);
       expect(match?.category).toBe('developer');
     });
 
+    it.each([
+      ['node_modules', 'node_modules'],
+      ['.next', '.next'],
+      ['.turbo', '.turbo'],
+      ['.vite', '.vite'],
+      ['.pytest_cache', '.pytest_cache'],
+      ['.venv', '.venv'],
+    ])('does not match developer rule %s without project context', (folderName) => {
+      expect(matchCleanupRule(folderName, folderName, null, false, false, DEV_OPTS)).toBeNull();
+    });
+
     it('does not match developer rules when developer mode is off', () => {
-      expect(matchCleanupRule('node_modules', 'node_modules', null, false, false, DEFAULT_OPTS)).toBeNull();
-      expect(matchCleanupRule('.next', '.next', null, false, false, DEFAULT_OPTS)).toBeNull();
+      expect(
+        matchCleanupRule('node_modules', 'node_modules', null, true, false, DEFAULT_OPTS),
+      ).toBeNull();
+      expect(matchCleanupRule('.next', '.next', null, true, false, DEFAULT_OPTS)).toBeNull();
     });
 
     it('does not match dist or build without dev project context', () => {
@@ -164,6 +211,16 @@ describe('cleanup-rules', () => {
       expect(
         matchCleanupRule('Temp', path.join('C:', 'Windows', 'Temp'), 'Windows', false, false, DEFAULT_OPTS),
       ).toBeNull();
+      expect(
+        matchCleanupRule(
+          'Temp',
+          path.join('C:', 'Users', 'alice', 'AppData', 'Other', 'Local', 'Temp'),
+          'Local',
+          false,
+          false,
+          DEFAULT_OPTS,
+        ),
+      ).toBeNull();
     });
 
     it('matches Steam steamapps\\downloading regardless of developer mode', () => {
@@ -172,30 +229,107 @@ describe('cleanup-rules', () => {
       expect(match?.ruleId).toBe('steam-downloading');
       expect(match?.category).toBe('general');
     });
+
+    it('matches npm user cache under AppData\\Local\\npm-cache', () => {
+      const npmCachePath = path.join('C:', 'Users', 'alice', 'AppData', 'Local', 'npm-cache');
+      const match = matchCleanupRule('npm-cache', npmCachePath, 'Local', false, false, DEFAULT_OPTS);
+      expect(match?.ruleId).toBe('npm-user-cache');
+      expect(match?.category).toBe('general');
+    });
+
+    it('matches pip cache under AppData\\Local\\pip\\Cache', () => {
+      const pipCachePath = path.join('C:', 'Users', 'alice', 'AppData', 'Local', 'pip', 'Cache');
+      const match = matchCleanupRule('Cache', pipCachePath, 'pip', false, false, DEFAULT_OPTS);
+      expect(match?.ruleId).toBe('pip-cache');
+      expect(match?.category).toBe('general');
+    });
+
+    it('matches Chrome browser cache under User Data profiles', () => {
+      const chromeCachePath = path.join(
+        'C:',
+        'Users',
+        'alice',
+        'AppData',
+        'Local',
+        'Google',
+        'Chrome',
+        'User Data',
+        'Default',
+        'Cache',
+      );
+      const match = matchCleanupRule('Cache', chromeCachePath, 'Default', false, false, DEFAULT_OPTS);
+      expect(match?.ruleId).toBe('chrome-cache');
+      expect(match?.risk).toBe('medium');
+    });
+
+    it('matches Edge browser cache under User Data profiles', () => {
+      const edgeCachePath = path.join(
+        'C:',
+        'Users',
+        'alice',
+        'AppData',
+        'Local',
+        'Microsoft',
+        'Edge',
+        'User Data',
+        'Default',
+        'Cache',
+      );
+      const match = matchCleanupRule('Cache', edgeCachePath, 'Default', false, false, DEFAULT_OPTS);
+      expect(match?.ruleId).toBe('edge-cache');
+    });
+
+    it('matches Firefox cache2 under Profiles', () => {
+      const firefoxCachePath = path.join(
+        'C:',
+        'Users',
+        'alice',
+        'AppData',
+        'Local',
+        'Mozilla',
+        'Firefox',
+        'Profiles',
+        'abc123.default-release',
+        'cache2',
+      );
+      const match = matchCleanupRule(
+        'cache2',
+        firefoxCachePath,
+        'abc123.default-release',
+        false,
+        false,
+        DEFAULT_OPTS,
+      );
+      expect(match?.ruleId).toBe('firefox-cache');
+    });
   });
 
   describe('risk labels', () => {
     it('assigns expected risk levels for common dev folders', () => {
-      expect(matchCleanupRule('node_modules', 'node_modules', null, false, false, DEV_OPTS)?.risk).toBe('low');
-      expect(matchCleanupRule('.next', '.next', null, false, false, DEV_OPTS)?.risk).toBe('low');
+      expect(
+        matchCleanupRule('node_modules', 'node_modules', null, true, false, DEV_OPTS)?.risk,
+      ).toBe('low');
+      expect(matchCleanupRule('.next', '.next', null, true, false, DEV_OPTS)?.risk).toBe('low');
       expect(
         matchCleanupRule('dist', path.join('/repo', 'dist'), 'repo', true, false, DEV_OPTS)?.risk,
       ).toBe('medium');
-      expect(matchCleanupRule('.pnpm-store', '.pnpm-store', null, false, false, DEV_OPTS)?.risk).toBe('medium');
-      expect(matchCleanupRule('.venv', '.venv', null, false, false, DEV_OPTS)?.risk).toBe('medium');
+      expect(
+        matchCleanupRule('.pnpm-store', '.pnpm-store', null, true, false, DEV_OPTS)?.risk,
+      ).toBe('medium');
+      expect(matchCleanupRule('.venv', '.venv', null, true, false, DEV_OPTS)?.risk).toBe('medium');
     });
 
     it('includes recommendations for every built-in rule', () => {
       const folders: Array<[string, boolean, boolean]> = [
-        ['node_modules', false, false],
-        ['.next', false, false],
+        ['node_modules', true, false],
+        ['.next', true, false],
         ['dist', true, false],
         ['build', true, false],
-        ['.turbo', false, false],
-        ['.vite', false, false],
-        ['.pnpm-store', false, false],
-        ['.pytest_cache', false, false],
-        ['.venv', false, false],
+        ['.turbo', true, false],
+        ['.vite', true, false],
+        ['.pnpm-store', true, false],
+        ['.pytest_cache', true, false],
+        ['.venv', true, false],
         ['coverage', true, false],
       ];
 
@@ -290,7 +424,7 @@ describe('cleanup-rules', () => {
       };
 
       const collector = new CleanupCandidateCollector(DEFAULT_OPTS);
-      collector.tryRegister('node_modules', nodeModules, 'workspace', false, false);
+      collector.tryRegister('node_modules', nodeModules, 'workspace', true, false);
 
       expect(collector.finalize(directoriesById)).toHaveLength(0);
     });

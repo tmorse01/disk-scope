@@ -12,6 +12,7 @@ import { useShellContext } from '../../components/ShellContext';
 import { useScanStore } from '../../hooks/useScanStore';
 import { showOverviewPicker } from '../../stores/scan-store';
 import { radii } from '../../theme/tokens';
+import { CleanupReclaimHero } from '../cleanup-candidates/CleanupReclaimHero';
 import { ScanHistoryPanel } from '../scan-picker/ScanHistoryPanel';
 import { OverviewLandingView } from './OverviewLandingView';
 
@@ -55,7 +56,8 @@ export function OverviewView(_props: OverviewViewProps = {}) {
     return <OverviewLandingView />;
   }
 
-  const cleanupCount = result.cleanupCandidates.length;
+  const cleanupCandidates = result.cleanupCandidates;
+  const cleanupCount = cleanupCandidates.length;
 
   return (
     <DsViewLayout
@@ -125,16 +127,6 @@ export function OverviewView(_props: OverviewViewProps = {}) {
                 {result.directoryCount.toLocaleString()}
               </DsTabular>
             </Box>
-            {cleanupCount > 0 ? (
-              <Box>
-                <Typography variant="overline" color="text.secondary">
-                  Cleanup suggestions
-                </Typography>
-                <DsTabular sx={{ display: 'block', fontSize: '22px', fontWeight: 600 }}>
-                  {cleanupCount.toLocaleString()}
-                </DsTabular>
-              </Box>
-            ) : null}
           </Box>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2, wordBreak: 'break-all' }}>
             Scanned{' '}
@@ -143,6 +135,14 @@ export function OverviewView(_props: OverviewViewProps = {}) {
             </DsTabular>
           </Typography>
         </DsCard>
+
+        <CleanupReclaimHero
+          candidates={cleanupCandidates}
+          mode="overview"
+          onOpenCleanup={() => navigateTo('cleanup-candidates')}
+          onOpenLargestFiles={() => navigateTo('largest-files')}
+          onOpenFileTypes={() => navigateTo('file-types')}
+        />
 
         <DsCard>
           <Typography
