@@ -101,6 +101,8 @@ jobs:
           generate_release_notes: true
           files: |
             dist/release/DiskScope-*-Setup.exe
+            dist/release/RELEASES
+            dist/release/*.nupkg
             dist/release/DiskScope-*-win32-x64-portable.zip
             dist/release/SHA256SUMS.txt
           fail_on_unmatched_files: true

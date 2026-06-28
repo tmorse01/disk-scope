@@ -17,4 +17,8 @@ export const IPC_CHANNELS = {
   WINDOW_CLOSE: 'disk-scope:window-close',
   WINDOW_IS_MAXIMIZED: 'disk-scope:window-is-maximized',
   WINDOW_MAXIMIZE_CHANGED: 'disk-scope:window-maximize-changed',
+  CHECK_FOR_UPDATES: 'disk-scope:check-for-updates',
+  INSTALL_UPDATE: 'disk-scope:install-update',
+  GET_UPDATE_STATUS: 'disk-scope:get-update-status',
+  UPDATE_STATUS: 'disk-scope:update-status',
 } as const;
