@@ -1,7 +1,6 @@
 import Box from '@mui/material/Box';
-
+import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-
 import { formatBytes } from '../../../shared/format-bytes';
 import {
   computeFilesPerSec,
@@ -10,8 +9,12 @@ import {
 } from '../../../shared/scan-duration';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
+import { useShellContext } from '../../components/ShellContext';
 import { useScanStore } from '../../hooks/useScanStore';
+import { showOverviewScanProgress } from '../../stores/scan-store';
+import type { AppRoute } from '../../routes';
 import { SCAN_STATUS_HEIGHT } from '../../theme/mui-theme';
+import { radii } from '../../theme/tokens';
 import { shellFooterBackgroundSx } from '../../theme/shell-chrome';
 import { formatElapsed, shortenPath } from './format-elapsed';
 
@@ -73,9 +76,14 @@ function statusLabel(status: string, cancelPending: boolean): string {
 
 
 
-export function ScanProgressRegion() {
+type ScanProgressRegionProps = {
+  activeRoute: AppRoute;
+};
 
-  const { status, result, scanError, cancelPending } = useScanStore();
+export function ScanProgressRegion({ activeRoute }: ScanProgressRegionProps) {
+  const { navigateTo } = useShellContext();
+  const { status, result, scanError, cancelPending, progress } = useScanStore();
+  const isActiveScan = status === 'scanning' || status === 'cancelled';
 
   const hasSummary = status === 'completed' || status === 'cancelled';
 
@@ -97,10 +105,21 @@ export function ScanProgressRegion() {
     statsLine = scanError ?? 'The scan could not be completed.';
 
   } else if (status === 'scanning' && cancelPending) {
-
     statsLine = 'Stopping scan…';
-
+  } else if (status === 'scanning' && progress) {
+    statsLine = `${progress.filesScanned.toLocaleString()} files · ${progress.directoriesScanned.toLocaleString()} folders · ${formatBytes(progress.bytesDiscovered)} · ${formatElapsed(progress.elapsedMs)}`;
+    pathLine = progress.currentPath;
+  } else if (status === 'cancelled' && progress) {
+    statsLine = `${progress.filesScanned.toLocaleString()} files · ${progress.directoriesScanned.toLocaleString()} folders · ${formatBytes(progress.bytesDiscovered)} · paused`;
+    pathLine = progress.currentPath;
   }
+
+  const showViewProgressAction = isActiveScan && activeRoute !== 'overview';
+
+  const handleViewProgress = () => {
+    showOverviewScanProgress();
+    navigateTo('overview');
+  };
 
 
 
@@ -214,6 +233,23 @@ export function ScanProgressRegion() {
         ) : null}
 
       </Box>
+
+      {showViewProgressAction ? (
+        <Button
+          variant="contained"
+          color="primary"
+          size="small"
+          onClick={handleViewProgress}
+          sx={{
+            flexShrink: 0,
+            borderRadius: `${radii.full}px`,
+            textTransform: 'none',
+            fontWeight: 600,
+          }}
+        >
+          View progress
+        </Button>
+      ) : null}
 
     </Box>
 

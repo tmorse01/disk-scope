@@ -27,6 +27,8 @@ export type ScanProgressSnapshot = {
 
 export type OverviewMode = 'picker' | 'summary';
 
+export type OverviewTab = 'new-scan' | 'recent-scans';
+
 export type ScanHistoryEntry = {
   scanId: ScanSessionId;
   result: ScanResult;
@@ -58,6 +60,8 @@ export type ScanStoreState = {
   developerCleanupEnabledAtScan: boolean | null;
   /** Overview shows folder picker or the active scan summary. */
   overviewMode: OverviewMode;
+  /** Active tab on the overview landing page. */
+  overviewTab: OverviewTab;
   /** Session scan history, newest first. */
   scanHistory: ScanHistoryEntry[];
   /** True when the active scan target path no longer exists on disk. */
@@ -80,6 +84,7 @@ export const scanStore: ScanStoreState = {
   result: null,
   developerCleanupEnabledAtScan: null,
   overviewMode: 'picker',
+  overviewTab: 'new-scan',
   scanHistory: [],
   scanTargetMissing: false,
   lastSelectedPaths: [],
@@ -338,6 +343,7 @@ export function initScanStoreListeners(): void {
 
 export function showOverviewPicker(): void {
   scanStore.overviewMode = 'picker';
+  scanStore.overviewTab = 'new-scan';
   if (
     scanStore.status === 'idle' &&
     scanStore.selectedPaths.length === 0 &&
@@ -345,6 +351,26 @@ export function showOverviewPicker(): void {
   ) {
     scanStore.selectedPaths = [...scanStore.lastSelectedPaths];
   }
+  notifyScanStore();
+}
+
+export function showOverviewRecentScans(): void {
+  scanStore.overviewMode = 'picker';
+  scanStore.overviewTab = 'recent-scans';
+  notifyScanStore();
+}
+
+export function setOverviewTab(tab: OverviewTab): void {
+  scanStore.overviewTab = tab;
+  notifyScanStore();
+}
+
+/** Return to the in-progress scan hero on Overview. */
+export function showOverviewScanProgress(): void {
+  if (scanStore.status !== 'scanning' && scanStore.status !== 'cancelled') {
+    return;
+  }
+  scanStore.overviewMode = 'summary';
   notifyScanStore();
 }
 
@@ -482,7 +508,7 @@ async function beginScanForRootPath(rootPath: string, options?: { resume?: boole
   scanStore.scanError = null;
   scanStore.cacheWarning = null;
   scanStore.result = null;
-  scanStore.overviewMode = 'picker';
+  scanStore.overviewMode = 'summary';
   scanStore.developerCleanupEnabledAtScan = preferencesStore.developerCleanupEnabled;
   cancelRequestedByUser = false;
   scanStore.cancelPending = false;
@@ -802,6 +828,7 @@ export function resetScanSessionForTest(): void {
   scanStore.result = null;
   scanStore.developerCleanupEnabledAtScan = null;
   scanStore.overviewMode = 'picker';
+  scanStore.overviewTab = 'new-scan';
   scanStore.scanHistory = [];
   scanStore.scanTargetMissing = false;
   scanStore.lastSelectedPaths = [];

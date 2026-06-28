@@ -4,7 +4,7 @@ import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
 import { MaterialIcon } from './MaterialIcon';
-import { TOP_APP_BAR_HEIGHT } from '../theme/mui-theme';
+import { TOP_APP_BAR_HEIGHT, CONTEXT_BAR_INLINE_HEIGHT } from '../theme/mui-theme';
 import { shellHeaderBackgroundSx } from '../theme/shell-chrome';
 
 export type BreadcrumbSegment = {
@@ -34,13 +34,24 @@ export function DsContextBar({ segments = [], actions, fallbackTitle = 'DiskScop
         justifyContent: 'space-between',
         gap: 2,
         minHeight: TOP_APP_BAR_HEIGHT,
+        py: `${(TOP_APP_BAR_HEIGHT - CONTEXT_BAR_INLINE_HEIGHT) / 2}px`,
         px: 2,
         ...shellHeaderBackgroundSx(theme),
         borderBottom: 1,
         borderColor: 'outlineVariant.main',
       })}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1, overflow: 'auto' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          minWidth: 0,
+          flex: 1,
+          overflow: 'auto',
+          height: CONTEXT_BAR_INLINE_HEIGHT,
+        }}
+      >
         {segments.length > 0 ? (
           <Breadcrumbs
             aria-label="Location"
@@ -103,7 +114,18 @@ export function DsContextBar({ segments = [], actions, fallbackTitle = 'DiskScop
       </Box>
 
       {actions ? (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>{actions}</Box>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            flexShrink: 0,
+            height: CONTEXT_BAR_INLINE_HEIGHT,
+            pl: 0.5,
+          }}
+        >
+          {actions}
+        </Box>
       ) : null}
     </Box>
   );

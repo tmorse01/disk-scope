@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box';
 import { useMemo, useState } from 'react';
+import { ActiveScanIndicator } from './components/ActiveScanIndicator';
 import { DsContextBar } from './components/DsContextBar';
 import { DsErrorBoundary } from './components/DsErrorBoundary';
 import { DsSidebar } from './components/DsSidebar';
@@ -68,6 +69,16 @@ function AppLayout({ activeRoute, onRouteChange }: AppLayoutProps) {
 
   const segments = breadcrumbSegments.length > 0 ? breadcrumbSegments : defaultSegments;
 
+  const headerActions = useMemo(
+    () => (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+        <ActiveScanIndicator />
+        {contextActions}
+      </Box>
+    ),
+    [contextActions],
+  );
+
   return (
     <Box
       sx={{
@@ -85,7 +96,7 @@ function AppLayout({ activeRoute, onRouteChange }: AppLayoutProps) {
         <DsSidebar activeRoute={activeRoute} onRouteChange={onRouteChange} />
 
         <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <DsContextBar segments={segments} actions={contextActions} />
+          <DsContextBar segments={segments} actions={headerActions} />
 
           <UpdateBanner onOpenSettings={() => onRouteChange('settings')} />
 
@@ -120,7 +131,7 @@ function AppLayout({ activeRoute, onRouteChange }: AppLayoutProps) {
             </Box>
           </Box>
 
-          {status !== 'scanning' ? <ScanProgressRegion /> : null}
+          <ScanProgressRegion activeRoute={activeRoute} />
         </Box>
       </Box>
     </Box>

@@ -593,6 +593,18 @@ describe('scan store history hydration', () => {
     expect(saveLastSelectedPaths).toHaveBeenCalledWith(['C:\\Demo', 'D:\\Extra']);
   });
 
+  it('shows the overview recent scans tab when requested', async () => {
+    const { showOverviewRecentScans, scanStore } = await import('../../src/renderer/stores/scan-store');
+
+    scanStore.status = 'idle';
+    scanStore.overviewMode = 'summary';
+
+    showOverviewRecentScans();
+
+    expect(scanStore.overviewMode).toBe('picker');
+    expect(scanStore.overviewTab).toBe('recent-scans');
+  });
+
   it('restores last selected paths when opening the overview picker', async () => {
     const { showOverviewPicker, scanStore } = await import('../../src/renderer/stores/scan-store');
 
@@ -604,6 +616,29 @@ describe('scan store history hydration', () => {
     showOverviewPicker();
 
     expect(scanStore.overviewMode).toBe('picker');
+    expect(scanStore.overviewTab).toBe('new-scan');
     expect(scanStore.selectedPaths).toEqual(['C:\\Restored']);
+  });
+
+  it('shows active scan progress on overview when requested', async () => {
+    const { showOverviewScanProgress, scanStore } = await import('../../src/renderer/stores/scan-store');
+
+    scanStore.status = 'scanning';
+    scanStore.overviewMode = 'picker';
+
+    showOverviewScanProgress();
+
+    expect(scanStore.overviewMode).toBe('summary');
+  });
+
+  it('ignores showOverviewScanProgress when no scan is active', async () => {
+    const { showOverviewScanProgress, scanStore } = await import('../../src/renderer/stores/scan-store');
+
+    scanStore.status = 'idle';
+    scanStore.overviewMode = 'picker';
+
+    showOverviewScanProgress();
+
+    expect(scanStore.overviewMode).toBe('picker');
   });
 });

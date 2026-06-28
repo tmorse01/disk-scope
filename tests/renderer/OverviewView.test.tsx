@@ -145,5 +145,79 @@ describe('OverviewView', () => {
 
     expect(screen.getByRole('heading', { name: 'Overview' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Add folder or drive/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /New scan/i })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('shows the recent scans tab content', async () => {
+    scanStore.scanHistory = [
+      {
+        scanId: 'scan-1',
+        result: buildResult(),
+        status: 'completed',
+        developerCleanupEnabledAtScan: false,
+      },
+    ];
+    scanStore.overviewTab = 'recent-scans';
+
+    renderView();
+
+    expect(screen.getByRole('tab', { name: /Recent scans/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByLabelText('Recent scans')).toBeInTheDocument();
+    expect(screen.getByText('Projects')).toBeInTheDocument();
+  });
+
+  it('returns to the folder picker from an in-progress scan', async () => {
+    scanStore.status = 'scanning';
+    scanStore.overviewMode = 'summary';
+    scanStore.scanId = 'scan-active';
+    scanStore.selectedPaths = ['C:\\Demo\\Projects'];
+    scanStore.progress = {
+      filesScanned: 100,
+      directoriesScanned: 10,
+      bytesDiscovered: 1024,
+      currentPath: 'C:\\Demo\\Projects\\src',
+      errorCount: 0,
+      elapsedMs: 5000,
+    };
+
+    renderView();
+
+    expect(screen.getByRole('heading', { name: 'Scanning' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Scan in progress')).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Back to overview/i }));
+
+    expect(screen.getByRole('heading', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add folder or drive/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /View scan progress/i })).toBeInTheDocument();
+    expect(scanStore.overviewMode).toBe('picker');
+  });
+
+  it('returns to scan progress from the folder picker during an active scan', async () => {
+    scanStore.status = 'scanning';
+    scanStore.overviewMode = 'picker';
+    scanStore.scanId = 'scan-active';
+    scanStore.selectedPaths = ['C:\\Demo\\Projects'];
+    scanStore.progress = {
+      filesScanned: 100,
+      directoriesScanned: 10,
+      bytesDiscovered: 1024,
+      currentPath: 'C:\\Demo\\Projects\\src',
+      errorCount: 0,
+      elapsedMs: 5000,
+    };
+
+    renderView();
+
+    expect(screen.getByRole('heading', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /View scan progress/i })).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /View scan progress/i }));
+
+    expect(screen.getByRole('heading', { name: 'Scanning' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Scan in progress')).toBeInTheDocument();
+    expect(scanStore.overviewMode).toBe('summary');
   });
 });

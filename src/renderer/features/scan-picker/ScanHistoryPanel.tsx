@@ -8,6 +8,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 import { formatBytes } from '../../../shared/format-bytes';
 import { DsCard } from '../../components/DsCard';
+import { DsEmptyState } from '../../components/DsEmptyState';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { useScanStore } from '../../hooks/useScanStore';
@@ -31,51 +32,87 @@ function formatScanCompletedAt(completedAt: string): string {
 
 type ScanHistoryPanelProps = {
   showNewScanAction?: boolean;
+  /** Hides the section header when rendered inside overview tabs. */
+  embedded?: boolean;
 };
 
-export function ScanHistoryPanel({ showNewScanAction = false }: ScanHistoryPanelProps) {
+export function ScanHistoryPanel({
+  showNewScanAction = false,
+  embedded = false,
+}: ScanHistoryPanelProps) {
   const { scanHistory, scanId } = useScanStore();
 
   if (scanHistory.length === 0) {
-    return null;
+    if (!embedded) {
+      return null;
+    }
+
+    return (
+      <DsCard sx={{ p: { xs: 2, sm: 3 } }}>
+        <DsEmptyState
+          icon="history"
+          title="No recent scans yet"
+          description="Completed scans appear here so you can switch between previous results."
+        />
+      </DsCard>
+    );
   }
 
   return (
     <DsCard sx={{ p: { xs: 2, sm: 2.5 } }}>
-      <Box
-        sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 1.5,
-        }}
-      >
-        <Box>
-          <Typography variant="h3" component="h2" sx={{ fontSize: '20px', fontWeight: 600 }}>
-            Recent scans
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Switch between previous results or start a new scan below.
-          </Typography>
+      {!embedded ? (
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1.5,
+            mb: 2,
+          }}
+        >
+          <Box>
+            <Typography variant="h3" component="h2" sx={{ fontSize: '20px', fontWeight: 600 }}>
+              Recent scans
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Switch between previous results or start a new scan below.
+            </Typography>
+          </Box>
+          {showNewScanAction ? (
+            <Button
+              variant="outlined"
+              size="medium"
+              onClick={showOverviewPicker}
+              startIcon={<MaterialIcon name="add" aria-hidden={false} />}
+              sx={{
+                borderRadius: `${radii.lg}px`,
+                textTransform: 'none',
+                fontWeight: 600,
+                flexShrink: 0,
+              }}
+            >
+              New scan
+            </Button>
+          ) : null}
         </Box>
-        {showNewScanAction ? (
+      ) : showNewScanAction ? (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
           <Button
             variant="outlined"
-            size="medium"
+            size="small"
             onClick={showOverviewPicker}
             startIcon={<MaterialIcon name="add" aria-hidden={false} />}
             sx={{
               borderRadius: `${radii.lg}px`,
               textTransform: 'none',
               fontWeight: 600,
-              flexShrink: 0,
             }}
           >
             New scan
           </Button>
-        ) : null}
-      </Box>
+        </Box>
+      ) : null}
 
       <List
         dense
