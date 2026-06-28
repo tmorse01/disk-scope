@@ -27,8 +27,6 @@ import { useScanStore } from '../../hooks/useScanStore';
 import { radii } from '../../theme/tokens';
 import type { DeleteTarget } from '../file-actions/delete-target';
 import { useSelectableFileActions } from '../file-actions/useSelectableFileActions';
-import { CleanupReclaimHero } from './CleanupReclaimHero';
-
 const RISK_LABELS: Record<RiskLevel, string> = {
   low: 'Minimal',
   medium: 'Moderate',
@@ -131,8 +129,6 @@ export function CleanupCandidatesView() {
 
       {hasTable && (
         <>
-          <CleanupReclaimHero candidates={candidates} mode="detail" />
-
           <DsCard
             noPadding
             sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}

@@ -104,17 +104,10 @@ describe('OverviewView', () => {
 
     renderView(navigateTo);
 
-    expect(screen.getByRole('heading', { name: 'You could reclaim' })).toBeInTheDocument();
-    expect(screen.getAllByText('4.0 KB').length).toBeGreaterThan(0);
-    expect(screen.getByText('Temp')).toBeInTheDocument();
-    expect(screen.getByText(/User temp files/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'You could gain 4.0 KB back' })).toBeInTheDocument();
 
     const user = userEvent.setup();
-    await user.click(
-      screen.getByRole('button', {
-        name: /You could reclaim 4\.0 KB\. View cleanup suggestions\./i,
-      }),
-    );
+    await user.click(screen.getByRole('button', { name: 'View suggestions' }));
 
     expect(navigateTo).toHaveBeenCalledWith('cleanup-candidates');
   });

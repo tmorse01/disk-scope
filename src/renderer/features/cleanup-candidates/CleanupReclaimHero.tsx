@@ -5,11 +5,7 @@ import type { CleanupCandidate } from '../../../shared/types';
 import { formatBytes } from '../../../shared/format-bytes';
 import { summarizeCleanupCandidates } from '../../../shared/cleanup-summary';
 import { DsCard } from '../../components/DsCard';
-import { DsTabular } from '../../components/DsTabular';
-import { MaterialIcon } from '../../components/MaterialIcon';
 import { radii } from '../../theme/tokens';
-
-const PREVIEW_CANDIDATE_LIMIT = 3;
 
 type CleanupReclaimHeroProps = {
   candidates: CleanupCandidate[];
@@ -28,142 +24,53 @@ function heroPrimaryBytes(summary: ReturnType<typeof summarizeCleanupCandidates>
 
 function CleanupReclaimFilledHero({
   candidates,
-  mode,
   onOpenCleanup,
 }: {
   candidates: CleanupCandidate[];
-  mode: 'overview' | 'detail';
   onOpenCleanup?: () => void;
 }) {
-  const summary = summarizeCleanupCandidates(candidates);
-  const primaryBytes = heroPrimaryBytes(summary);
-  const showSecondaryTotal =
-    summary.reclaimableBytesLowRisk > 0 &&
-    summary.reclaimableBytesAll > summary.reclaimableBytesLowRisk;
-  const previewCandidates = candidates.slice(0, PREVIEW_CANDIDATE_LIMIT);
-  const isInteractive = mode === 'overview' && onOpenCleanup !== undefined;
-  const title = mode === 'overview' ? 'You could reclaim' : 'Cleanup readiness';
+  const primaryBytes = heroPrimaryBytes(summarizeCleanupCandidates(candidates));
+  const headline = `You could gain ${formatBytes(primaryBytes)} back`;
 
-  const content = (
-    <>
-      <Box sx={{ position: 'absolute', top: 16, right: 16, opacity: 0.1 }}>
-        <MaterialIcon name="delete_sweep" style={{ fontSize: 160 }} />
-      </Box>
-      <Typography variant="h3" sx={{ opacity: 0.85, mb: 1 }}>
-        {title}
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 2,
+        flexWrap: 'wrap',
+        flexShrink: 0,
+        bgcolor: 'primary.light',
+        color: 'common.white',
+        borderRadius: `${radii.lg}px`,
+        px: 2,
+        py: 1.25,
+      }}
+    >
+      <Typography component="h2" variant="h5" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+        {headline}
       </Typography>
-      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
-        <Typography variant="h1" sx={{ fontWeight: 800, lineHeight: 1 }}>
-          {formatBytes(primaryBytes)}
-        </Typography>
-        <Typography variant="h3" sx={{ opacity: 0.85 }}>
-          {summary.reclaimableBytesLowRisk > 0 ? 'from low-risk cleanup targets' : 'potential reclaimable space'}
-        </Typography>
-      </Box>
-      {showSecondaryTotal ? (
-        <Typography variant="body2" sx={{ mt: 1, opacity: 0.85 }}>
-          Up to {formatBytes(summary.reclaimableBytesAll)} including items that need review.
-        </Typography>
-      ) : null}
-      <Typography variant="body1" sx={{ mt: 2, maxWidth: 560, opacity: 0.9 }}>
-        {summary.candidateCount} folder{summary.candidateCount === 1 ? '' : 's'} matched cleanup rules.
-        {mode === 'overview'
-          ? ' Open cleanup suggestions to review the largest items first.'
-          : ' Review each item before removing — use Reveal or Copy path to inspect safely.'}
-      </Typography>
-      {previewCandidates.length > 0 ? (
-        <Box
-          component="ul"
-          sx={{
-            mt: 2,
-            mb: 0,
-            pl: 2.5,
-            maxWidth: 560,
-            opacity: 0.92,
-            '& li': { mb: 0.5 },
-          }}
-        >
-          {previewCandidates.map((candidate) => (
-            <Box component="li" key={candidate.path}>
-              <Typography component="span" variant="body2" sx={{ fontWeight: 600 }}>
-                {candidate.name}
-              </Typography>
-              <Typography component="span" variant="body2" sx={{ opacity: 0.85 }}>
-                {' '}
-                · {candidate.label} ·{' '}
-              </Typography>
-              <DsTabular component="span" sx={{ fontSize: 'inherit', fontWeight: 700 }}>
-                {formatBytes(candidate.sizeBytes)}
-              </DsTabular>
-            </Box>
-          ))}
-        </Box>
-      ) : null}
-      {isInteractive ? (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 2, opacity: 0.9 }}>
-          <MaterialIcon name="arrow_forward" aria-hidden={false} />
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            View cleanup suggestions
-          </Typography>
-        </Box>
-      ) : null}
-    </>
-  );
-
-  if (isInteractive) {
-    return (
-      <Box
-        component="button"
-        type="button"
+      <Button
+        variant="contained"
+        size="small"
         onClick={onOpenCleanup}
-        aria-label={`You could reclaim ${formatBytes(primaryBytes)}. View cleanup suggestions.`}
         sx={{
           flexShrink: 0,
-          bgcolor: 'primary.light',
-          color: 'primary.contrastText',
-          border: 'none',
-          borderRadius: `${radii.xl}px`,
-          position: 'relative',
-          overflow: 'hidden',
-          minHeight: 200,
-          width: '100%',
-          p: 3,
-          textAlign: 'left',
-          cursor: 'pointer',
-          transition: (theme) =>
-            theme.transitions.create(['transform', 'box-shadow'], {
-              duration: theme.transitions.duration.short,
-            }),
+          bgcolor: 'common.white',
+          color: 'primary.light',
+          fontWeight: 600,
+          textTransform: 'none',
+          boxShadow: 'none',
           '&:hover': {
-            transform: 'translateY(-1px)',
-            boxShadow: 4,
-          },
-          '&:focus-visible': {
-            outline: '2px solid',
-            outlineColor: 'primary.contrastText',
-            outlineOffset: 2,
+            bgcolor: 'grey.100',
+            boxShadow: 'none',
           },
         }}
       >
-        {content}
-      </Box>
-    );
-  }
-
-  return (
-    <DsCard
-      sx={{
-        flexShrink: 0,
-        bgcolor: 'primary.light',
-        color: 'primary.contrastText',
-        border: 'none',
-        position: 'relative',
-        overflow: 'hidden',
-        minHeight: 200,
-      }}
-    >
-      {content}
-    </DsCard>
+        View suggestions
+      </Button>
+    </Box>
   );
 }
 
@@ -218,11 +125,11 @@ export function CleanupReclaimHero({
   onOpenLargestFiles,
   onOpenFileTypes,
 }: CleanupReclaimHeroProps) {
-  if (candidates.length === 0) {
-    if (mode !== 'overview') {
-      return null;
-    }
+  if (mode === 'detail') {
+    return null;
+  }
 
+  if (candidates.length === 0) {
     return (
       <CleanupReclaimEmptyHint
         onOpenLargestFiles={onOpenLargestFiles}
@@ -231,7 +138,5 @@ export function CleanupReclaimHero({
     );
   }
 
-  return (
-    <CleanupReclaimFilledHero candidates={candidates} mode={mode} onOpenCleanup={onOpenCleanup} />
-  );
+  return <CleanupReclaimFilledHero candidates={candidates} onOpenCleanup={onOpenCleanup} />;
 }
