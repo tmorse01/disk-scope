@@ -1,7 +1,7 @@
 {
   "name": "diskscope",
   "productName": "DiskScope",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Cleanup-focused disk usage analyzer for developers and power users",
   "main": ".vite/build/main.js",
   "private": true,
