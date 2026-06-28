@@ -92,6 +92,7 @@ export function createMockDiskScope(
     },
     onScanComplete: () => noopUnsubscribe,
     onScanError: () => noopUnsubscribe,
+    getE2eAutostartConfig: async () => null,
     windowControls: mockWindowControls,
     ...overrides,
   };

@@ -322,7 +322,29 @@ export async function startScanFromStore(): Promise<void> {
   }
 
   const rootPath = scanStore.selectedPaths[0];
+  await beginScanForRootPath(rootPath);
+}
 
+export async function startScanForPath(rootPath: string): Promise<void> {
+  if (typeof window.diskScope === 'undefined') {
+    scanStore.scanError = 'DiskScope API is not available yet.';
+    notifyScanStore();
+    return;
+  }
+
+  const normalized = rootPath.trim();
+  if (!normalized) {
+    scanStore.scanError = 'Select a folder before starting a scan.';
+    notifyScanStore();
+    return;
+  }
+
+  scanStore.selectedPaths = [normalized];
+  scanStore.pickerError = null;
+  await beginScanForRootPath(normalized);
+}
+
+async function beginScanForRootPath(rootPath: string): Promise<void> {
   if (scanStore.status === 'scanning') {
     return;
   }
@@ -356,6 +378,19 @@ export async function startScanFromStore(): Promise<void> {
     scanStore.scanId = null;
     notifyScanStore();
   }
+}
+
+export async function initE2eAutostartScan(): Promise<void> {
+  if (typeof window.diskScope === 'undefined') {
+    return;
+  }
+
+  const config = await window.diskScope.getE2eAutostartConfig();
+  if (!config?.rootPath) {
+    return;
+  }
+
+  await startScanForPath(config.rootPath);
 }
 
 export async function cancelScanFromStore(): Promise<void> {

@@ -17,4 +17,5 @@ export const IPC_CHANNELS = {
   WINDOW_CLOSE: 'disk-scope:window-close',
   WINDOW_IS_MAXIMIZED: 'disk-scope:window-is-maximized',
   WINDOW_MAXIMIZE_CHANGED: 'disk-scope:window-maximize-changed',
+  GET_E2E_AUTOSTART_CONFIG: 'disk-scope:get-e2e-autostart-config',
 } as const;
