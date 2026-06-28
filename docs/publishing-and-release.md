@@ -93,6 +93,8 @@ Portable zip installs do not receive in-app auto-updates. Squirrel-installed bui
 
 ## Auto-update assets
 
+For the full in-app update flow (state machine, IPC, Settings UI, and testing), see [**Auto-update**](auto-update.md).
+
 Packaged Squirrel installs use **`electron-updater`** with the GitHub provider (`package.json` → `repository` + `build.publish`). Each release must include:
 
 | Asset | Purpose |
