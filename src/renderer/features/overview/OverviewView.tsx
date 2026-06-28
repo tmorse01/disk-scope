@@ -50,9 +50,9 @@ const NEXT_STEP_ROUTES = [
 export function OverviewView(_props: OverviewViewProps = {}) {
   const { status, result, overviewMode, scanTargetMissing } = useScanStore();
   const { navigateTo } = useShellContext();
-  const hasResult = result && (status === 'completed' || status === 'cancelled');
+  const hasCompletedResult = result && status === 'completed';
 
-  if (status === 'scanning' || overviewMode === 'picker' || !hasResult) {
+  if (status === 'scanning' || status === 'cancelled' || overviewMode === 'picker' || !hasCompletedResult) {
     return <OverviewLandingView />;
   }
 

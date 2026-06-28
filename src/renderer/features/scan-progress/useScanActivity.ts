@@ -18,13 +18,53 @@ const DEFAULT_STATE: ScanActivityState = {
 
 const TICK_MS = 250;
 
+function computeActivityState(
+  progress: ScanProgressSnapshot,
+  scanPath: string | null,
+  elapsedMs: number,
+): ScanActivityState {
+  const estimatedMs = estimateScanDurationMs({
+    scanPath: scanPath ?? '',
+    filesScanned: progress.filesScanned,
+    elapsedMs,
+  });
+  const percentAnalyzed = computeAnalyzedPercent(elapsedMs, estimatedMs);
+
+  return {
+    percentAnalyzed,
+    caption: analyzedCaption(percentAnalyzed, elapsedMs, estimatedMs),
+  };
+}
+
+function applyPercentFloor(state: ScanActivityState, percentFloor: number): ScanActivityState {
+  if (percentFloor <= 0 || state.percentAnalyzed >= percentFloor) {
+    return state;
+  }
+
+  return {
+    ...state,
+    percentAnalyzed: percentFloor,
+  };
+}
+
 export function useScanActivity(
   progress: ScanProgressSnapshot | null,
   scanPath: string | null,
+  isActive = true,
+  percentFloor = 0,
 ): ScanActivityState {
   const wallStartRef = useRef<number | null>(null);
   const latestProgressRef = useRef<ScanProgressSnapshot | null>(null);
-  const [state, setState] = useState<ScanActivityState>(DEFAULT_STATE);
+  const [state, setState] = useState<ScanActivityState>(() => {
+    if (!progress) {
+      return DEFAULT_STATE;
+    }
+
+    return applyPercentFloor(
+      computeActivityState(progress, scanPath, progress.elapsedMs),
+      percentFloor,
+    );
+  });
 
   useEffect(() => {
     if (!progress) {
@@ -37,6 +77,15 @@ export function useScanActivity(
     wallStartRef.current = Date.now() - progress.elapsedMs;
     latestProgressRef.current = progress;
 
+    const publish = (next: ScanActivityState) => {
+      setState(applyPercentFloor(next, percentFloor));
+    };
+
+    if (!isActive) {
+      publish(computeActivityState(progress, scanPath, progress.elapsedMs));
+      return;
+    }
+
     const tick = () => {
       const snapshot = latestProgressRef.current;
       const wallStart = wallStartRef.current;
@@ -45,23 +94,13 @@ export function useScanActivity(
       }
 
       const elapsedMs = Math.max(0, Date.now() - wallStart);
-      const estimatedMs = estimateScanDurationMs({
-        scanPath: scanPath ?? '',
-        filesScanned: snapshot.filesScanned,
-        elapsedMs,
-      });
-      const percentAnalyzed = computeAnalyzedPercent(elapsedMs, estimatedMs);
-
-      setState({
-        percentAnalyzed,
-        caption: analyzedCaption(percentAnalyzed, elapsedMs, estimatedMs),
-      });
+      publish(computeActivityState(snapshot, scanPath, elapsedMs));
     };
 
     tick();
     const intervalId = window.setInterval(tick, TICK_MS);
     return () => window.clearInterval(intervalId);
-  }, [progress, scanPath]);
+  }, [progress, scanPath, isActive, percentFloor]);
 
   return state;
 }

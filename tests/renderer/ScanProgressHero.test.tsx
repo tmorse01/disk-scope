@@ -7,6 +7,7 @@ import {
   applyScanProgressForTest,
   resetScanSessionForTest,
   scanStore,
+  setScanCancelPendingForTest,
 } from '../../src/renderer/stores/scan-store';
 import { muiTheme } from '../../src/renderer/theme/mui-theme';
 
@@ -57,6 +58,19 @@ describe('ScanProgressHero', () => {
     renderHero();
     expect(screen.getByText(/node_modules/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Cancel scan/i })).toBeInTheDocument();
+  });
+
+  it('shows resume action and paused status after cancel is requested', () => {
+    renderHero();
+
+    act(() => {
+      setScanCancelPendingForTest(true);
+    });
+
+    expect(screen.getByRole('button', { name: /Resume scan/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Cancel scan/i })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Scan paused')).toBeInTheDocument();
+    expect(screen.getByText('Paused')).toBeInTheDocument();
   });
 
   it('updates when progress snapshot changes', () => {

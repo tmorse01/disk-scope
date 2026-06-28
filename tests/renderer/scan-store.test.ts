@@ -357,6 +357,9 @@ describe('scan store scan lifecycle', () => {
     initScanStoreListeners();
     await cancelScanFromStore();
 
+    expect(scanStore.cancelPending).toBe(true);
+    expect(cancelScan).toHaveBeenCalledWith('scan-1');
+
     completeHandler?.({
       scanId: 'scan-1',
       result: {
@@ -378,8 +381,72 @@ describe('scan store scan lifecycle', () => {
       },
     });
 
-    expect(cancelScan).toHaveBeenCalledWith('scan-1');
     expect(scanStore.status).toBe('cancelled');
+    expect(scanStore.cancelPending).toBe(false);
+    expect(scanStore.overviewMode).toBe('picker');
+  });
+
+  it('resumes scan progress from the paused baseline instead of resetting', async () => {
+    vi.useFakeTimers();
+    startScan.mockResolvedValueOnce({ scanId: 'scan-1' }).mockResolvedValueOnce({ scanId: 'scan-2' });
+    cancelScan.mockResolvedValue(undefined);
+
+    const {
+      startScanFromStore,
+      cancelScanFromStore,
+      resumeScanFromStore,
+      initScanStoreListeners,
+      scanStore,
+    } = await import('../../src/renderer/stores/scan-store');
+
+    scanStore.selectedPaths = ['C:\\Demo'];
+    await startScanFromStore();
+    initScanStoreListeners();
+
+    _progressHandler?.({
+      scanId: 'scan-1',
+      filesScanned: 12_000,
+      directoriesScanned: 400,
+      bytesDiscovered: 1_000_000,
+      currentPath: 'C:\\Demo\\src',
+      errorCount: 0,
+      elapsedMs: 45_000,
+    });
+    await vi.advanceTimersByTimeAsync(200);
+
+    expect(scanStore.progress?.elapsedMs).toBe(45_000);
+
+    await cancelScanFromStore();
+
+    expect(scanStore.analyzedPercentFloor).toBeGreaterThan(0);
+
+    await resumeScanFromStore();
+
+    expect(scanStore.status).toBe('scanning');
+    expect(scanStore.progress?.elapsedMs).toBe(45_000);
+    expect(scanStore.progress?.filesScanned).toBe(12_000);
+    expect(scanStore.analyzedPercentFloor).toBeGreaterThan(0);
+    expect(startScan).toHaveBeenLastCalledWith({
+      rootPath: 'C:\\Demo',
+      useFilesystemCache: true,
+    });
+
+    scanStore.scanId = 'scan-2';
+    _progressHandler?.({
+      scanId: 'scan-2',
+      filesScanned: 500,
+      directoriesScanned: 20,
+      bytesDiscovered: 50_000,
+      currentPath: 'C:\\Demo\\lib',
+      errorCount: 0,
+      elapsedMs: 2_000,
+    });
+    await vi.advanceTimersByTimeAsync(200);
+
+    expect(scanStore.progress?.elapsedMs).toBe(47_000);
+    expect(scanStore.progress?.filesScanned).toBe(12_000);
+
+    vi.useRealTimers();
   });
 });
 

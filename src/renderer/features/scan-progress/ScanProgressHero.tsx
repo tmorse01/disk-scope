@@ -10,7 +10,11 @@ import { DsLinearProgressBar } from '../../components/DsLinearProgressBar';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { useScanStore } from '../../hooks/useScanStore';
-import { cancelScanFromStore, getPrimarySelectedPath } from '../../stores/scan-store';
+import {
+  cancelScanFromStore,
+  getPrimarySelectedPath,
+  resumeScanFromStore,
+} from '../../stores/scan-store';
 import { radii } from '../../theme/tokens';
 import { formatElapsed, shortenPath } from './format-elapsed';
 import { useScanActivity } from './useScanActivity';
@@ -32,9 +36,16 @@ export function ScanProgressHero() {
   const theme = useTheme();
   const isCompact = useMediaQuery(theme.breakpoints.down('sm'));
   const isMedium = useMediaQuery(theme.breakpoints.down('lg'));
-  const { progress } = useScanStore();
+  const { status, cancelPending, progress, analyzedPercentFloor } = useScanStore();
   const primaryPath = getPrimarySelectedPath();
-  const { percentAnalyzed, caption } = useScanActivity(progress, primaryPath);
+  const isPaused = cancelPending || status === 'cancelled';
+  const isActive = status === 'scanning' && !cancelPending;
+  const { percentAnalyzed, caption } = useScanActivity(
+    progress,
+    primaryPath,
+    isActive,
+    analyzedPercentFloor,
+  );
 
   const ringSize = isCompact ? 168 : isMedium ? 220 : 260;
   const strokeWidth = isCompact ? 10 : 12;
@@ -48,6 +59,20 @@ export function ScanProgressHero() {
 
   const statsLine = `${filesScanned.toLocaleString()} files · ${directoriesScanned.toLocaleString()} folders · ${formatBytes(bytesDiscovered)} · ${errorCount} errors · ${formatElapsed(elapsedMs)}`;
 
+  const title = status === 'cancelled'
+    ? 'Scan cancelled'
+    : cancelPending
+      ? 'Cancelling scan'
+      : 'Scan in progress';
+
+  const statusIcon = status === 'cancelled'
+    ? 'cancel'
+    : cancelPending
+      ? 'pause_circle'
+      : 'progress_activity';
+
+  const sectionLabel = isPaused ? 'Scan paused' : 'Scan in progress';
+
   return (
     <DsCard
       noPadding
@@ -58,7 +83,7 @@ export function ScanProgressHero() {
     >
       <Box
         component="section"
-        aria-label="Scan in progress"
+        aria-label={sectionLabel}
         sx={{ display: 'flex', flexDirection: 'column' }}
       >
         <Box
@@ -76,38 +101,55 @@ export function ScanProgressHero() {
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
             <MaterialIcon
-              name="progress_activity"
+              name={statusIcon}
               style={{ color: 'var(--mui-palette-primary-main)', fontSize: 22, flexShrink: 0 }}
             />
             <Box sx={{ minWidth: 0 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
-                Scan in progress
+                {title}
               </Typography>
               <Typography variant="body2" color="text.secondary" noWrap title={statsLine}>
                 {statsLine}
               </Typography>
             </Box>
           </Box>
-          <Button
-            variant="contained"
-            size={isCompact ? 'small' : 'medium'}
-            onClick={() => void cancelScanFromStore()}
-            startIcon={<MaterialIcon name="close" aria-hidden={false} />}
-            sx={{
-              flexShrink: 0,
-              borderRadius: `${radii.full}px`,
-              textTransform: 'none',
-              fontWeight: 600,
-              bgcolor: 'error.light',
-              color: 'error.dark',
-              '&:hover': {
-                bgcolor: 'error.main',
-                color: 'error.contrastText',
-              },
-            }}
-          >
-            Cancel scan
-          </Button>
+          {isPaused ? (
+            <Button
+              variant="contained"
+              size={isCompact ? 'small' : 'medium'}
+              onClick={() => void resumeScanFromStore()}
+              startIcon={<MaterialIcon name="play_arrow" aria-hidden={false} />}
+              sx={{
+                flexShrink: 0,
+                borderRadius: `${radii.full}px`,
+                textTransform: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Resume scan
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              size={isCompact ? 'small' : 'medium'}
+              onClick={() => void cancelScanFromStore()}
+              startIcon={<MaterialIcon name="close" aria-hidden={false} />}
+              sx={{
+                flexShrink: 0,
+                borderRadius: `${radii.full}px`,
+                textTransform: 'none',
+                fontWeight: 600,
+                bgcolor: 'error.light',
+                color: 'error.dark',
+                '&:hover': {
+                  bgcolor: 'error.main',
+                  color: 'error.contrastText',
+                },
+              }}
+            >
+              Cancel scan
+            </Button>
+          )}
         </Box>
 
         <Box
@@ -179,7 +221,7 @@ export function ScanProgressHero() {
               <MetricCell label="Total size" value={formatBytes(bytesDiscovered)} />
               <MetricCell label="Elapsed" value={formatElapsed(elapsedMs)} />
               <MetricCell label="Errors" value={errorCount.toLocaleString()} />
-              <MetricCell label="Status" value={caption} />
+              <MetricCell label="Status" value={isPaused ? 'Paused' : caption} />
               <MetricCell label="Files" value={filesScanned.toLocaleString()} />
             </Box>
 
@@ -192,7 +234,9 @@ export function ScanProgressHero() {
             />
 
             <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
-              Rankings and cleanup candidates appear when the scan finishes.
+              {isPaused
+                ? 'Progress is paused. Resume to continue scanning this target.'
+                : 'Rankings and cleanup candidates appear when the scan finishes.'}
             </Typography>
           </Box>
         </Box>

@@ -10,6 +10,10 @@ import type {
 } from '../../shared/types';
 import { computeScanDurationMs } from '../../shared/scan-duration';
 import type { DeleteTarget } from '../features/file-actions/delete-target';
+import {
+  computeAnalyzedPercent,
+  estimateScanDurationMs,
+} from '../features/scan-progress/scan-activity';
 import { preferencesStore } from './preferences-store';
 
 export type ScanProgressSnapshot = {
@@ -42,9 +46,13 @@ export type ScanStoreState = {
   pickerError: string | null;
   scanId: ScanSessionId | null;
   scanError: string | null;
+  /** True after the user requests cancel until the scan session settles. */
+  cancelPending: boolean;
   cacheWarning: string | null;
   useFilesystemCache: boolean;
   progress: ScanProgressSnapshot | null;
+  /** Fake analyzed-percent floor preserved across pause/resume. */
+  analyzedPercentFloor: number;
   result: ScanResult | null;
   /** Whether developer cleanup was enabled when the current result was scanned. */
   developerCleanupEnabledAtScan: boolean | null;
@@ -64,9 +72,11 @@ export const scanStore: ScanStoreState = {
   pickerError: null,
   scanId: null,
   scanError: null,
+  cancelPending: false,
   cacheWarning: null,
   useFilesystemCache: true,
   progress: null,
+  analyzedPercentFloor: 0,
   result: null,
   developerCleanupEnabledAtScan: null,
   overviewMode: 'picker',
@@ -87,6 +97,8 @@ let storeVersion = 0;
 let listenersInitialized = false;
 let historyHydrated = false;
 let cancelRequestedByUser = false;
+/** Progress snapshot captured when a scan is paused so resume continues from the same point. */
+let scanProgressBaseline: ScanProgressSnapshot | null = null;
 
 const PROGRESS_NOTIFY_MS = 150;
 let pendingProgress: ScanProgressEvent | null = null;
@@ -162,6 +174,37 @@ function progressSnapshotFromResult(result: ScanResult): ScanProgressSnapshot {
   };
 }
 
+function captureScanProgressBaseline(snapshot: ScanProgressSnapshot): void {
+  scanProgressBaseline = { ...snapshot };
+  const scanPath = getPrimarySelectedPath() ?? snapshot.currentPath ?? '';
+  const estimatedMs = estimateScanDurationMs({
+    scanPath,
+    filesScanned: snapshot.filesScanned,
+    elapsedMs: snapshot.elapsedMs,
+  });
+  scanStore.analyzedPercentFloor = computeAnalyzedPercent(snapshot.elapsedMs, estimatedMs);
+}
+
+function clearScanProgressBaseline(): void {
+  scanProgressBaseline = null;
+  scanStore.analyzedPercentFloor = 0;
+}
+
+function mergeProgressWithBaseline(event: ScanProgressEvent): ScanProgressEvent {
+  if (!scanProgressBaseline) {
+    return event;
+  }
+
+  return {
+    ...event,
+    filesScanned: Math.max(scanProgressBaseline.filesScanned, event.filesScanned),
+    directoriesScanned: Math.max(scanProgressBaseline.directoriesScanned, event.directoriesScanned),
+    bytesDiscovered: Math.max(scanProgressBaseline.bytesDiscovered, event.bytesDiscovered),
+    errorCount: Math.max(scanProgressBaseline.errorCount, event.errorCount),
+    elapsedMs: scanProgressBaseline.elapsedMs + event.elapsedMs,
+  };
+}
+
 function upsertScanHistory(entry: ScanHistoryEntry): void {
   scanStore.scanHistory = [
     entry,
@@ -225,11 +268,15 @@ export async function hydrateScanHistoryFromMain(): Promise<void> {
 }
 
 function handleScanProgress(event: ScanProgressEvent): void {
-  if (scanStore.scanId !== event.scanId || scanStore.status !== 'scanning') {
+  if (
+    scanStore.scanId !== event.scanId ||
+    scanStore.status !== 'scanning' ||
+    scanStore.cancelPending
+  ) {
     return;
   }
 
-  scheduleProgressNotify(event);
+  scheduleProgressNotify(mergeProgressWithBaseline(event));
 }
 
 function handleScanComplete(event: { scanId: ScanSessionId; result: ScanResult }): void {
@@ -243,6 +290,7 @@ function handleScanComplete(event: { scanId: ScanSessionId; result: ScanResult }
   scanStore.result = event.result;
   scanStore.progress = progressSnapshotFromResult(event.result);
   scanStore.status = finalStatus;
+  scanStore.cancelPending = false;
   scanStore.scanTargetMissing = false;
   upsertScanHistory({
     scanId: event.scanId,
@@ -250,7 +298,12 @@ function handleScanComplete(event: { scanId: ScanSessionId; result: ScanResult }
     status: finalStatus,
     developerCleanupEnabledAtScan: scanStore.developerCleanupEnabledAtScan ?? false,
   });
-  scanStore.overviewMode = 'summary';
+  scanStore.overviewMode = finalStatus === 'completed' ? 'summary' : 'picker';
+  if (finalStatus === 'completed') {
+    clearScanProgressBaseline();
+  } else {
+    captureScanProgressBaseline(scanStore.progress);
+  }
   cancelRequestedByUser = false;
   notifyScanStore();
 }
@@ -264,6 +317,7 @@ function handleScanError(event: { scanId: ScanSessionId; message: string }): voi
   pendingProgress = null;
   scanStore.scanError = event.message;
   scanStore.status = 'failed';
+  scanStore.cancelPending = false;
   cancelRequestedByUser = false;
   notifyScanStore();
 }
@@ -418,8 +472,8 @@ export async function startScanForPath(rootPath: string): Promise<void> {
   await beginScanForRootPath(normalized);
 }
 
-async function beginScanForRootPath(rootPath: string): Promise<void> {
-  if (scanStore.status === 'scanning') {
+async function beginScanForRootPath(rootPath: string, options?: { resume?: boolean }): Promise<void> {
+  if (scanStore.status === 'scanning' && !scanStore.cancelPending && !options?.resume) {
     return;
   }
 
@@ -428,12 +482,20 @@ async function beginScanForRootPath(rootPath: string): Promise<void> {
   scanStore.scanError = null;
   scanStore.cacheWarning = null;
   scanStore.result = null;
-  scanStore.progress = null;
   scanStore.overviewMode = 'picker';
   scanStore.developerCleanupEnabledAtScan = preferencesStore.developerCleanupEnabled;
   cancelRequestedByUser = false;
+  scanStore.cancelPending = false;
   clearProgressNotifyTimer();
   pendingProgress = null;
+
+  if (options?.resume) {
+    scanStore.progress = scanProgressBaseline ? { ...scanProgressBaseline } : null;
+  } else {
+    clearScanProgressBaseline();
+    scanStore.progress = null;
+  }
+
   scanStore.status = 'scanning';
   notifyScanStore();
 
@@ -470,19 +532,66 @@ export async function initE2eAutostartScan(): Promise<void> {
 }
 
 export async function cancelScanFromStore(): Promise<void> {
-  if (typeof window.diskScope === 'undefined' || !scanStore.scanId || scanStore.status !== 'scanning') {
+  if (
+    typeof window.diskScope === 'undefined' ||
+    !scanStore.scanId ||
+    scanStore.status !== 'scanning' ||
+    scanStore.cancelPending
+  ) {
     return;
   }
 
   cancelRequestedByUser = true;
+  scanStore.cancelPending = true;
+  if (scanStore.progress) {
+    captureScanProgressBaseline(scanStore.progress);
+  }
+  clearProgressNotifyTimer();
+  pendingProgress = null;
+  notifyScanStore();
 
   try {
     await window.diskScope.cancelScan(scanStore.scanId);
   } catch (error) {
+    scanStore.cancelPending = false;
+    cancelRequestedByUser = false;
     scanStore.scanError =
       error instanceof Error ? error.message : 'Failed to cancel scan.';
     notifyScanStore();
   }
+}
+
+export async function resumeScanFromStore(): Promise<void> {
+  if (typeof window.diskScope === 'undefined') {
+    scanStore.scanError = 'DiskScope API is not available yet.';
+    notifyScanStore();
+    return;
+  }
+
+  const rootPath = scanStore.selectedPaths[0];
+  if (!rootPath) {
+    scanStore.scanError = 'Select a folder before starting a scan.';
+    notifyScanStore();
+    return;
+  }
+
+  if (scanStore.status !== 'scanning' && scanStore.status !== 'cancelled') {
+    return;
+  }
+
+  if (!scanProgressBaseline) {
+    if (scanStore.progress) {
+      captureScanProgressBaseline(scanStore.progress);
+    } else if (scanStore.result) {
+      captureScanProgressBaseline(progressSnapshotFromResult(scanStore.result));
+    }
+  }
+
+  scanStore.scanId = null;
+  scanStore.result = null;
+  scanStore.scanError = null;
+
+  await beginScanForRootPath(rootPath, { resume: true });
 }
 
 export async function exportReportFromStore(format: ExportFormat): Promise<void> {
@@ -522,6 +631,12 @@ export function applyScanProgressForTest(event: ScanProgressEvent): void {
   }
 
   applyProgressSnapshot(event);
+  notifyScanStore();
+}
+
+/** Test helper — toggle cancel-pending UI state. */
+export function setScanCancelPendingForTest(value: boolean): void {
+  scanStore.cancelPending = value;
   notifyScanStore();
 }
 
@@ -677,10 +792,13 @@ export function resetScanSessionForTest(): void {
   clearProgressNotifyTimer();
   pendingProgress = null;
   cancelRequestedByUser = false;
+  clearScanProgressBaseline();
+  scanStore.cancelPending = false;
   scanStore.scanId = null;
   scanStore.scanError = null;
   scanStore.cacheWarning = null;
   scanStore.progress = null;
+  scanStore.analyzedPercentFloor = 0;
   scanStore.result = null;
   scanStore.developerCleanupEnabledAtScan = null;
   scanStore.overviewMode = 'picker';

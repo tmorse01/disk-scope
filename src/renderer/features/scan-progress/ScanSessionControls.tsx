@@ -4,15 +4,16 @@ import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
 import { MaterialIcon } from '../../components/MaterialIcon';
-import { cancelScanFromStore, startScanFromStore } from '../../stores/scan-store';
+import { cancelScanFromStore, resumeScanFromStore, startScanFromStore } from '../../stores/scan-store';
 import { usePreferencesStore } from '../../hooks/usePreferencesStore';
 import { useScanStore } from '../../hooks/useScanStore';
 
 export function ScanSessionControls() {
-  const { status, selectedPaths, scanError } = useScanStore();
+  const { status, selectedPaths, scanError, cancelPending } = useScanStore();
   const { exclusions } = usePreferencesStore();
   const isScanning = status === 'scanning';
-  const canStart = selectedPaths.length > 0 && !isScanning && status !== 'selecting-target';
+  const isPaused = cancelPending || status === 'cancelled';
+  const canStart = selectedPaths.length > 0 && !isScanning && !isPaused && status !== 'selecting-target';
   const showActiveExclusions =
     exclusions.length > 0 && !isScanning && status !== 'completed' && status !== 'cancelled';
 
@@ -62,7 +63,7 @@ export function ScanSessionControls() {
         >
           {isScanning ? 'Scanning…' : 'Start scan'}
         </Button>
-        {isScanning ? (
+        {isScanning && !cancelPending ? (
           <Button
             variant="outlined"
             color="warning"
@@ -70,6 +71,16 @@ export function ScanSessionControls() {
             sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
           >
             Cancel scan
+          </Button>
+        ) : null}
+        {isPaused ? (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => void resumeScanFromStore()}
+            sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
+          >
+            Resume scan
           </Button>
         ) : null}
       </Box>

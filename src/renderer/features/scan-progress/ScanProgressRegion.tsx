@@ -43,7 +43,7 @@ function statusIcon(status: string): string {
 
 
 
-function statusLabel(status: string): string {
+function statusLabel(status: string, cancelPending: boolean): string {
 
   switch (status) {
 
@@ -59,6 +59,10 @@ function statusLabel(status: string): string {
 
       return 'Scan failed';
 
+    case 'scanning':
+
+      return cancelPending ? 'Cancelling scan' : 'Scan in progress';
+
     default:
 
       return 'No scan in progress';
@@ -71,7 +75,7 @@ function statusLabel(status: string): string {
 
 export function ScanProgressRegion() {
 
-  const { status, result, scanError } = useScanStore();
+  const { status, result, scanError, cancelPending } = useScanStore();
 
   const hasSummary = status === 'completed' || status === 'cancelled';
 
@@ -91,6 +95,10 @@ export function ScanProgressRegion() {
   } else if (status === 'failed') {
 
     statsLine = scanError ?? 'The scan could not be completed.';
+
+  } else if (status === 'scanning' && cancelPending) {
+
+    statsLine = 'Stopping scan…';
 
   }
 
@@ -161,7 +169,7 @@ export function ScanProgressRegion() {
 
       <Typography component="span" variant="body2" sx={{ fontWeight: 600, flexShrink: 0 }}>
 
-        {statusLabel(status)}
+        {statusLabel(status, cancelPending)}
 
       </Typography>
 

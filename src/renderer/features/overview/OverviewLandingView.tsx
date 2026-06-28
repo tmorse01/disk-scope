@@ -9,14 +9,19 @@ import { ScanTargetPanel } from '../scan-picker/ScanTargetPanel';
 export function OverviewLandingView() {
   const { status } = useScanStore();
 
-  if (status === 'scanning') {
+  if (status === 'scanning' || status === 'cancelled') {
     const primaryPath = getPrimarySelectedPath();
+    const title = status === 'cancelled' ? 'Scan cancelled' : 'Scanning';
+    const subtitle =
+      status === 'cancelled'
+        ? 'Resume to continue scanning this target.'
+        : (primaryPath ?? 'Analyzing selected storage…');
     return (
       <DsViewLayout
         header={
           <DsPageHeader
-            title="Scanning"
-            subtitle={primaryPath ?? 'Analyzing selected storage…'}
+            title={title}
+            subtitle={subtitle}
             compact
           />
         }
