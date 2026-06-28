@@ -59,4 +59,11 @@ describe('App', () => {
 
     expect(screen.getByLabelText('Scan status')).toHaveTextContent('No scan in progress');
   });
+
+  it('keeps main content host and context bar in the shell', () => {
+    renderApp();
+
+    expect(screen.getByRole('main', { name: 'Overview' })).toBeInTheDocument();
+    expect(document.querySelector('header.ds-glass')).toBeInTheDocument();
+  });
 });

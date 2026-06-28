@@ -28,12 +28,13 @@ export function DsContextBar({ segments = [], actions, fallbackTitle = 'DiskScop
         position: 'sticky',
         top: 0,
         zIndex: 30,
+        flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 2,
         minHeight: TOP_APP_BAR_HEIGHT,
-        px: 3,
+        px: 2,
         ...shellHeaderBackgroundSx(theme),
         borderBottom: 1,
         borderColor: 'outlineVariant.main',
@@ -53,13 +54,14 @@ export function DsContextBar({ segments = [], actions, fallbackTitle = 'DiskScop
                 return (
                   <Typography
                     key={segment.id}
-                    variant="body1"
+                    variant="body2"
                     sx={{
                       fontWeight: isLast ? 700 : 400,
+                      lineHeight: 1.2,
                       color: isLast ? 'primary.main' : 'text.secondary',
-                      borderBottom: isLast ? 2 : 0,
+                      borderBottom: isLast ? 1.5 : 0,
                       borderColor: 'primary.main',
-                      pb: isLast ? 0.25 : 0,
+                      pb: isLast ? 0.125 : 0,
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -80,6 +82,7 @@ export function DsContextBar({ segments = [], actions, fallbackTitle = 'DiskScop
                     cursor: 'pointer',
                     fontFamily: 'inherit',
                     fontSize: 'inherit',
+                    lineHeight: 1.2,
                     border: 'none',
                     bgcolor: 'transparent',
                     p: 0,
@@ -93,7 +96,7 @@ export function DsContextBar({ segments = [], actions, fallbackTitle = 'DiskScop
             })}
           </Breadcrumbs>
         ) : (
-          <Typography variant="h3" component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>
+          <Typography variant="body1" component="span" sx={{ fontWeight: 700, color: 'primary.main', lineHeight: 1.2 }}>
             {fallbackTitle}
           </Typography>
         )}

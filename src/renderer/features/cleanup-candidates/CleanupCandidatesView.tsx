@@ -17,6 +17,7 @@ import {
   type ResizableColumnDef,
 } from '../../components/DsResizableColumns';
 import { DsPageHeader, DsStatusChip } from '../../components/DsStatusChip';
+import { DsViewLayout } from '../../components/DsViewLayout';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { useScanStore } from '../../hooks/useScanStore';
@@ -64,13 +65,18 @@ export function CleanupCandidatesView() {
   const totalReclaimable = candidates.reduce((sum, candidate) => sum + candidate.sizeBytes, 0);
   const { getRowProps, toolbar, contextMenu, deleteConfirmationUi } = useSelectableFileActions();
 
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <DsPageHeader
-        title="Cleanup Candidates"
-        subtitle="Developer bloat folders detected during the scan, grouped by reclaimable risk."
-      />
+  const hasTable = hasScanResult && candidates.length > 0;
 
+  return (
+    <DsViewLayout
+      mode={hasTable ? 'data' : 'page'}
+      header={
+        <DsPageHeader
+          title="Cleanup Candidates"
+          subtitle="Developer bloat folders detected during the scan, grouped by reclaimable risk."
+        />
+      }
+    >
       {!hasScanResult && (
         <Alert severity="info" variant="outlined">
           Run a scan to identify cleanup candidates such as package caches and build output.
@@ -83,10 +89,11 @@ export function CleanupCandidatesView() {
         </Alert>
       )}
 
-      {hasScanResult && candidates.length > 0 && (
+      {hasTable && (
         <>
           <DsCard
             sx={{
+              flexShrink: 0,
               bgcolor: 'primary.light',
               color: 'primary.contrastText',
               border: 'none',
@@ -115,10 +122,14 @@ export function CleanupCandidatesView() {
             </Typography>
           </DsCard>
 
-          <DsCard noPadding sx={{ overflow: 'hidden' }}>
+          <DsCard
+            noPadding
+            sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+          >
             {toolbar}
             <DsResizableColumnsProvider columns={CLEANUP_COLUMNS}>
               <DsDataTable
+                scroll
                 noOuterCard
                 aria-label="Cleanup candidates"
                 header={
@@ -196,12 +207,17 @@ export function CleanupCandidatesView() {
             {deleteConfirmationUi}
           </DsCard>
 
-          <Alert severity="info" variant="outlined" icon={<MaterialIcon name="info" filled aria-hidden={false} />}>
+          <Alert
+            severity="info"
+            variant="outlined"
+            icon={<MaterialIcon name="info" filled aria-hidden={false} />}
+            sx={{ flexShrink: 0 }}
+          >
             Safe-first approach: DiskScope recommends targets only. Select a row and use the toolbar, or right-click
             for the same actions.
           </Alert>
         </>
       )}
-    </Box>
+    </DsViewLayout>
   );
 }

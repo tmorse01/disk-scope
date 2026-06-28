@@ -1,15 +1,22 @@
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { useCallback, useMemo, useState } from 'react';
 import type { NodeId } from '../../../shared/types';
 import { DsCard } from '../../components/DsCard';
 import { DsPageHeader } from '../../components/DsStatusChip';
+import { DsViewLayout } from '../../components/DsViewLayout';
 import { useShellOverrides } from '../../components/ShellContext';
 import { useScanStore } from '../../hooks/useScanStore';
 import { buildBreadcrumbPath } from '../largest-folders/folder-tree-utils';
 import { DiskMapTreemap } from './DiskMapTreemap';
 import { buildTreemapItems } from './disk-map-utils';
+
+const pageHeader = (
+  <DsPageHeader
+    title="Disk Map"
+    subtitle="Visual map of folder sizes from your latest scan."
+  />
+);
 
 export function DiskMapView() {
   const { status, result } = useScanStore();
@@ -59,53 +66,58 @@ export function DiskMapView() {
 
   if (status === 'scanning') {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <DsPageHeader
-          title="Disk Map"
-          subtitle="Visual map of folder sizes from your latest scan."
-        />
+      <DsViewLayout header={pageHeader}>
         <Alert severity="info" variant="outlined">
           Scan in progress — the disk map will update when the scan completes.
         </Alert>
-      </Box>
+      </DsViewLayout>
     );
   }
 
   if (!result) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <DsPageHeader
-          title="Disk Map"
-          subtitle="Visual map of folder sizes from your latest scan."
-        />
+      <DsViewLayout header={pageHeader}>
         <Alert severity="info" variant="outlined">
           Run a scan from Overview to see a treemap of folder sizes here.
         </Alert>
-      </Box>
+      </DsViewLayout>
     );
   }
 
   const focusTotalBytes = focusedNode?.sizeBytes ?? result.totalSizeBytes;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <DsPageHeader
-        title="Disk Map"
-        subtitle={`Tile area reflects size under ${result.rootPath}. Click a folder to drill in.`}
-      />
-
-      <Typography variant="body2" color="text.secondary">
+    <DsViewLayout
+      mode="data"
+      header={
+        <DsPageHeader
+          title="Disk Map"
+          subtitle={`Tile area reflects size under ${result.rootPath}. Click a folder to drill in.`}
+        />
+      }
+    >
+      <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0 }}>
         Colors distinguish folders. The <strong>Files</strong> tile shows direct files in the
         current folder (not files inside subfolders).
       </Typography>
 
-      <DsCard noPadding sx={{ p: 1.5 }}>
+      <DsCard
+        noPadding
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          p: 1.5,
+          overflow: 'hidden',
+        }}
+      >
         <DiskMapTreemap
           items={treemapItems}
           focusTotalBytes={focusTotalBytes}
           onDirectoryClick={handleFocusChange}
         />
       </DsCard>
-    </Box>
+    </DsViewLayout>
   );
 }

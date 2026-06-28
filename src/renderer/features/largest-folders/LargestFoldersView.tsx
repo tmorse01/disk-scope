@@ -22,6 +22,7 @@ import {
   type ResizableColumnDef,
 } from '../../components/DsResizableColumns';
 import { DsPageHeader } from '../../components/DsStatusChip';
+import { DsViewLayout } from '../../components/DsViewLayout';
 import {
   buildCleanupCandidatePathIndex,
   getCleanupCandidateForPath,
@@ -228,17 +229,35 @@ export function LargestFoldersView() {
 
   if (status === 'scanning') {
     return (
-      <Alert severity="info" variant="outlined">
-        Scan in progress — folder rankings will update when the scan completes.
-      </Alert>
+      <DsViewLayout
+        header={
+          <DsPageHeader
+            title="Largest Folders"
+            subtitle="Folder rankings from the latest scan."
+          />
+        }
+      >
+        <Alert severity="info" variant="outlined">
+          Scan in progress — folder rankings will update when the scan completes.
+        </Alert>
+      </DsViewLayout>
     );
   }
 
   if (!result) {
     return (
-      <Alert severity="info" variant="outlined">
-        Run a scan from Overview to see folder rankings here.
-      </Alert>
+      <DsViewLayout
+        header={
+          <DsPageHeader
+            title="Largest Folders"
+            subtitle="Folder rankings from the latest scan."
+          />
+        }
+      >
+        <Alert severity="info" variant="outlined">
+          Run a scan from Overview to see folder rankings here.
+        </Alert>
+      </DsViewLayout>
     );
   }
 
@@ -247,21 +266,28 @@ export function LargestFoldersView() {
     rows.length > 0 || (focusedNode?.fileCount ?? 0) > 0 || (focusedNode?.directoryCount ?? 0) > 0;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <DsPageHeader
-        title="Largest Folders"
-        subtitle={`Analyzing ${result.fileCount.toLocaleString()} files under ${result.rootPath}`}
-      />
-
+    <DsViewLayout
+      mode={hasVisibleRows ? 'data' : 'page'}
+      header={
+        <DsPageHeader
+          title="Largest Folders"
+          subtitle={`Analyzing ${result.fileCount.toLocaleString()} files under ${result.rootPath}`}
+        />
+      }
+    >
       {!hasVisibleRows ? (
         <Typography variant="body2" color="text.secondary">
           No subfolders in this directory.
         </Typography>
       ) : (
-        <DsCard noPadding sx={{ overflow: 'hidden' }}>
+        <DsCard
+          noPadding
+          sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        >
           {toolbar}
           <DsResizableColumnsProvider columns={FOLDER_TREE_COLUMNS}>
             <DsDataTable
+              scroll
               noOuterCard
               aria-label="Largest folders"
               header={
@@ -462,10 +488,10 @@ export function LargestFoldersView() {
         </DsCard>
       )}
 
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
         Select a folder or file to use the toolbar above. Right-click a row for the same actions. Double-click a
         folder to drill in, or expand &lt;Files&gt; to browse individual files.
       </Typography>
-    </Box>
+    </DsViewLayout>
   );
 }

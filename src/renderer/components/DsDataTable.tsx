@@ -1,3 +1,4 @@
+import Box from '@mui/material/Box';
 import Table from '@mui/material/Table';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
@@ -12,15 +13,37 @@ type DsDataTableProps = {
   header: ReactNode;
   children: ReactNode;
   noOuterCard?: boolean;
+  scroll?: boolean;
 };
 
-export function DsDataTable({ 'aria-label': ariaLabel, header, children, noOuterCard = false }: DsDataTableProps) {
+const scrollContainerSx = {
+  flex: 1,
+  minHeight: 0,
+  overflow: 'auto',
+} as const;
+
+const scrollCardSx = {
+  overflow: 'hidden',
+  flex: 1,
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+} as const;
+
+export function DsDataTable({
+  'aria-label': ariaLabel,
+  header,
+  children,
+  noOuterCard = false,
+  scroll = false,
+}: DsDataTableProps) {
   const resizableColumns = useOptionalResizableColumns();
 
   const table = (
-    <TableContainer className="ds-custom-scrollbar">
+    <TableContainer className="ds-custom-scrollbar" sx={scroll ? scrollContainerSx : undefined}>
       <Table
         size="small"
+        stickyHeader={scroll}
         aria-label={ariaLabel}
         sx={{
           tableLayout: 'fixed',
@@ -35,11 +58,19 @@ export function DsDataTable({ 'aria-label': ariaLabel, header, children, noOuter
   );
 
   if (noOuterCard) {
+    if (scroll) {
+      return (
+        <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {table}
+        </Box>
+      );
+    }
+
     return table;
   }
 
   return (
-    <DsCard noPadding sx={{ overflow: 'hidden' }}>
+    <DsCard noPadding sx={scroll ? scrollCardSx : { overflow: 'hidden' }}>
       {table}
     </DsCard>
   );
@@ -61,6 +92,7 @@ export function DsTableHeadRow({ children }: { children: ReactNode }) {
             borderBottom: 1,
             borderColor: 'outlineVariant.main',
             py: 2,
+            bgcolor: 'surfaceContainerLow.main',
           },
         }}
       >

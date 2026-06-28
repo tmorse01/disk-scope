@@ -72,7 +72,8 @@ function AppLayout({ activeRoute, onRouteChange }: AppLayoutProps) {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100vh',
+        height: '100vh',
+        overflow: 'hidden',
         bgcolor: 'background.default',
         color: 'text.primary',
       }}
@@ -91,11 +92,21 @@ function AppLayout({ activeRoute, onRouteChange }: AppLayoutProps) {
             className="ds-custom-scrollbar"
             sx={{
               flex: 1,
-              overflow: 'auto',
+              minHeight: 0,
+              overflow: 'hidden',
               p: `${CONTENT_GUTTER}px`,
             }}
           >
-            <Box sx={{ maxWidth: CONTENT_MAX_WIDTH, mx: 'auto' }}>
+            <Box
+              sx={{
+                maxWidth: CONTENT_MAX_WIDTH,
+                mx: 'auto',
+                height: '100%',
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
               <DsErrorBoundary
                 resetKeys={[activeRoute]}
                 onBackToSafety={() => onRouteChange(DEFAULT_ROUTE)}

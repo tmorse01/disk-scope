@@ -35,6 +35,7 @@ export function FileActionsToolbar({
       role="toolbar"
       aria-label="File actions"
       sx={{
+        flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',

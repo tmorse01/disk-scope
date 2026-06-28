@@ -1,5 +1,5 @@
-import Box from '@mui/material/Box';
 import { DsPageHeader } from '../../components/DsStatusChip';
+import { DsViewLayout } from '../../components/DsViewLayout';
 import { useScanStore } from '../../hooks/useScanStore';
 import { getPrimarySelectedPath } from '../../stores/scan-store';
 import { ScanProgressHero } from '../scan-progress/ScanProgressHero';
@@ -11,25 +11,31 @@ export function OverviewLandingView() {
   if (status === 'scanning') {
     const primaryPath = getPrimarySelectedPath();
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <DsPageHeader
-          title="Scanning"
-          subtitle={primaryPath ?? 'Analyzing selected storage…'}
-          compact
-        />
+      <DsViewLayout
+        header={
+          <DsPageHeader
+            title="Scanning"
+            subtitle={primaryPath ?? 'Analyzing selected storage…'}
+            compact
+          />
+        }
+      >
         <ScanProgressHero />
-      </Box>
+      </DsViewLayout>
     );
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <DsPageHeader
-        title="Overview"
-        subtitle="Select folders or drives to analyze."
-        compact
-      />
+    <DsViewLayout
+      header={
+        <DsPageHeader
+          title="Overview"
+          subtitle="Select folders or drives to analyze."
+          compact
+        />
+      }
+    >
       <ScanTargetPanel />
-    </Box>
+    </DsViewLayout>
   );
 }

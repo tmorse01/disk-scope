@@ -115,6 +115,7 @@ export function ScanProgressRegion() {
         gap: 1.5,
 
         minHeight: SCAN_STATUS_HEIGHT,
+        flexShrink: 0,
 
         px: 3,
 

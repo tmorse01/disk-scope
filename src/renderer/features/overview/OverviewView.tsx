@@ -4,6 +4,7 @@ import Typography from '@mui/material/Typography';
 import { formatBytes } from '../../../shared/format-bytes';
 import { DsCard } from '../../components/DsCard';
 import { DsPageHeader } from '../../components/DsStatusChip';
+import { DsViewLayout } from '../../components/DsViewLayout';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { useShellContext } from '../../components/ShellContext';
@@ -54,12 +55,15 @@ export function OverviewView(_props: OverviewViewProps = {}) {
   const cleanupCount = result.cleanupCandidates.length;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <DsPageHeader
-        title="Scan complete"
-        subtitle="Explore what's using space or review recommended cleanup items."
-      />
-
+    <DsViewLayout
+      header={
+        <DsPageHeader
+          title="Scan complete"
+          subtitle="Explore what's using space or review recommended cleanup items."
+        />
+      }
+    >
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <DsCard
         sx={{
           bgcolor: 'background.paper',
@@ -145,6 +149,7 @@ export function OverviewView(_props: OverviewViewProps = {}) {
           ))}
         </Box>
       </DsCard>
-    </Box>
+      </Box>
+    </DsViewLayout>
   );
 }

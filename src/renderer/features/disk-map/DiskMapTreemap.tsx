@@ -126,8 +126,9 @@ export function DiskMapTreemap({ items, focusTotalBytes, onDirectoryClick }: Dis
       sx={{
         position: 'relative',
         width: '100%',
+        flex: 1,
         minHeight: 420,
-        height: 'min(70vh, 640px)',
+        height: '100%',
         bgcolor: 'background.default',
         borderRadius: 1,
         overflow: 'hidden',

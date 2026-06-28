@@ -1,7 +1,5 @@
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
-import TableBody from '@mui/material/TableBody';
-import TableSortLabel from '@mui/material/TableSortLabel';
+import TableBody from '@mui/material/TableBody';import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
 import { useMemo, useState } from 'react';
 import { formatBytes } from '../../../shared/format-bytes';
@@ -17,6 +15,7 @@ import {
   type ResizableColumnDef,
 } from '../../components/DsResizableColumns';
 import { DsPageHeader } from '../../components/DsStatusChip';
+import { DsViewLayout } from '../../components/DsViewLayout';
 import { DsTabular } from '../../components/DsTabular';
 import { useScanStore } from '../../hooks/useScanStore';
 import {
@@ -63,14 +62,17 @@ export function FileTypesView() {
   });
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <DsPageHeader
-        title="File Types"
-        subtitle="Disk usage grouped by file extension from the latest completed scan."
-      />
-
+    <DsViewLayout
+      mode={sortedSummaries.length > 0 ? 'data' : 'page'}
+      header={
+        <DsPageHeader
+          title="File Types"
+          subtitle="Disk usage grouped by file extension from the latest completed scan."
+        />
+      }
+    >
       {status === 'scanning' && (
-        <Alert severity="info" variant="outlined">
+        <Alert severity="info" variant="outlined" sx={{ flexShrink: 0 }}>
           Scan in progress — file type breakdown will update when the scan completes.
         </Alert>
       )}
@@ -90,6 +92,7 @@ export function FileTypesView() {
       {sortedSummaries.length > 0 && (
         <DsResizableColumnsProvider columns={FILE_TYPES_COLUMNS}>
           <DsDataTable
+            scroll
             aria-label="File types"
             header={
               <DsTableHeadRow>
@@ -131,6 +134,6 @@ export function FileTypesView() {
           </DsDataTable>
         </DsResizableColumnsProvider>
       )}
-    </Box>
+    </DsViewLayout>
   );
 }

@@ -15,6 +15,7 @@ import {
   type ResizableColumnDef,
 } from '../../components/DsResizableColumns';
 import { DsPageHeader } from '../../components/DsStatusChip';
+import { DsViewLayout } from '../../components/DsViewLayout';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { useScanStore } from '../../hooks/useScanStore';
@@ -78,14 +79,17 @@ export function LargestFilesView() {
   });
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <DsPageHeader
-        title="Largest Files"
-        subtitle="Individual files ranked by size from the latest completed scan."
-      />
-
+    <DsViewLayout
+      mode={sortedFiles.length > 0 ? 'data' : 'page'}
+      header={
+        <DsPageHeader
+          title="Largest Files"
+          subtitle="Individual files ranked by size from the latest completed scan."
+        />
+      }
+    >
       {status === 'scanning' && (
-        <Alert severity="info" variant="outlined">
+        <Alert severity="info" variant="outlined" sx={{ flexShrink: 0 }}>
           Scan in progress — file rankings will update when the scan completes.
         </Alert>
       )}
@@ -103,10 +107,14 @@ export function LargestFilesView() {
       )}
 
       {sortedFiles.length > 0 && (
-        <DsCard noPadding sx={{ overflow: 'hidden' }}>
+        <DsCard
+          noPadding
+          sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        >
           {toolbar}
           <DsResizableColumnsProvider columns={LARGEST_FILES_COLUMNS}>
             <DsDataTable
+              scroll
               noOuterCard
               aria-label="Largest files"
               header={
@@ -179,6 +187,6 @@ export function LargestFilesView() {
           {deleteConfirmationUi}
         </DsCard>
       )}
-    </Box>
+    </DsViewLayout>
   );
 }
