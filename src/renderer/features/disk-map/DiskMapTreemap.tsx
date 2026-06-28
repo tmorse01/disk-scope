@@ -3,14 +3,23 @@ import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatBytes } from '../../../shared/format-bytes';
+import { fonts, radii } from '../../theme/tokens';
 import { formatPercentOfRoot } from '../largest-folders/folder-tree-utils';
 import type { TreemapItem } from './disk-map-utils';
 import { layoutSquarifiedTreemap } from './treemap-layout';
-import { OTHER_TILE_COLOR, colorForFolderName } from './treemap-colors';
+import {
+  buildTreemapSpectrum,
+  countFolderLikeTiles,
+  folderLikeRankById,
+  tileStyleForItem,
+} from './treemap-colors';
 
-const MIN_LABEL_WIDTH = 48;
-const MIN_LABEL_HEIGHT = 28;
-const TILE_GAP = 1;
+const MIN_LABEL_WIDTH = 46;
+const MIN_LABEL_HEIGHT = 22;
+const MIN_SIZE_LABEL_HEIGHT = 38;
+const TILE_GAP = 6;
+const TILE_RADIUS = radii.md;
+const LABEL_PADDING = 7;
 
 type DiskMapTreemapProps = {
   items: TreemapItem[];
@@ -24,18 +33,6 @@ type PlacedTile = TreemapItem & {
   width: number;
   height: number;
 };
-
-function tileFill(item: TreemapItem, filesColor: string): string {
-  if (item.kind === 'files') {
-    return filesColor;
-  }
-
-  if (item.kind === 'other') {
-    return OTHER_TILE_COLOR;
-  }
-
-  return colorForFolderName(item.name);
-}
 
 function tileTooltip(item: TreemapItem, focusTotalBytes: number): string {
   const percent = formatPercentOfRoot(item.sizeBytes, focusTotalBytes);
@@ -54,18 +51,20 @@ function tileTooltip(item: TreemapItem, focusTotalBytes: number): string {
   return `${item.name}\n${size} (${percent})`;
 }
 
-function truncateLabel(label: string, maxChars: number): string {
-  if (label.length <= maxChars) {
-    return label;
-  }
-
-  return `${label.slice(0, Math.max(1, maxChars - 1))}…`;
+function hoverHint(item: TreemapItem, focusTotalBytes: number): string {
+  const percent = formatPercentOfRoot(item.sizeBytes, focusTotalBytes);
+  return `${item.name} — ${formatBytes(item.sizeBytes)} (${percent})`;
 }
 
 export function DiskMapTreemap({ items, focusTotalBytes, onDirectoryClick }: DiskMapTreemapProps) {
   const theme = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const [hoveredTile, setHoveredTile] = useState<TreemapItem | null>(null);
+
+  const spectrum = useMemo(() => buildTreemapSpectrum(theme), [theme]);
+  const folderLikeCount = useMemo(() => countFolderLikeTiles(items), [items]);
+  const folderLikeRanks = useMemo(() => folderLikeRankById(items), [items]);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -118,105 +117,167 @@ export function DiskMapTreemap({ items, focusTotalBytes, onDirectoryClick }: Dis
       .filter((tile): tile is PlacedTile => tile != null);
   }, [items, size.height, size.width]);
 
-  const filesColor = theme.palette.primary.main;
+  const tileStroke = theme.palette.background.paper;
+  const accentStroke = theme.palette.primary.main;
 
   return (
     <Box
-      ref={containerRef}
       sx={{
-        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
         width: '100%',
         flex: 1,
         minHeight: 420,
         height: '100%',
-        bgcolor: 'background.default',
-        borderRadius: 1,
-        overflow: 'hidden',
+        gap: 1,
       }}
     >
-      {size.width > 0 && size.height > 0 ? (
-        <Box
-          component="svg"
-          width={size.width}
-          height={size.height}
-          role="img"
-          aria-label="Disk usage treemap"
-          sx={{ display: 'block' }}
-        >
-          {placedTiles.map((tile) => {
-            const inset = TILE_GAP / 2;
-            const x = tile.x + inset;
-            const y = tile.y + inset;
-            const width = Math.max(0, tile.width - TILE_GAP);
-            const height = Math.max(0, tile.height - TILE_GAP);
-            const showLabel = width >= MIN_LABEL_WIDTH && height >= MIN_LABEL_HEIGHT;
-            const maxChars = Math.max(4, Math.floor(width / 7));
-            const isDrillable = tile.kind === 'directory';
-
-            return (
-              <g
-                key={tile.id}
-                role={isDrillable ? 'button' : undefined}
-                tabIndex={isDrillable ? 0 : undefined}
-                aria-label={tileTooltip(tile, focusTotalBytes)}
-                style={{ cursor: isDrillable ? 'pointer' : 'default' }}
-                onClick={() => {
-                  if (isDrillable) {
-                    onDirectoryClick(tile.id);
-                  }
-                }}
-                onKeyDown={(event) => {
-                  if (isDrillable && (event.key === 'Enter' || event.key === ' ')) {
-                    event.preventDefault();
-                    onDirectoryClick(tile.id);
-                  }
-                }}
-              >
-                <title>{tileTooltip(tile, focusTotalBytes)}</title>
-                <rect
-                  x={x}
-                  y={y}
-                  width={width}
-                  height={height}
-                  fill={tileFill(tile, filesColor)}
-                  stroke={theme.palette.background.paper}
-                  strokeWidth={1}
-                  rx={2}
-                />
-                {showLabel ? (
-                  <text
-                    x={x + 6}
-                    y={y + 16}
-                    fill={theme.palette.common.white}
-                    fontSize={12}
-                    fontFamily={theme.typography.fontFamily}
-                    pointerEvents="none"
-                  >
-                    {truncateLabel(tile.name, maxChars)}
-                  </text>
-                ) : null}
-              </g>
-            );
-          })}
-        </Box>
+      {items.length > 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0, minHeight: 20 }}>
+          {hoveredTile ? hoverHint(hoveredTile, focusTotalBytes) : 'Hover a folder for details'}
+        </Typography>
       ) : null}
 
-      {items.length === 0 ? (
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            px: 3,
-          }}
-        >
-          <Typography variant="body2" color="text.secondary" align="center">
-            No sized items to display in this folder.
-          </Typography>
-        </Box>
-      ) : null}
+      <Box
+        ref={containerRef}
+        sx={{
+          position: 'relative',
+          flex: 1,
+          minHeight: 0,
+          bgcolor: 'background.default',
+          borderRadius: 1,
+          overflow: 'hidden',
+        }}
+      >
+        {size.width > 0 && size.height > 0 ? (
+          <Box
+            component="svg"
+            width={size.width}
+            height={size.height}
+            role="img"
+            aria-label="Disk usage treemap"
+            sx={{ display: 'block' }}
+          >
+            {placedTiles.map((tile) => {
+              const inset = TILE_GAP / 2;
+              const width = Math.max(0, tile.width - TILE_GAP);
+              const height = Math.max(0, tile.height - TILE_GAP);
+              const showName = width >= MIN_LABEL_WIDTH && height >= MIN_LABEL_HEIGHT;
+              const showSize = showName && height >= MIN_SIZE_LABEL_HEIGHT;
+              const isDrillable = tile.kind === 'directory';
+              const isHovered = hoveredTile?.id === tile.id;
+              const folderRank = folderLikeRanks.get(tile.id) ?? 0;
+              const tileColors = tileStyleForItem(
+                tile.kind,
+                folderRank,
+                folderLikeCount,
+                spectrum,
+                theme,
+              );
+              const nameY = height - (showSize ? 28 : 14);
+              const sizeY = height - 10;
+              const clipId = `treemap-clip-${tile.id.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+
+              return (
+                <g
+                  key={tile.id}
+                  transform={`translate(${tile.x + inset},${tile.y + inset})`}
+                  role={isDrillable ? 'button' : undefined}
+                  tabIndex={isDrillable ? 0 : undefined}
+                  aria-label={tileTooltip(tile, focusTotalBytes)}
+                  style={{ cursor: isDrillable ? 'pointer' : 'default' }}
+                  onClick={() => {
+                    if (isDrillable) {
+                      onDirectoryClick(tile.id);
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (isDrillable && (event.key === 'Enter' || event.key === ' ')) {
+                      event.preventDefault();
+                      onDirectoryClick(tile.id);
+                    }
+                  }}
+                  onMouseEnter={() => setHoveredTile(tile)}
+                  onMouseLeave={() =>
+                    setHoveredTile((current) => (current?.id === tile.id ? null : current))
+                  }
+                  onFocus={() => setHoveredTile(tile)}
+                  onBlur={() =>
+                    setHoveredTile((current) => (current?.id === tile.id ? null : current))
+                  }
+                >
+                  <title>{tileTooltip(tile, focusTotalBytes)}</title>
+                  {showName ? (
+                    <clipPath id={clipId}>
+                      <rect
+                        width={Math.max(0, width - LABEL_PADDING * 2)}
+                        height={height - 6}
+                        x={LABEL_PADDING - 2}
+                        y={3}
+                      />
+                    </clipPath>
+                  ) : null}
+                  <rect
+                    width={width}
+                    height={height}
+                    fill={tileColors.fill}
+                    fillOpacity={isHovered ? 1 : 0.86}
+                    stroke={isHovered && isDrillable ? accentStroke : tileStroke}
+                    strokeWidth={isHovered && isDrillable ? 2.5 : 1}
+                    rx={TILE_RADIUS}
+                  />
+                  {showName ? (
+                    <>
+                      <text
+                        clipPath={`url(#${clipId})`}
+                        x={LABEL_PADDING}
+                        y={nameY}
+                        fill={tileColors.label}
+                        fontSize={12}
+                        fontWeight={600}
+                        fontFamily={theme.typography.fontFamily}
+                        pointerEvents="none"
+                      >
+                        {tile.name}
+                      </text>
+                      {showSize ? (
+                        <text
+                          clipPath={`url(#${clipId})`}
+                          x={LABEL_PADDING}
+                          y={sizeY}
+                          fill={tileColors.labelMuted}
+                          fontSize={11}
+                          fontFamily={fonts.mono}
+                          pointerEvents="none"
+                        >
+                          {formatBytes(tile.sizeBytes)}
+                        </text>
+                      ) : null}
+                    </>
+                  ) : null}
+                </g>
+              );
+            })}
+          </Box>
+        ) : null}
+
+        {items.length === 0 ? (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              px: 3,
+            }}
+          >
+            <Typography variant="body2" color="text.secondary" align="center">
+              No sized items to display in this folder.
+            </Typography>
+          </Box>
+        ) : null}
+      </Box>
     </Box>
   );
 }
