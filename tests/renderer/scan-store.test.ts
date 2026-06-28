@@ -4,6 +4,8 @@ import type { ScanCompleteEvent, ScanProgressEvent } from '../../src/shared/type
 const selectDirectory = vi.fn<[], Promise<{ path: string } | null>>();
 const startScan = vi.fn();
 const cancelScan = vi.fn();
+const getScanHistory = vi.fn();
+const saveLastSelectedPaths = vi.fn();
 const onScanProgress = vi.fn();
 const onScanComplete = vi.fn();
 const onScanError = vi.fn();
@@ -28,6 +30,8 @@ function mockDiskScope() {
     };
   });
   onScanError.mockImplementation(() => () => undefined);
+  getScanHistory.mockResolvedValue({ entries: [], lastSelectedPaths: [] });
+  saveLastSelectedPaths.mockResolvedValue(undefined);
 
   Object.defineProperty(globalThis, 'window', {
     configurable: true,
@@ -36,6 +40,8 @@ function mockDiskScope() {
         selectDirectory,
         startScan,
         cancelScan,
+        getScanHistory,
+        saveLastSelectedPaths,
         onScanProgress,
         onScanComplete,
         onScanError,
@@ -50,6 +56,8 @@ describe('scan store picker flow', () => {
     selectDirectory.mockReset();
     startScan.mockReset();
     cancelScan.mockReset();
+    getScanHistory.mockReset();
+    saveLastSelectedPaths.mockReset();
     onScanProgress.mockReset();
     onScanComplete.mockReset();
     onScanError.mockReset();
@@ -133,6 +141,8 @@ describe('scan store scan lifecycle', () => {
     selectDirectory.mockReset();
     startScan.mockReset();
     cancelScan.mockReset();
+    getScanHistory.mockReset();
+    saveLastSelectedPaths.mockReset();
     onScanProgress.mockReset();
     onScanComplete.mockReset();
     onScanError.mockReset();
@@ -370,5 +380,163 @@ describe('scan store scan lifecycle', () => {
 
     expect(cancelScan).toHaveBeenCalledWith('scan-1');
     expect(scanStore.status).toBe('cancelled');
+  });
+});
+
+describe('scan store history hydration', () => {
+  beforeEach(async () => {
+    vi.resetModules();
+    selectDirectory.mockReset();
+    startScan.mockReset();
+    cancelScan.mockReset();
+    getScanHistory.mockReset();
+    saveLastSelectedPaths.mockReset();
+    onScanProgress.mockReset();
+    onScanComplete.mockReset();
+    onScanError.mockReset();
+    _progressHandler = undefined;
+    completeHandler = undefined;
+    mockDiskScope();
+
+    const { scanStore, resetScanSessionForTest } = await import('../../src/renderer/stores/scan-store');
+    resetScanSessionForTest();
+    scanStore.selectedPaths = [];
+  });
+
+  it('hydrates scan history and activates the most recent completed scan', async () => {
+    const completedResult = {
+      scanId: 'scan-done',
+      rootPath: 'C:\\Done',
+      startedAt: '2026-01-01T00:00:00.000Z',
+      completedAt: '2026-01-01T00:00:05.000Z',
+      durationMs: 5000,
+      totalSizeBytes: 2048,
+      fileCount: 4,
+      directoryCount: 1,
+      errorCount: 0,
+      rootNodeId: 'root-done',
+      directoriesById: {},
+      largestFiles: [],
+      extensionSummaries: [],
+      cleanupCandidates: [],
+      errors: [],
+    };
+    const cancelledResult = {
+      ...completedResult,
+      scanId: 'scan-cancelled',
+      rootPath: 'C:\\Cancelled',
+      rootNodeId: 'root-cancelled',
+    };
+
+    getScanHistory.mockResolvedValue({
+      entries: [
+        {
+          scanId: 'scan-cancelled',
+          status: 'cancelled',
+          developerCleanupEnabledAtScan: false,
+          savedAt: '2026-01-02T00:00:00.000Z',
+          result: cancelledResult,
+          rootPathMissing: false,
+        },
+        {
+          scanId: 'scan-done',
+          status: 'completed',
+          developerCleanupEnabledAtScan: true,
+          savedAt: '2026-01-01T00:00:00.000Z',
+          result: completedResult,
+          rootPathMissing: false,
+        },
+      ],
+      lastSelectedPaths: ['C:\\Done'],
+    });
+
+    const { hydrateScanHistoryFromMain, scanStore } = await import('../../src/renderer/stores/scan-store');
+
+    await hydrateScanHistoryFromMain();
+
+    expect(getScanHistory).toHaveBeenCalledOnce();
+    expect(scanStore.scanHistory).toHaveLength(2);
+    expect(scanStore.scanId).toBe('scan-done');
+    expect(scanStore.result?.rootPath).toBe('C:\\Done');
+    expect(scanStore.overviewMode).toBe('summary');
+    expect(scanStore.selectedPaths).toEqual(['C:\\Done']);
+    expect(scanStore.developerCleanupEnabledAtScan).toBe(true);
+  });
+
+  it('handles empty persisted history without changing idle state', async () => {
+    getScanHistory.mockResolvedValue({ entries: [], lastSelectedPaths: [] });
+
+    const { hydrateScanHistoryFromMain, scanStore } = await import('../../src/renderer/stores/scan-store');
+
+    await hydrateScanHistoryFromMain();
+
+    expect(scanStore.scanHistory).toEqual([]);
+    expect(scanStore.result).toBeNull();
+    expect(scanStore.overviewMode).toBe('picker');
+    expect(scanStore.status).toBe('idle');
+  });
+
+  it('marks missing scan targets during hydration', async () => {
+    getScanHistory.mockResolvedValue({
+      entries: [
+        {
+          scanId: 'scan-missing',
+          status: 'completed',
+          developerCleanupEnabledAtScan: false,
+          savedAt: '2026-01-01T00:00:00.000Z',
+          result: {
+            scanId: 'scan-missing',
+            rootPath: 'Z:\\Gone',
+            startedAt: '2026-01-01T00:00:00.000Z',
+            completedAt: '2026-01-01T00:00:05.000Z',
+            durationMs: 5000,
+            totalSizeBytes: 100,
+            fileCount: 1,
+            directoryCount: 1,
+            errorCount: 0,
+            rootNodeId: 'root',
+            directoriesById: {},
+            largestFiles: [],
+            extensionSummaries: [],
+            cleanupCandidates: [],
+            errors: [],
+          },
+          rootPathMissing: true,
+        },
+      ],
+      lastSelectedPaths: [],
+    });
+
+    const { hydrateScanHistoryFromMain, scanStore } = await import('../../src/renderer/stores/scan-store');
+
+    await hydrateScanHistoryFromMain();
+
+    expect(scanStore.scanTargetMissing).toBe(true);
+    expect(scanStore.scanHistory[0]?.rootPathMissing).toBe(true);
+  });
+
+  it('persists last selected paths when starting a scan', async () => {
+    startScan.mockResolvedValue({ scanId: 'scan-1' });
+
+    const { startScanFromStore, scanStore } = await import('../../src/renderer/stores/scan-store');
+    scanStore.selectedPaths = ['C:\\Demo', 'D:\\Extra'];
+
+    await startScanFromStore();
+
+    expect(saveLastSelectedPaths).toHaveBeenCalledWith(['C:\\Demo', 'D:\\Extra']);
+  });
+
+  it('restores last selected paths when opening the overview picker', async () => {
+    const { showOverviewPicker, scanStore } = await import('../../src/renderer/stores/scan-store');
+
+    scanStore.lastSelectedPaths = ['C:\\Restored'];
+    scanStore.selectedPaths = [];
+    scanStore.status = 'idle';
+    scanStore.overviewMode = 'summary';
+
+    showOverviewPicker();
+
+    expect(scanStore.overviewMode).toBe('picker');
+    expect(scanStore.selectedPaths).toEqual(['C:\\Restored']);
   });
 });

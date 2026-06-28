@@ -86,6 +86,8 @@ export function createMockDiskScope(
         developerCleanupEnabled: mockPreferences.developerCleanupEnabled,
       };
     },
+    getScanHistory: async () => ({ entries: [], lastSelectedPaths: [] }),
+    saveLastSelectedPaths: async () => undefined,
     onScanProgress: (callback) => {
       progressHandler = callback;
       return noopUnsubscribe;

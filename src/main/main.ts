@@ -4,7 +4,7 @@ import { createMainWindow } from './browser-window';
 import { registerScanIpc } from './ipc/scan-ipc';
 import { registerWindowIpc } from './ipc/window-ipc';
 import { initPreferencesStore } from './services/preferences-store';
-import { terminateAllScans } from './services/scan-coordinator';
+import { initScanCoordinatorHistory, terminateAllScans } from './services/scan-coordinator';
 
 if (started) {
   app.quit();
@@ -18,8 +18,11 @@ app.on('before-quit', () => {
 });
 
 app.on('ready', () => {
-  void initPreferencesStore();
-  createMainWindow();
+  void (async () => {
+    await initPreferencesStore();
+    await initScanCoordinatorHistory();
+    createMainWindow();
+  })();
 });
 
 app.on('window-all-closed', () => {

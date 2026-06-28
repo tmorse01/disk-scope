@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
@@ -131,6 +132,14 @@ export function ScanHistoryPanel({ showNewScanAction = false }: ScanHistoryPanel
                     <Typography component="span" sx={{ fontWeight: 600 }} noWrap>
                       {targetTitle(result.rootPath)}
                     </Typography>
+                    {entry.rootPathMissing ? (
+                      <Chip
+                        size="small"
+                        color="warning"
+                        label="Target missing"
+                        sx={{ flexShrink: 0, height: 22, fontSize: '11px' }}
+                      />
+                    ) : null}
                     <DsTabular
                       component="span"
                       sx={{ fontSize: '12px', color: 'text.secondary', flexShrink: 0 }}

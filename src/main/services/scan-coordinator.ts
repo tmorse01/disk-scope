@@ -16,6 +16,7 @@ import { resolveWorkerCount } from '../../scanner/scan-types';
 import { ScanWorkerPool } from '../../scanner/scan-worker-pool';
 import { dropWindowsStandbyCache } from './filesystem-cache';
 import { getPreferencesSync } from './preferences-store';
+import { appendScanHistory, getPersistedScanResults, initScanHistoryStore } from './scan-history-store';
 
 type ActiveSingleScan = {
   kind: 'single';
@@ -30,8 +31,14 @@ type ActivePoolScan = {
 
 type ActiveScan = ActiveSingleScan | ActivePoolScan;
 
+type ScanSessionMetadata = {
+  developerCleanupEnabledAtScan: boolean;
+};
+
 const activeScans = new Map<ScanSessionId, ActiveScan>();
 const completedScans = new Map<ScanSessionId, ScanResult>();
+const cancelRequestedScans = new Set<ScanSessionId>();
+const scanSessionMetadata = new Map<ScanSessionId, ScanSessionMetadata>();
 
 export function getCompletedScanResult(scanId: ScanSessionId): ScanResult | undefined {
   return completedScans.get(scanId);
@@ -39,6 +46,14 @@ export function getCompletedScanResult(scanId: ScanSessionId): ScanResult | unde
 
 export function getProtectedScanRootPaths(): string[] {
   return [...completedScans.values()].map((result) => path.normalize(result.rootPath));
+}
+
+export async function initScanCoordinatorHistory(): Promise<void> {
+  await initScanHistoryStore();
+  completedScans.clear();
+  for (const [scanId, result] of getPersistedScanResults()) {
+    completedScans.set(scanId, result);
+  }
 }
 
 function broadcastToRenderers<T>(channel: string, payload: T): void {
@@ -56,19 +71,42 @@ function getScanWorkerPath(): string {
   return path.join(workerDir, 'scan-worker.js');
 }
 
+async function persistCompletedScan(scanId: ScanSessionId, result: ScanResult): Promise<void> {
+  const metadata = scanSessionMetadata.get(scanId);
+  const status = cancelRequestedScans.has(scanId) ? 'cancelled' : 'completed';
+
+  completedScans.set(scanId, result);
+  cancelRequestedScans.delete(scanId);
+  scanSessionMetadata.delete(scanId);
+
+  try {
+    await appendScanHistory({
+      scanId,
+      status,
+      developerCleanupEnabledAtScan: metadata?.developerCleanupEnabledAtScan ?? false,
+      result,
+    });
+  } catch (error) {
+    console.warn('[scan-coordinator] Failed to persist scan history:', error);
+  }
+}
+
 function handleWorkerMessage(scanId: ScanSessionId, message: WorkerOutboundMessage): void {
   switch (message.type) {
     case 'progress':
       broadcastToRenderers<ScanProgressEvent>(IPC_CHANNELS.SCAN_PROGRESS, message.payload);
       break;
     case 'complete':
-      completedScans.set(scanId, message.payload.result);
-      broadcastToRenderers<ScanCompleteEvent>(IPC_CHANNELS.SCAN_COMPLETE, message.payload);
-      cleanupScan(scanId);
+      void persistCompletedScan(scanId, message.payload.result).then(() => {
+        broadcastToRenderers<ScanCompleteEvent>(IPC_CHANNELS.SCAN_COMPLETE, message.payload);
+        void cleanupScan(scanId);
+      });
       break;
     case 'error':
+      cancelRequestedScans.delete(scanId);
+      scanSessionMetadata.delete(scanId);
       broadcastToRenderers<ScanErrorEvent>(IPC_CHANNELS.SCAN_ERROR, message.payload);
-      cleanupScan(scanId);
+      void cleanupScan(scanId);
       break;
     default:
       break;
@@ -156,13 +194,16 @@ function startPoolScan(
   activeScans.set(scanId, { kind: 'pool', pool, cancelRequested: false });
 
   void pool.start().then(({ result }) => {
-    completedScans.set(scanId, result);
-    broadcastToRenderers<ScanCompleteEvent>(IPC_CHANNELS.SCAN_COMPLETE, {
-      scanId,
-      result,
+    void persistCompletedScan(scanId, result).then(() => {
+      broadcastToRenderers<ScanCompleteEvent>(IPC_CHANNELS.SCAN_COMPLETE, {
+        scanId,
+        result,
+      });
+      void cleanupScan(scanId);
     });
-    void cleanupScan(scanId);
   }).catch((error: Error) => {
+    cancelRequestedScans.delete(scanId);
+    scanSessionMetadata.delete(scanId);
     broadcastToRenderers<ScanErrorEvent>(IPC_CHANNELS.SCAN_ERROR, {
       scanId,
       message: error.message,
@@ -176,11 +217,13 @@ export async function startScan(options: {
   rootPath: string;
   useFilesystemCache: boolean;
 }): Promise<StartScanResponse> {
-  completedScans.clear();
   const scanId = randomUUID();
   const preferences = getPreferencesSync();
   const exclusions = preferences.exclusions;
   const developerCleanupEnabled = preferences.developerCleanupEnabled;
+
+  scanSessionMetadata.set(scanId, { developerCleanupEnabledAtScan: developerCleanupEnabled });
+  cancelRequestedScans.delete(scanId);
 
   let cacheWarning: string | undefined;
   if (!options.useFilesystemCache) {
@@ -204,6 +247,8 @@ export function cancelScan(scanId: ScanSessionId): void {
   if (!active) {
     return;
   }
+
+  cancelRequestedScans.add(scanId);
 
   if (active.kind === 'single') {
     const cancelMessage: WorkerInboundMessage = { type: 'cancel' };

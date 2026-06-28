@@ -155,6 +155,34 @@ export type ScanErrorEvent = {
   code?: string;
 };
 
+export type PersistedScanHistoryEntry = {
+  scanId: ScanSessionId;
+  status: 'completed' | 'cancelled';
+  developerCleanupEnabledAtScan: boolean;
+  savedAt: string;
+  result: ScanResult;
+};
+
+export type ScanHistoryFile = {
+  version: number;
+  lastSelectedPaths: string[];
+  entries: PersistedScanHistoryEntry[];
+};
+
+export type ScanHistoryHydrationEntry = {
+  scanId: ScanSessionId;
+  status: 'completed' | 'cancelled';
+  developerCleanupEnabledAtScan: boolean;
+  savedAt: string;
+  result: ScanResult;
+  rootPathMissing: boolean;
+};
+
+export type ScanHistoryHydrationPayload = {
+  entries: ScanHistoryHydrationEntry[];
+  lastSelectedPaths: string[];
+};
+
 export type Unsubscribe = () => void;
 
 export type WindowMaximizeChangedEvent = {
@@ -180,6 +208,8 @@ export type DiskScopeAPI = {
   exportReport(scanId: ScanSessionId, options: ExportOptions): Promise<void>;
   getPreferences(): Promise<AppPreferences>;
   setPreferences(preferences: AppPreferences): Promise<AppPreferences>;
+  getScanHistory(): Promise<ScanHistoryHydrationPayload>;
+  saveLastSelectedPaths(paths: string[]): Promise<void>;
   onScanProgress(callback: (event: ScanProgressEvent) => void): Unsubscribe;
   onScanComplete(callback: (event: ScanCompleteEvent) => void): Unsubscribe;
   onScanError(callback: (event: ScanErrorEvent) => void): Unsubscribe;

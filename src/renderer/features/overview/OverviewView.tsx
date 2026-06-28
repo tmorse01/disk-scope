@@ -1,3 +1,4 @@
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
@@ -46,7 +47,7 @@ const NEXT_STEP_ROUTES = [
 ];
 
 export function OverviewView(_props: OverviewViewProps = {}) {
-  const { status, result, overviewMode } = useScanStore();
+  const { status, result, overviewMode, scanTargetMissing } = useScanStore();
   const { navigateTo } = useShellContext();
   const hasResult = result && (status === 'completed' || status === 'cancelled');
 
@@ -77,6 +78,12 @@ export function OverviewView(_props: OverviewViewProps = {}) {
       }
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {scanTargetMissing ? (
+          <Alert severity="warning">
+            Scan target missing — rescan recommended. The folder or drive from this scan is no longer
+            available on disk.
+          </Alert>
+        ) : null}
         <DsCard
           sx={{
             bgcolor: 'background.paper',

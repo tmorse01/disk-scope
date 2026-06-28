@@ -100,6 +100,14 @@ const diskScopeAPI: DiskScopeAPI = {
     return ipcRenderer.invoke(IPC_CHANNELS.SET_PREFERENCES, preferences);
   },
 
+  getScanHistory: () => {
+    return ipcRenderer.invoke(IPC_CHANNELS.GET_SCAN_HISTORY);
+  },
+
+  saveLastSelectedPaths: (paths: string[]): Promise<void> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.SAVE_LAST_SELECTED_PATHS, paths);
+  },
+
   onScanProgress: (callback: (event: ScanProgressEvent) => void): Unsubscribe => {
     return createEventSubscription(IPC_CHANNELS.SCAN_PROGRESS, callback);
   },
