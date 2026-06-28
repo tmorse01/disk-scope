@@ -110,6 +110,7 @@ export function createMockDiskScope(
     },
     onScanComplete: () => noopUnsubscribe,
     onScanError: () => noopUnsubscribe,
+    getE2eAutostartConfig: async () => null,
     updates: {
       checkForUpdates: async () => undefined,
       installUpdate: async () => undefined,

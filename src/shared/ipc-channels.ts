@@ -23,4 +23,5 @@ export const IPC_CHANNELS = {
   INSTALL_UPDATE: 'disk-scope:install-update',
   GET_UPDATE_STATUS: 'disk-scope:get-update-status',
   UPDATE_STATUS: 'disk-scope:update-status',
+  GET_E2E_AUTOSTART_CONFIG: 'disk-scope:get-e2e-autostart-config',
 } as const;

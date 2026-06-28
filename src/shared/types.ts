@@ -203,6 +203,10 @@ export type ScanHistoryHydrationPayload = {
   lastSelectedPaths: string[];
 };
 
+export type E2eAutostartConfig = {
+  rootPath: string;
+};
+
 export type Unsubscribe = () => void;
 
 export type WindowMaximizeChangedEvent = {
@@ -240,6 +244,8 @@ export type DiskScopeAPI = {
   onScanProgress(callback: (event: ScanProgressEvent) => void): Unsubscribe;
   onScanComplete(callback: (event: ScanCompleteEvent) => void): Unsubscribe;
   onScanError(callback: (event: ScanErrorEvent) => void): Unsubscribe;
+  /** Returns fixture scan config when DISKSCOPE_E2E=1 at launch; otherwise null. */
+  getE2eAutostartConfig(): Promise<E2eAutostartConfig | null>;
   windowControls?: WindowControlsAPI;
   updates?: UpdateAPI;
 };

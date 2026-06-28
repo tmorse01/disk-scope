@@ -140,6 +140,10 @@ const diskScopeAPI: DiskScopeAPI = {
     return createEventSubscription(IPC_CHANNELS.SCAN_ERROR, callback);
   },
 
+  getE2eAutostartConfig: (): Promise<import('../shared/types').E2eAutostartConfig | null> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.GET_E2E_AUTOSTART_CONFIG);
+  },
+
   updates: updatesAPI,
 
   windowControls: windowControlsAPI,

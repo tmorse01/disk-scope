@@ -160,3 +160,37 @@ pnpm test:e2e
 
 - Halt if E2E requires disabling security boundaries in production code paths
 - Halt if CI job exceeds reasonable time (>15 min) — narrow to smoke only, defer full `make` to manual release checklist
+
+---
+
+## Build and run (final)
+
+Local E2E requires a Forge Vite build before Playwright can launch Electron:
+
+```powershell
+cd .worktrees/task-025   # or repo root on task branch
+pnpm install
+pnpm test:e2e:ci         # builds via `pnpm package`, then runs Playwright
+```
+
+Individual steps:
+
+```powershell
+pnpm package             # produces .vite/build/main.js (+ preload, renderer, workers)
+pnpm test:e2e            # Playwright _electron.launch() smoke tests
+```
+
+### E2E scan injection (test-only)
+
+Set at launch (Playwright helper does this automatically for scan tests):
+
+| Variable | Value |
+| --- | --- |
+| `DISKSCOPE_E2E` | `1` |
+| `DISKSCOPE_E2E_SCAN_ROOT` | Absolute path to fixture tree (`tests/e2e/fixtures/sample-tree`) |
+
+Main returns autostart config only when `DISKSCOPE_E2E=1` and the scan root exists. Without those env vars, packaged builds behave normally.
+
+### CI
+
+The `e2e` job on `windows-latest` runs `pnpm test:e2e:ci` in parallel with the existing `quality` job. Playwright traces upload on failure.

@@ -19,6 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:ci": "pnpm package && playwright test",
     "dev:renderer-preview": "vite --config vite.renderer.preview.config.ts",
     "dev:website": "pnpm --dir website dev",
     "build:website": "pnpm --dir website build",
