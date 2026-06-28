@@ -16,6 +16,7 @@ const mockPreferences: AppPreferences = {
   exclusions: [],
   confirmBeforeDelete: true,
   defaultDeleteMethod: 'recycle-bin',
+  developerCleanupEnabled: false,
 };
 
 export function createMockDiskScope(
@@ -69,17 +70,20 @@ export function createMockDiskScope(
       exclusions: mockPreferences.exclusions.map((entry) => ({ ...entry })),
       confirmBeforeDelete: mockPreferences.confirmBeforeDelete,
       defaultDeleteMethod: mockPreferences.defaultDeleteMethod,
+      developerCleanupEnabled: mockPreferences.developerCleanupEnabled,
     }),
     setPreferences: async (preferences) => {
       mockPreferences.theme = preferences.theme;
       mockPreferences.exclusions = preferences.exclusions.map((entry) => ({ ...entry }));
       mockPreferences.confirmBeforeDelete = preferences.confirmBeforeDelete;
       mockPreferences.defaultDeleteMethod = preferences.defaultDeleteMethod;
+      mockPreferences.developerCleanupEnabled = preferences.developerCleanupEnabled;
       return {
         theme: mockPreferences.theme,
         exclusions: mockPreferences.exclusions.map((entry) => ({ ...entry })),
         confirmBeforeDelete: mockPreferences.confirmBeforeDelete,
         defaultDeleteMethod: mockPreferences.defaultDeleteMethod,
+        developerCleanupEnabled: mockPreferences.developerCleanupEnabled,
       };
     },
     onScanProgress: (callback) => {

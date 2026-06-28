@@ -10,6 +10,7 @@ import type {
 } from '../../shared/types';
 import { computeScanDurationMs } from '../../shared/scan-duration';
 import type { DeleteTarget } from '../features/file-actions/delete-target';
+import { preferencesStore } from './preferences-store';
 
 export type ScanProgressSnapshot = {
   filesScanned: number;
@@ -19,6 +20,17 @@ export type ScanProgressSnapshot = {
   errorCount: number;
   elapsedMs: number;
 };
+
+export type OverviewMode = 'picker' | 'summary';
+
+export type ScanHistoryEntry = {
+  scanId: ScanSessionId;
+  result: ScanResult;
+  status: 'completed' | 'cancelled';
+  developerCleanupEnabledAtScan: boolean;
+};
+
+const MAX_SCAN_HISTORY = 10;
 
 /**
  * In-memory scan session state for the renderer.
@@ -33,6 +45,12 @@ export type ScanStoreState = {
   useFilesystemCache: boolean;
   progress: ScanProgressSnapshot | null;
   result: ScanResult | null;
+  /** Whether developer cleanup was enabled when the current result was scanned. */
+  developerCleanupEnabledAtScan: boolean | null;
+  /** Overview shows folder picker or the active scan summary. */
+  overviewMode: OverviewMode;
+  /** Session scan history, newest first. */
+  scanHistory: ScanHistoryEntry[];
 };
 
 export const scanStore: ScanStoreState = {
@@ -45,6 +63,9 @@ export const scanStore: ScanStoreState = {
   useFilesystemCache: true,
   progress: null,
   result: null,
+  developerCleanupEnabledAtScan: null,
+  overviewMode: 'picker',
+  scanHistory: [],
 };
 
 export function getPrimarySelectedPath(): string | null {
@@ -122,6 +143,24 @@ function scheduleProgressNotify(event: ScanProgressEvent): void {
   progressNotifyTimer = setTimeout(flushPendingProgress, PROGRESS_NOTIFY_MS);
 }
 
+function progressSnapshotFromResult(result: ScanResult): ScanProgressSnapshot {
+  return {
+    filesScanned: result.fileCount,
+    directoriesScanned: result.directoryCount,
+    bytesDiscovered: result.totalSizeBytes,
+    currentPath: result.rootPath,
+    errorCount: result.errorCount,
+    elapsedMs: computeScanDurationMs(result),
+  };
+}
+
+function upsertScanHistory(entry: ScanHistoryEntry): void {
+  scanStore.scanHistory = [
+    entry,
+    ...scanStore.scanHistory.filter((existing) => existing.scanId !== entry.scanId),
+  ].slice(0, MAX_SCAN_HISTORY);
+}
+
 function handleScanProgress(event: ScanProgressEvent): void {
   if (scanStore.scanId !== event.scanId || scanStore.status !== 'scanning') {
     return;
@@ -137,16 +176,17 @@ function handleScanComplete(event: { scanId: ScanSessionId; result: ScanResult }
 
   clearProgressNotifyTimer();
   pendingProgress = null;
+  const finalStatus = cancelRequestedByUser ? 'cancelled' : 'completed';
   scanStore.result = event.result;
-  scanStore.progress = {
-    filesScanned: event.result.fileCount,
-    directoriesScanned: event.result.directoryCount,
-    bytesDiscovered: event.result.totalSizeBytes,
-    currentPath: event.result.rootPath,
-    errorCount: event.result.errorCount,
-    elapsedMs: computeScanDurationMs(event.result),
-  };
-  scanStore.status = cancelRequestedByUser ? 'cancelled' : 'completed';
+  scanStore.progress = progressSnapshotFromResult(event.result);
+  scanStore.status = finalStatus;
+  upsertScanHistory({
+    scanId: event.scanId,
+    result: event.result,
+    status: finalStatus,
+    developerCleanupEnabledAtScan: scanStore.developerCleanupEnabledAtScan ?? false,
+  });
+  scanStore.overviewMode = 'summary';
   cancelRequestedByUser = false;
   notifyScanStore();
 }
@@ -174,6 +214,35 @@ export function initScanStoreListeners(): void {
   window.diskScope.onScanProgress(handleScanProgress);
   window.diskScope.onScanComplete(handleScanComplete);
   window.diskScope.onScanError(handleScanError);
+}
+
+export function showOverviewPicker(): void {
+  scanStore.overviewMode = 'picker';
+  notifyScanStore();
+}
+
+export function showOverviewSummary(): void {
+  if (!scanStore.result) {
+    return;
+  }
+  scanStore.overviewMode = 'summary';
+  notifyScanStore();
+}
+
+export function activateScanFromHistory(scanId: ScanSessionId): void {
+  const entry = scanStore.scanHistory.find((candidate) => candidate.scanId === scanId);
+  if (!entry) {
+    return;
+  }
+
+  scanStore.scanId = entry.scanId;
+  scanStore.result = entry.result;
+  scanStore.status = entry.status;
+  scanStore.developerCleanupEnabledAtScan = entry.developerCleanupEnabledAtScan;
+  scanStore.progress = progressSnapshotFromResult(entry.result);
+  scanStore.overviewMode = 'summary';
+  scanStore.scanError = null;
+  notifyScanStore();
 }
 
 export function addSelectedPath(path: string): void {
@@ -264,6 +333,8 @@ export async function startScanFromStore(): Promise<void> {
   scanStore.cacheWarning = null;
   scanStore.result = null;
   scanStore.progress = null;
+  scanStore.overviewMode = 'picker';
+  scanStore.developerCleanupEnabledAtScan = preferencesStore.developerCleanupEnabled;
   cancelRequestedByUser = false;
   clearProgressNotifyTimer();
   pendingProgress = null;
@@ -500,6 +571,9 @@ export function resetScanSessionForTest(): void {
   scanStore.cacheWarning = null;
   scanStore.progress = null;
   scanStore.result = null;
+  scanStore.developerCleanupEnabledAtScan = null;
+  scanStore.overviewMode = 'picker';
+  scanStore.scanHistory = [];
   scanStore.status = 'idle';
   notifyScanStore();
 }

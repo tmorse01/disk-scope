@@ -39,6 +39,8 @@ export type ExtensionSummary = {
   fileCount: number;
 };
 
+export type CleanupCandidateCategory = 'general' | 'developer';
+
 export type CleanupCandidate = {
   path: string;
   name: string;
@@ -48,6 +50,7 @@ export type CleanupCandidate = {
   fileCount: number;
   risk: RiskLevel;
   recommendation: string;
+  category: CleanupCandidateCategory;
 };
 
 export type ScanFileError = {
@@ -112,6 +115,7 @@ export type AppPreferences = {
   exclusions: ScanExclusion[];
   confirmBeforeDelete: boolean;
   defaultDeleteMethod: DeleteMethod;
+  developerCleanupEnabled: boolean;
 };
 
 export type StartScanOptions = {

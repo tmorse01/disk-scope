@@ -15,6 +15,7 @@ function makeCandidate(overrides: Partial<CleanupCandidate> = {}): CleanupCandid
     fileCount: 10,
     risk: 'low',
     recommendation: 'Safe to remove; reinstall with your package manager.',
+    category: 'developer',
     ...overrides,
   };
 }

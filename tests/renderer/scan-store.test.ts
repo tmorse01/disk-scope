@@ -252,6 +252,88 @@ describe('scan store scan lifecycle', () => {
 
     expect(scanStore.status).toBe('completed');
     expect(scanStore.result?.fileCount).toBe(20);
+    expect(scanStore.overviewMode).toBe('summary');
+    expect(scanStore.scanHistory).toHaveLength(1);
+    expect(scanStore.scanHistory[0]?.scanId).toBe('scan-1');
+  });
+
+  it('activates a previous scan from history', async () => {
+    const { activateScanFromHistory, scanStore } = await import('../../src/renderer/stores/scan-store');
+
+    const firstResult = {
+      scanId: 'scan-a',
+      rootPath: 'C:\\First',
+      startedAt: '2026-01-01T00:00:00.000Z',
+      completedAt: '2026-01-01T00:00:05.000Z',
+      durationMs: 5000,
+      totalSizeBytes: 100,
+      fileCount: 1,
+      directoryCount: 1,
+      errorCount: 0,
+      rootNodeId: 'root-a',
+      directoriesById: {},
+      largestFiles: [],
+      extensionSummaries: [],
+      cleanupCandidates: [],
+      errors: [],
+    };
+    const secondResult = {
+      ...firstResult,
+      scanId: 'scan-b',
+      rootPath: 'C:\\Second',
+      fileCount: 2,
+      rootNodeId: 'root-b',
+    };
+
+    scanStore.scanHistory = [
+      { scanId: 'scan-b', result: secondResult, status: 'completed', developerCleanupEnabledAtScan: false },
+      { scanId: 'scan-a', result: firstResult, status: 'completed', developerCleanupEnabledAtScan: false },
+    ];
+    scanStore.scanId = 'scan-b';
+    scanStore.result = secondResult;
+    scanStore.status = 'completed';
+    scanStore.overviewMode = 'summary';
+
+    activateScanFromHistory('scan-a');
+
+    expect(scanStore.scanId).toBe('scan-a');
+    expect(scanStore.result?.rootPath).toBe('C:\\First');
+    expect(scanStore.overviewMode).toBe('summary');
+  });
+
+  it('shows the overview picker without clearing scan history', async () => {
+    const { showOverviewPicker, scanStore } = await import('../../src/renderer/stores/scan-store');
+
+    scanStore.scanHistory = [
+      {
+        scanId: 'scan-a',
+        result: {
+          scanId: 'scan-a',
+          rootPath: 'C:\\Demo',
+          startedAt: '2026-01-01T00:00:00.000Z',
+          completedAt: '2026-01-01T00:00:05.000Z',
+          durationMs: 5000,
+          totalSizeBytes: 100,
+          fileCount: 1,
+          directoryCount: 1,
+          errorCount: 0,
+          rootNodeId: 'root',
+          directoriesById: {},
+          largestFiles: [],
+          extensionSummaries: [],
+          cleanupCandidates: [],
+          errors: [],
+        },
+        status: 'completed',
+        developerCleanupEnabledAtScan: false,
+      },
+    ];
+    scanStore.overviewMode = 'summary';
+
+    showOverviewPicker();
+
+    expect(scanStore.overviewMode).toBe('picker');
+    expect(scanStore.scanHistory).toHaveLength(1);
   });
 
   it('marks cancelled when user cancels before completion', async () => {

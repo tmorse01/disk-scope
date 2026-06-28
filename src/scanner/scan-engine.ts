@@ -8,7 +8,11 @@ import type {
   ScanFileError,
   ScanResult,
 } from '../shared/types';
-import { CleanupCandidateCollector, parentHasDotNetProject } from './cleanup-rules';
+import {
+  CleanupCandidateCollector,
+  parentHasDevProjectContext,
+  parentHasDotNetProject,
+} from './cleanup-rules';
 import { baseName, fileExtension, normalizePath, parentPath, pathToNodeId } from './path-utils';
 import {
   buildExclusionConfig,
@@ -102,7 +106,9 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
     topFilesLimit,
     tuning.minHeapTopFiles,
   );
-  const cleanupCollector = new CleanupCandidateCollector();
+  const cleanupCollector = new CleanupCandidateCollector({
+    developerCleanupEnabled: options.developerCleanupEnabled === true,
+  });
 
   let totalFileCount = 0;
   let totalDirectoryCount = 0;
@@ -365,7 +371,11 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
       const siblingFileNames = directoryEntries
         .filter((entry) => !entry.isDirectory && !entry.isSymlink)
         .map((entry) => entry.name);
+      const siblingDirNames = directoryEntries
+        .filter((entry) => entry.isDirectory && !entry.isSymlink)
+        .map((entry) => entry.name);
       const dotNetProjectContext = parentHasDotNetProject(siblingFileNames);
+      const devProjectContext = parentHasDevProjectContext(siblingFileNames, siblingDirNames);
 
       const processDirectoryEntry = (entry: DirectoryEntry): void => {
         const entryPath = entry.path;
@@ -388,6 +398,7 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
             entry.name,
             entryPath,
             currentNode.name,
+            devProjectContext,
             dotNetProjectContext,
           );
           const { node: childNode, created } = ensureDirectoryNode(entryPath, current.nodeId);
@@ -428,7 +439,11 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
     }
 
     const siblingFileNames = direntEntries.filter((entry) => entry.isFile()).map((entry) => entry.name);
+    const siblingDirNames = direntEntries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
     const dotNetProjectContext = parentHasDotNetProject(siblingFileNames);
+    const devProjectContext = parentHasDevProjectContext(siblingFileNames, siblingDirNames);
 
     const processEntry = async (entry: Dirent): Promise<void> => {
       const entryPath = path.join(current.dirPath, entry.name);
@@ -451,6 +466,7 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
             entry.name,
             entryPath,
             currentNode.name,
+            devProjectContext,
             dotNetProjectContext,
           );
           const { node: childNode, created } = ensureDirectoryNode(entryPath, current.nodeId);
@@ -479,6 +495,7 @@ export async function runScan(options: ScanEngineOptions): Promise<ScanEngineRun
             entry.name,
             entryPath,
             currentNode.name,
+            devProjectContext,
             dotNetProjectContext,
           );
           const { node: childNode, created } = ensureDirectoryNode(entryPath, current.nodeId);

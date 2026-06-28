@@ -15,6 +15,7 @@ export type ScanWorkerPoolOptions = {
   scanId: ScanSessionId;
   rootPath: string;
   exclusions: ScanExclusion[];
+  developerCleanupEnabled: boolean;
   workerCount: number;
   onProgress?: (event: ScanProgressEvent) => void;
   shouldCancel?: () => boolean;
@@ -95,7 +96,10 @@ export class ScanWorkerPool {
 
         const initMessage: SliceWorkerInboundMessage = {
           type: 'init',
-          payload: { exclusions: this.options.exclusions },
+          payload: {
+            exclusions: this.options.exclusions,
+            developerCleanupEnabled: this.options.developerCleanupEnabled,
+          },
         };
         worker.postMessage(initMessage);
       }

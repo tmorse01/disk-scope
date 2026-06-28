@@ -34,7 +34,7 @@ export function ScanTargetPanel() {
   const showExclusions = exclusions.length > 0 && !isScanning;
 
   return (
-    <DsCard sx={{ p: { xs: 2, sm: 2.5 } }}>
+    <DsCard sx={{ p: { xs: 2, sm: 2.5 }, mb: 2 }}>
       <Box
         sx={{
           display: 'flex',
@@ -59,7 +59,12 @@ export function ScanTargetPanel() {
           disabled={isSelecting || isScanning}
           onClick={() => void pickScanTarget()}
           startIcon={<MaterialIcon name="add_circle" filled aria-hidden={false} />}
-          sx={{ borderRadius: `${radii.lg}px`, textTransform: 'none', fontWeight: 600, flexShrink: 0 }}
+          sx={{
+            borderRadius: `${radii.lg}px`,
+            textTransform: 'none',
+            fontWeight: 600,
+            flexShrink: 0,
+          }}
         >
           {isSelecting ? 'Opening picker…' : 'Add folder or drive'}
         </Button>

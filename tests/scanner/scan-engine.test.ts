@@ -184,6 +184,8 @@ describe('scan-engine', () => {
   it('detects cleanup candidates during scan', async () => {
     const root = await trackFixture('diskscope-cleanup-');
     const projectRoot = path.join(root, 'web-app');
+    await fs.mkdir(projectRoot, { recursive: true });
+    await fs.writeFile(path.join(projectRoot, 'package.json'), '{"name":"web-app"}', 'utf-8');
     await writeFileWithSize(path.join(projectRoot, 'node_modules', 'pkg', 'index.js'), 300);
     await writeFileWithSize(path.join(projectRoot, 'dist', 'bundle.js'), 150);
     await writeFileWithSize(path.join(projectRoot, 'src', 'index.ts'), 20);
@@ -196,6 +198,7 @@ describe('scan-engine', () => {
     const { result } = await runScan({
       scanId: 'scan-cleanup',
       rootPath: root,
+      developerCleanupEnabled: true,
     });
 
     const ruleIds = result.cleanupCandidates.map((candidate) => candidate.ruleId).sort();

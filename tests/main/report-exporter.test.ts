@@ -83,6 +83,7 @@ function buildResult(overrides: Partial<ScanResult> = {}): ScanResult {
         fileCount: 10,
         risk: 'low',
         recommendation: 'Safe to review',
+        category: 'developer',
       },
     ],
     errors: [

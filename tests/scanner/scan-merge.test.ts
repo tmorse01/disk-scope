@@ -166,6 +166,7 @@ describe('scan-merge', () => {
             label: 'Node dependencies',
             risk: 'low',
             recommendation: 'Safe to remove; reinstall with your package manager.',
+            category: 'developer',
           },
         ],
       ]),

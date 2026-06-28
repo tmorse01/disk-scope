@@ -1,4 +1,4 @@
-import type { CleanupCandidate, DirectoryNode, RiskLevel } from '../shared/types';
+import type { CleanupCandidate, CleanupCandidateCategory, DirectoryNode, RiskLevel } from '../shared/types';
 import { normalizePath } from './path-utils';
 
 export type CleanupRuleMatch = {
@@ -6,6 +6,11 @@ export type CleanupRuleMatch = {
   label: string;
   risk: RiskLevel;
   recommendation: string;
+  category: CleanupCandidateCategory;
+};
+
+export type CleanupRuleOptions = {
+  developerCleanupEnabled: boolean;
 };
 
 type CleanupRule = {
@@ -15,16 +20,39 @@ type CleanupRule = {
   label: string;
   risk: RiskLevel;
   recommendation: string;
+  category: CleanupCandidateCategory;
+  requiresDevProjectContext?: boolean;
   requiresDotNetContext?: boolean;
+  requiresPathSegments?: string[];
 };
 
 const CLEANUP_RULES: CleanupRule[] = [
+  {
+    id: 'user-temp',
+    folderName: 'Temp',
+    parentFolderName: 'Local',
+    label: 'User temp files',
+    risk: 'medium',
+    recommendation: 'Often safe to clear; close apps first and review contents.',
+    category: 'general',
+    requiresPathSegments: ['AppData', 'Local', 'Temp'],
+  },
+  {
+    id: 'steam-downloading',
+    folderName: 'downloading',
+    parentFolderName: 'steamapps',
+    label: 'Steam incomplete downloads',
+    risk: 'low',
+    recommendation: 'Incomplete Steam downloads; safe to remove if no active downloads.',
+    category: 'general',
+  },
   {
     id: 'node_modules',
     folderName: 'node_modules',
     label: 'Node dependencies',
     risk: 'low',
     recommendation: 'Safe to remove; reinstall with your package manager.',
+    category: 'developer',
   },
   {
     id: 'next',
@@ -32,6 +60,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     label: 'Next.js build output',
     risk: 'low',
     recommendation: 'Rebuild with next build.',
+    category: 'developer',
   },
   {
     id: 'dist',
@@ -39,6 +68,8 @@ const CLEANUP_RULES: CleanupRule[] = [
     label: 'Build output',
     risk: 'medium',
     recommendation: 'Safe when generated; verify you are not deleting published artifacts.',
+    category: 'developer',
+    requiresDevProjectContext: true,
   },
   {
     id: 'build',
@@ -46,6 +77,8 @@ const CLEANUP_RULES: CleanupRule[] = [
     label: 'Build output',
     risk: 'medium',
     recommendation: 'Safe when generated; verify you are not deleting published artifacts.',
+    category: 'developer',
+    requiresDevProjectContext: true,
   },
   {
     id: 'turbo',
@@ -53,6 +86,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     label: 'Turborepo cache',
     risk: 'low',
     recommendation: 'Safe to remove; Turborepo will rebuild cache entries.',
+    category: 'developer',
   },
   {
     id: 'vite',
@@ -60,6 +94,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     label: 'Vite cache',
     risk: 'low',
     recommendation: 'Safe to remove; Vite will recreate cache on next dev/build.',
+    category: 'developer',
   },
   {
     id: 'pnpm-store',
@@ -67,6 +102,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     label: 'pnpm content store',
     risk: 'medium',
     recommendation: 'Removing may force re-downloads; use pnpm store prune when unsure.',
+    category: 'developer',
   },
   {
     id: 'nuget-packages',
@@ -75,6 +111,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     label: 'NuGet package cache',
     risk: 'medium',
     recommendation: 'Can reclaim space but may slow future package restores.',
+    category: 'developer',
   },
   {
     id: 'bin',
@@ -82,6 +119,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     label: '.NET build output',
     risk: 'low',
     recommendation: 'Rebuild the .NET project to regenerate.',
+    category: 'developer',
     requiresDotNetContext: true,
   },
   {
@@ -90,6 +128,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     label: '.NET intermediate output',
     risk: 'low',
     recommendation: 'Rebuild the .NET project to regenerate.',
+    category: 'developer',
     requiresDotNetContext: true,
   },
   {
@@ -98,6 +137,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     label: 'pytest cache',
     risk: 'low',
     recommendation: 'Safe to remove; pytest recreates cache on next run.',
+    category: 'developer',
   },
   {
     id: 'venv',
@@ -105,6 +145,7 @@ const CLEANUP_RULES: CleanupRule[] = [
     label: 'Python virtual environment',
     risk: 'medium',
     recommendation: 'Recreate with your environment manager before deleting.',
+    category: 'developer',
   },
   {
     id: 'coverage',
@@ -112,8 +153,35 @@ const CLEANUP_RULES: CleanupRule[] = [
     label: 'Test coverage report',
     risk: 'low',
     recommendation: 'Safe to remove; rerun tests to regenerate reports.',
+    category: 'developer',
+    requiresDevProjectContext: true,
   },
 ];
+
+const DEV_PROJECT_FILE_MARKERS = [
+  'package.json',
+  'package-lock.json',
+  'pnpm-lock.yaml',
+  'yarn.lock',
+  'bun.lockb',
+  'tsconfig.json',
+  'jsconfig.json',
+  'cargo.toml',
+  'go.mod',
+  'pyproject.toml',
+  'requirements.txt',
+  'setup.py',
+  'pipfile',
+  'pom.xml',
+  'build.gradle',
+  'build.gradle.kts',
+  'composer.json',
+  'gemfile',
+  'makefile',
+  'cmakelists.txt',
+];
+
+const DEV_PROJECT_FILE_SUFFIXES = ['.csproj', '.fsproj', '.vbproj', '.sln'];
 
 export function parentHasDotNetProject(siblingFileNames: string[]): boolean {
   return siblingFileNames.some((name) => {
@@ -127,11 +195,39 @@ export function parentHasDotNetProject(siblingFileNames: string[]): boolean {
   });
 }
 
+export function parentHasDevProjectContext(
+  siblingFileNames: string[],
+  siblingDirNames: string[],
+): boolean {
+  if (parentHasDotNetProject(siblingFileNames)) {
+    return true;
+  }
+
+  if (siblingDirNames.some((name) => name.toLowerCase() === '.git')) {
+    return true;
+  }
+
+  return siblingFileNames.some((name) => {
+    const lower = name.toLowerCase();
+    if (DEV_PROJECT_FILE_MARKERS.includes(lower)) {
+      return true;
+    }
+    return DEV_PROJECT_FILE_SUFFIXES.some((suffix) => lower.endsWith(suffix));
+  });
+}
+
+function pathContainsSegments(folderPath: string, segments: string[]): boolean {
+  const normalized = normalizePath(folderPath).toLowerCase();
+  return segments.every((segment) => normalized.includes(segment.toLowerCase()));
+}
+
 export function matchCleanupRule(
   folderName: string,
   folderPath: string,
   parentFolderName: string | null,
-  parentHasDotNet: boolean,
+  devProjectContext: boolean,
+  dotNetProjectContext: boolean,
+  options: CleanupRuleOptions,
 ): CleanupRuleMatch | null {
   const normalizedName = folderName.toLowerCase();
   const normalizedParent = parentFolderName?.toLowerCase() ?? null;
@@ -145,16 +241,28 @@ export function matchCleanupRule(
       continue;
     }
 
-    if (rule.requiresDotNetContext && !parentHasDotNet) {
+    if (rule.category === 'developer' && !options.developerCleanupEnabled) {
       continue;
     }
 
-    void folderPath;
+    if (rule.requiresDevProjectContext && !devProjectContext) {
+      continue;
+    }
+
+    if (rule.requiresDotNetContext && !dotNetProjectContext) {
+      continue;
+    }
+
+    if (rule.requiresPathSegments && !pathContainsSegments(folderPath, rule.requiresPathSegments)) {
+      continue;
+    }
+
     return {
       ruleId: rule.id,
       label: rule.label,
       risk: rule.risk,
       recommendation: rule.recommendation,
+      category: rule.category,
     };
   }
 
@@ -163,14 +271,27 @@ export function matchCleanupRule(
 
 export class CleanupCandidateCollector {
   private readonly matches = new Map<string, CleanupRuleMatch>();
+  private readonly options: CleanupRuleOptions;
+
+  constructor(options: CleanupRuleOptions) {
+    this.options = options;
+  }
 
   tryRegister(
     folderName: string,
     folderPath: string,
     parentFolderName: string | null,
-    parentHasDotNet: boolean,
+    devProjectContext: boolean,
+    dotNetProjectContext: boolean,
   ): void {
-    const match = matchCleanupRule(folderName, folderPath, parentFolderName, parentHasDotNet);
+    const match = matchCleanupRule(
+      folderName,
+      folderPath,
+      parentFolderName,
+      devProjectContext,
+      dotNetProjectContext,
+      this.options,
+    );
     if (match) {
       this.matches.set(normalizePath(folderPath), match);
     }
@@ -210,6 +331,7 @@ export function finalizeCleanupMatches(
       fileCount: node.fileCount,
       risk: match.risk,
       recommendation: match.recommendation,
+      category: match.category,
     });
   }
 

@@ -8,6 +8,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   exclusions: [],
   confirmBeforeDelete: true,
   defaultDeleteMethod: 'recycle-bin',
+  developerCleanupEnabled: false,
 };
 
 let cachedPreferences: AppPreferences | null = null;
@@ -72,8 +73,9 @@ export function normalizePreferences(value: unknown): AppPreferences {
   const confirmBeforeDelete = record.confirmBeforeDelete !== false;
   const defaultDeleteMethod =
     record.defaultDeleteMethod === 'permanent' ? 'permanent' : 'recycle-bin';
+  const developerCleanupEnabled = record.developerCleanupEnabled === true;
 
-  return { theme, exclusions, confirmBeforeDelete, defaultDeleteMethod };
+  return { theme, exclusions, confirmBeforeDelete, defaultDeleteMethod, developerCleanupEnabled };
 }
 
 export async function loadPreferences(): Promise<AppPreferences> {

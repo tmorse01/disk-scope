@@ -62,6 +62,7 @@ For multi-agent parallel waves, see [`docs/agent-fleet-playbook.md`](docs/agent-
 1. Confirm a task doc exists in `docs/tasks/` (create one if missing — see above)
 2. For large or parallel tasks, create or switch to the task worktree
 3. Write a short implementation plan in chat if the task doc needs refinement
+4. Create a git work tree to isolate the changes
 
 Keep scope narrow to the assigned task doc.
 
@@ -105,23 +106,23 @@ Before marking a task done:
 
 ## File ownership map
 
-| Area | Tasks | Paths |
-| --- | --- | --- |
-| Main / IPC | 002, 004, 011 | `src/main/` |
-| Preload API | 002, 004–011 | `src/preload/` |
-| Scanner | 005, 009, 010 | `src/scanner/` |
-| UI shell | 003 | `src/renderer/theme/`, `src/renderer/components/`, `App.tsx`, layout |
-| Scan picker | 004 | `src/renderer/features/scan-picker/` |
-| Scan progress | 006 | `src/renderer/features/scan-progress/`, `scan-store` |
-| Largest folders | 007 | `src/renderer/features/largest-folders/` |
-| Largest files / types | 008 | `src/renderer/features/largest-files/`, `file-types/` |
-| Cleanup rules | 009 | `src/scanner/cleanup-rules.ts`, `cleanup-candidates/` |
-| Exclusions | 010 | `src/scanner/exclusions.ts`, `exclusions/`, preferences |
-| Export | 011 | `src/main/services/report-exporter.ts` |
-| File browser / safe delete | 016 | `src/main/services/file-actions.ts`, `src/renderer/features/file-actions/`, `src/renderer/features/largest-folders/FilesInFolderPanel.tsx`, settings safety prefs |
-| Packaging | 012 | `forge.config.ts`, assets |
-| Auto-update | 022 | `src/main/services/update-service.ts`, update IPC, settings UI, release staging |
-| Shared types | all | `src/shared/` — coordinate before changing |
+| Area                       | Tasks         | Paths                                                                                                                                                             |
+| -------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Main / IPC                 | 002, 004, 011 | `src/main/`                                                                                                                                                       |
+| Preload API                | 002, 004–011  | `src/preload/`                                                                                                                                                    |
+| Scanner                    | 005, 009, 010 | `src/scanner/`                                                                                                                                                    |
+| UI shell                   | 003           | `src/renderer/theme/`, `src/renderer/components/`, `App.tsx`, layout                                                                                              |
+| Scan picker                | 004           | `src/renderer/features/scan-picker/`                                                                                                                              |
+| Scan progress              | 006           | `src/renderer/features/scan-progress/`, `scan-store`                                                                                                              |
+| Largest folders            | 007           | `src/renderer/features/largest-folders/`                                                                                                                          |
+| Largest files / types      | 008           | `src/renderer/features/largest-files/`, `file-types/`                                                                                                             |
+| Cleanup rules              | 009           | `src/scanner/cleanup-rules.ts`, `cleanup-candidates/`                                                                                                             |
+| Exclusions                 | 010           | `src/scanner/exclusions.ts`, `exclusions/`, preferences                                                                                                           |
+| Export                     | 011           | `src/main/services/report-exporter.ts`                                                                                                                            |
+| File browser / safe delete | 016           | `src/main/services/file-actions.ts`, `src/renderer/features/file-actions/`, `src/renderer/features/largest-folders/FilesInFolderPanel.tsx`, settings safety prefs |
+| Packaging                  | 012           | `forge.config.ts`, assets                                                                                                                                         |
+| Auto-update                | 022           | `src/main/services/update-service.ts`, update IPC, settings UI, release staging                                                                                   |
+| Shared types               | all           | `src/shared/` — coordinate before changing                                                                                                                        |
 
 ## Parallel work
 

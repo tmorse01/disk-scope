@@ -33,6 +33,7 @@ describe('preferences-store', () => {
       exclusions: [],
       confirmBeforeDelete: true,
       defaultDeleteMethod: 'recycle-bin',
+      developerCleanupEnabled: false,
     });
   });
 
@@ -45,6 +46,7 @@ describe('preferences-store', () => {
       ],
       confirmBeforeDelete: true,
       defaultDeleteMethod: 'recycle-bin',
+      developerCleanupEnabled: false,
     });
 
     resetPreferencesFilePathConfiguration();
@@ -64,6 +66,7 @@ describe('preferences-store', () => {
       exclusions: [],
       confirmBeforeDelete: false,
       defaultDeleteMethod: 'permanent',
+      developerCleanupEnabled: false,
     });
 
     resetPreferencesFilePathConfiguration();
@@ -89,6 +92,23 @@ describe('preferences-store', () => {
       exclusions: [{ id: 'ok', kind: 'path', value: 'C:\\valid' }],
       confirmBeforeDelete: true,
       defaultDeleteMethod: 'recycle-bin',
+      developerCleanupEnabled: false,
     });
+  });
+
+  it('persists developerCleanupEnabled', async () => {
+    await savePreferences({
+      theme: 'light',
+      exclusions: [],
+      confirmBeforeDelete: true,
+      defaultDeleteMethod: 'recycle-bin',
+      developerCleanupEnabled: true,
+    });
+
+    resetPreferencesFilePathConfiguration();
+    configurePreferencesFilePath(() => preferencesFilePath);
+
+    const reloaded = await loadPreferences();
+    expect(reloaded.developerCleanupEnabled).toBe(true);
   });
 });

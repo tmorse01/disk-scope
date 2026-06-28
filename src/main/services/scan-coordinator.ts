@@ -91,7 +91,12 @@ async function cleanupScan(scanId: ScanSessionId): Promise<void> {
   activeScans.delete(scanId);
 }
 
-function startSingleWorkerScan(scanId: ScanSessionId, rootPath: string, exclusions: import('../../shared/types').ScanExclusion[]): void {
+function startSingleWorkerScan(
+  scanId: ScanSessionId,
+  rootPath: string,
+  exclusions: import('../../shared/types').ScanExclusion[],
+  developerCleanupEnabled: boolean,
+): void {
   const worker = new Worker(getScanWorkerPath());
 
   activeScans.set(scanId, { kind: 'single', worker });
@@ -122,16 +127,22 @@ function startSingleWorkerScan(scanId: ScanSessionId, rootPath: string, exclusio
 
   const startMessage: WorkerInboundMessage = {
     type: 'start',
-    payload: { scanId, rootPath, exclusions },
+    payload: { scanId, rootPath, exclusions, developerCleanupEnabled },
   };
   worker.postMessage(startMessage);
 }
 
-function startPoolScan(scanId: ScanSessionId, rootPath: string, exclusions: import('../../shared/types').ScanExclusion[]): void {
+function startPoolScan(
+  scanId: ScanSessionId,
+  rootPath: string,
+  exclusions: import('../../shared/types').ScanExclusion[],
+  developerCleanupEnabled: boolean,
+): void {
   const pool = new ScanWorkerPool({
     scanId,
     rootPath,
     exclusions,
+    developerCleanupEnabled,
     workerCount: resolveWorkerCount(),
     onProgress: (event) => {
       broadcastToRenderers<ScanProgressEvent>(IPC_CHANNELS.SCAN_PROGRESS, event);
@@ -167,7 +178,9 @@ export async function startScan(options: {
 }): Promise<StartScanResponse> {
   completedScans.clear();
   const scanId = randomUUID();
-  const exclusions = getPreferencesSync().exclusions;
+  const preferences = getPreferencesSync();
+  const exclusions = preferences.exclusions;
+  const developerCleanupEnabled = preferences.developerCleanupEnabled;
 
   let cacheWarning: string | undefined;
   if (!options.useFilesystemCache) {
@@ -178,9 +191,9 @@ export async function startScan(options: {
   }
 
   if (resolveWorkerCount() === 1) {
-    startSingleWorkerScan(scanId, options.rootPath, exclusions);
+    startSingleWorkerScan(scanId, options.rootPath, exclusions, developerCleanupEnabled);
   } else {
-    startPoolScan(scanId, options.rootPath, exclusions);
+    startPoolScan(scanId, options.rootPath, exclusions, developerCleanupEnabled);
   }
 
   return { scanId, cacheWarning };

@@ -3,6 +3,7 @@ import { DsViewLayout } from '../../components/DsViewLayout';
 import { useScanStore } from '../../hooks/useScanStore';
 import { getPrimarySelectedPath } from '../../stores/scan-store';
 import { ScanProgressHero } from '../scan-progress/ScanProgressHero';
+import { ScanHistoryPanel } from '../scan-picker/ScanHistoryPanel';
 import { ScanTargetPanel } from '../scan-picker/ScanTargetPanel';
 
 export function OverviewLandingView() {
@@ -28,14 +29,11 @@ export function OverviewLandingView() {
   return (
     <DsViewLayout
       header={
-        <DsPageHeader
-          title="Overview"
-          subtitle="Select folders or drives to analyze."
-          compact
-        />
+        <DsPageHeader title="Overview" subtitle="Select folders or drives to analyze." compact />
       }
     >
       <ScanTargetPanel />
+      <ScanHistoryPanel />
     </DsViewLayout>
   );
 }

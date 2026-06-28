@@ -5,6 +5,7 @@ import type { SliceWorkerInboundMessage, SliceWorkerOutboundMessage } from './sc
 
 let cancelRequested = false;
 let exclusions: import('../shared/types').ScanExclusion[] = [];
+let developerCleanupEnabled = false;
 const readDirectory = resolveReadDirectory();
 
 function postMessage(message: SliceWorkerOutboundMessage): void {
@@ -15,6 +16,7 @@ if (parentPort) {
   parentPort.on('message', (message: SliceWorkerInboundMessage) => {
     if (message.type === 'init') {
       exclusions = message.payload.exclusions;
+      developerCleanupEnabled = message.payload.developerCleanupEnabled;
       postMessage({ type: 'ready' });
       return;
     }
@@ -32,6 +34,7 @@ if (parentPort) {
             job: message.payload,
             readDirectory,
             exclusions,
+            developerCleanupEnabled,
             shouldCancel: () => cancelRequested,
           });
           postMessage({ type: 'partial', payload: partial, jobId: message.jobId });

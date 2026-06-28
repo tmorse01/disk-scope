@@ -106,6 +106,7 @@ export async function runScanParallel(
           },
           readDirectory,
           exclusions: options.exclusions ?? [],
+          developerCleanupEnabled: options.developerCleanupEnabled,
           tuning: options.tuning ?? DEFAULT_SCAN_ENGINE_TUNING,
           shouldCancel,
         })

@@ -26,12 +26,15 @@ function buildResult(overrides: Partial<ScanResult> = {}): ScanResult {
     extensionSummaries: [],
     cleanupCandidates: [
       {
-        path: 'C:\\Demo\\Projects\\temp\\cache.tmp',
-        name: 'cache.tmp',
-        ruleId: 'temp-files',
-        risk: 'low',
+        path: 'C:\\Demo\\Heavy\\user-temp',
+        name: 'Temp',
+        label: 'User temp files',
+        ruleId: 'user-temp',
         sizeBytes: 4096,
-        reason: 'Temporary file',
+        fileCount: 3,
+        risk: 'medium',
+        recommendation: 'Often safe to clear.',
+        category: 'general',
       },
     ],
     errors: [],
@@ -66,19 +69,46 @@ describe('OverviewView', () => {
     const navigateTo = vi.fn();
     scanStore.result = buildResult();
     scanStore.status = 'completed';
+    scanStore.overviewMode = 'summary';
+    scanStore.scanId = 'scan-1';
+    scanStore.scanHistory = [
+      {
+        scanId: 'scan-1',
+        result: buildResult(),
+        status: 'completed',
+        developerCleanupEnabledAtScan: false,
+      },
+    ];
 
     renderView(navigateTo);
 
     expect(screen.getByRole('heading', { name: 'Scan complete' })).toBeInTheDocument();
-    expect(screen.getByText(/C:\\Demo\\Projects/)).toBeInTheDocument();
+    expect(screen.getAllByText(/C:\\Demo\\Projects/).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /Browse largest folders/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Browse largest files/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /View cleanup recommendations \(1\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /View cleanup suggestions \(1\)/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Export JSON/i })).not.toBeInTheDocument();
 
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /Browse largest folders/i }));
 
     expect(navigateTo).toHaveBeenCalledWith('largest-folders');
+  });
+
+  it('returns to the folder picker when New scan is clicked', async () => {
+    scanStore.result = buildResult();
+    scanStore.status = 'completed';
+    scanStore.overviewMode = 'summary';
+    scanStore.scanId = 'scan-1';
+
+    renderView();
+
+    expect(screen.getByRole('heading', { name: 'Scan complete' })).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /New scan/i }));
+
+    expect(screen.getByRole('heading', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add folder or drive/i })).toBeInTheDocument();
   });
 });

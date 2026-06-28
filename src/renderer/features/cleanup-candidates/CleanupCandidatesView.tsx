@@ -1,8 +1,9 @@
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import TableBody from '@mui/material/TableBody';
 import Typography from '@mui/material/Typography';
-import type { CleanupCandidate, RiskLevel } from '../../../shared/types';
+import type { CleanupCandidate, CleanupCandidateCategory, RiskLevel } from '../../../shared/types';
 import { formatBytes } from '../../../shared/format-bytes';
 import { DsCard } from '../../components/DsCard';
 import {
@@ -20,6 +21,8 @@ import { DsPageHeader, DsStatusChip } from '../../components/DsStatusChip';
 import { DsViewLayout } from '../../components/DsViewLayout';
 import { DsTabular } from '../../components/DsTabular';
 import { MaterialIcon } from '../../components/MaterialIcon';
+import { useShellContext } from '../../components/ShellContext';
+import { usePreferencesStore } from '../../hooks/usePreferencesStore';
 import { useScanStore } from '../../hooks/useScanStore';
 import { radii } from '../../theme/tokens';
 import type { DeleteTarget } from '../file-actions/delete-target';
@@ -39,12 +42,18 @@ const RISK_VARIANTS: Record<RiskLevel, 'success' | 'warning' | 'error' | 'neutra
   'do-not-touch': 'neutral',
 };
 
+const CATEGORY_LABELS: Record<CleanupCandidateCategory, string> = {
+  general: 'General',
+  developer: 'Developer',
+};
+
 const CLEANUP_COLUMNS: ResizableColumnDef[] = [
-  { id: 'folder', defaultWidth: 280, minWidth: 160 },
-  { id: 'category', defaultWidth: 140, minWidth: 88 },
+  { id: 'folder', defaultWidth: 260, minWidth: 160 },
+  { id: 'category', defaultWidth: 100, minWidth: 72 },
+  { id: 'type', defaultWidth: 140, minWidth: 88 },
   { id: 'risk', defaultWidth: 120, minWidth: 88 },
   { id: 'sizeBytes', defaultWidth: 108, minWidth: 72 },
-  { id: 'recommendation', defaultWidth: 280, minWidth: 160 },
+  { id: 'recommendation', defaultWidth: 260, minWidth: 160 },
 ];
 
 function candidateToDeleteTarget(candidate: CleanupCandidate): DeleteTarget {
@@ -59,12 +68,17 @@ function candidateToDeleteTarget(candidate: CleanupCandidate): DeleteTarget {
 }
 
 export function CleanupCandidatesView() {
-  const { status, result } = useScanStore();
+  const { status, result, developerCleanupEnabledAtScan } = useScanStore();
+  const { developerCleanupEnabled } = usePreferencesStore();
+  const { navigateTo } = useShellContext();
   const candidates = result?.cleanupCandidates ?? [];
   const hasScanResult = status === 'completed' || status === 'cancelled';
   const totalReclaimable = candidates.reduce((sum, candidate) => sum + candidate.sizeBytes, 0);
+  const needsRescan =
+    hasScanResult &&
+    developerCleanupEnabledAtScan !== null &&
+    developerCleanupEnabledAtScan !== developerCleanupEnabled;
   const { getRowProps, toolbar, contextMenu, deleteConfirmationUi } = useSelectableFileActions();
-
   const hasTable = hasScanResult && candidates.length > 0;
 
   return (
@@ -72,20 +86,46 @@ export function CleanupCandidatesView() {
       mode={hasTable ? 'data' : 'page'}
       header={
         <DsPageHeader
-          title="Cleanup Candidates"
-          subtitle="Developer bloat folders detected during the scan, grouped by reclaimable risk."
+          title="Cleanup suggestions"
+          subtitle="Known temp and cache folders from your scan. Review each item before removing."
         />
       }
     >
+      {needsRescan ? (
+        <Alert severity="info" variant="outlined" sx={{ flexShrink: 0 }}>
+          Developer cleanup detection changed since this scan. Run a new scan to update cleanup
+          suggestions.
+        </Alert>
+      ) : null}
+
       {!hasScanResult && (
         <Alert severity="info" variant="outlined">
-          Run a scan to identify cleanup candidates such as package caches and build output.
+          Run a scan to identify temp folders and other known cleanup targets.
         </Alert>
       )}
 
       {hasScanResult && candidates.length === 0 && (
         <Alert severity="success" variant="outlined">
-          No known developer cleanup folders were found in the scanned path.
+          No known temp or cache folders were found in the scanned path. For videos, games, and
+          large personal files, try{' '}
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => navigateTo('largest-files')}
+            sx={{ textTransform: 'none', fontWeight: 600, p: 0, minWidth: 0, verticalAlign: 'baseline' }}
+          >
+            Largest Files
+          </Button>{' '}
+          or{' '}
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => navigateTo('file-types')}
+            sx={{ textTransform: 'none', fontWeight: 600, p: 0, minWidth: 0, verticalAlign: 'baseline' }}
+          >
+            File Types
+          </Button>
+          .
         </Alert>
       )}
 
@@ -117,8 +157,8 @@ export function CleanupCandidatesView() {
               </Typography>
             </Box>
             <Typography variant="body1" sx={{ mt: 2, maxWidth: 520, opacity: 0.9 }}>
-              {candidates.length} folder{candidates.length === 1 ? '' : 's'} matched developer cleanup
-              rules. Review each item before removing — use Reveal or Copy path to inspect safely.
+              {candidates.length} folder{candidates.length === 1 ? '' : 's'} matched cleanup rules.
+              Review each item before removing — use Reveal or Copy path to inspect safely.
             </Typography>
           </DsCard>
 
@@ -135,7 +175,8 @@ export function CleanupCandidatesView() {
                 header={
                   <DsTableHeadRow>
                     <DsResizableHeaderCell columnId="folder">Folder</DsResizableHeaderCell>
-                    <DsResizableHeaderCell columnId="category">Category</DsResizableHeaderCell>
+                    <DsResizableHeaderCell columnId="category">Source</DsResizableHeaderCell>
+                    <DsResizableHeaderCell columnId="type">Category</DsResizableHeaderCell>
                     <DsResizableHeaderCell columnId="risk">Risk</DsResizableHeaderCell>
                     <DsResizableHeaderCell columnId="sizeBytes" align="right">
                       Size
@@ -185,7 +226,10 @@ export function CleanupCandidatesView() {
                             </Box>
                           </Box>
                         </DsResizableBodyCell>
-                        <DsResizableBodyCell columnId="category">{candidate.label}</DsResizableBodyCell>
+                        <DsResizableBodyCell columnId="category">
+                          {CATEGORY_LABELS[candidate.category]}
+                        </DsResizableBodyCell>
+                        <DsResizableBodyCell columnId="type">{candidate.label}</DsResizableBodyCell>
                         <DsResizableBodyCell columnId="risk">
                           <DsStatusChip label={RISK_LABELS[candidate.risk]} variant={RISK_VARIANTS[candidate.risk]} />
                         </DsResizableBodyCell>

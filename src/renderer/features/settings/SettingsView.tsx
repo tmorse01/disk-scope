@@ -16,12 +16,14 @@ import { usePreferencesStore } from '../../hooks/usePreferencesStore';
 import {
   setConfirmBeforeDeletePreference,
   setDefaultDeleteMethodPreference,
+  setDeveloperCleanupEnabledPreference,
   setThemePreference,
 } from '../../stores/preferences-store';
 import { radii } from '../../theme/tokens';
 
 export function SettingsView() {
-  const { theme, confirmBeforeDelete, defaultDeleteMethod } = usePreferencesStore();
+  const { theme, confirmBeforeDelete, defaultDeleteMethod, developerCleanupEnabled } =
+    usePreferencesStore();
 
   return (
     <DsViewLayout
@@ -64,6 +66,31 @@ export function SettingsView() {
             }
             label="Use dark mode"
           />
+        </DsCard>
+
+        <DsCard>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+            <MaterialIcon name="cleaning_services" style={{ color: 'var(--mui-palette-primary-main)' }} />
+            <Typography variant="h3" component="h3" sx={{ fontSize: '18px', fontWeight: 600 }}>
+              Cleanup
+            </Typography>
+          </Box>
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={developerCleanupEnabled}
+                onChange={(_, checked) => setDeveloperCleanupEnabledPreference(checked)}
+              />
+            }
+            label="Developer cleanup detection"
+            sx={{ mb: 1, display: 'flex' }}
+          />
+          <Typography variant="body2" color="text.secondary">
+            When enabled, flags project folders like node_modules, build caches, and project dist/build
+            output. Off by default — use Largest Files and File Types to find videos, games, and other
+            large personal files.
+          </Typography>
         </DsCard>
 
         <DsCard>
@@ -114,8 +141,7 @@ export function SettingsView() {
 
         <DsCard sx={{ bgcolor: 'surfaceContainerLow.main' }}>
           <Typography variant="body2" color="text.secondary">
-            More settings will appear here as DiskScope grows. Exclusions are managed from the Exclusions section in the
-            sidebar.
+            Exclusions are managed from the Exclusions section in the sidebar.
           </Typography>
         </DsCard>
       </Box>

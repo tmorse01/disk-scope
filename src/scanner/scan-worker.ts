@@ -18,6 +18,7 @@ async function handleStart(payload: WorkerInboundMessage & { type: 'start' }): P
       scanId: payload.payload.scanId,
       rootPath: payload.payload.rootPath,
       exclusions: payload.payload.exclusions,
+      developerCleanupEnabled: payload.payload.developerCleanupEnabled,
       readDirectory,
       shouldCancel: () => cancelRequested,
       onProgress: (event) => {

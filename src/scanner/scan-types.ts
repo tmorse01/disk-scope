@@ -60,6 +60,7 @@ export type ScanEngineOptions = {
   topFilesLimit?: number;
   progressIntervalMs?: number;
   exclusions?: ScanExclusion[];
+  developerCleanupEnabled?: boolean;
   shouldCancel?: () => boolean;
   onProgress?: (event: ScanProgressEvent) => void;
   /** Benchmark-only; production scans use DEFAULT_SCAN_ENGINE_TUNING. */
@@ -77,6 +78,7 @@ export type WorkerStartPayload = {
   scanId: ScanSessionId;
   rootPath: string;
   exclusions: ScanExclusion[];
+  developerCleanupEnabled: boolean;
 };
 
 export type WorkerInboundMessage =
@@ -116,6 +118,7 @@ export type DirectorySliceJob = {
 
 export type SliceWorkerStartPayload = {
   exclusions: ScanExclusion[];
+  developerCleanupEnabled: boolean;
 };
 
 export type SliceWorkerInboundMessage =

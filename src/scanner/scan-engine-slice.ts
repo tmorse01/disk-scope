@@ -1,7 +1,11 @@
 import type { Stats } from 'node:fs';
 import fs from 'node:fs/promises';
 import type { DirectoryNode, NodeId, ScanFileError } from '../shared/types';
-import { CleanupCandidateCollector, parentHasDotNetProject } from './cleanup-rules';
+import {
+  CleanupCandidateCollector,
+  parentHasDevProjectContext,
+  parentHasDotNetProject,
+} from './cleanup-rules';
 import { baseName, fileExtension, normalizePath, pathToNodeId } from './path-utils';
 import {
   buildExclusionConfig,
@@ -47,6 +51,7 @@ export type ProcessDirectorySliceOptions = {
   job: DirectorySliceJob;
   readDirectory: ReadDirFn;
   exclusions: import('../shared/types').ScanExclusion[];
+  developerCleanupEnabled?: boolean;
   tuning?: Partial<ScanEngineTuning>;
   shouldCancel?: () => boolean;
   /** Pre-populated parent node when child was stubbed by another worker. */
@@ -69,7 +74,9 @@ export async function processDirectorySlice(
   const extensionTotals = new Map<string | null, ExtensionAccumulator>();
   const largestFileCandidates: TopFileCandidate[] = [];
   const cleanupMatches = new Map<string, import('./cleanup-rules').CleanupRuleMatch>();
-  const cleanupCollector = new CleanupCandidateCollector();
+  const cleanupCollector = new CleanupCandidateCollector({
+    developerCleanupEnabled: options.developerCleanupEnabled === true,
+  });
   const childDirs: ScanPartialResult['childDirs'] = [];
 
   let fileCount = 0;
@@ -272,7 +279,11 @@ export async function processDirectorySlice(
   const siblingFileNames = directoryEntries
     .filter((entry) => !entry.isDirectory && !entry.isSymlink)
     .map((entry) => entry.name);
+  const siblingDirNames = directoryEntries
+    .filter((entry) => entry.isDirectory && !entry.isSymlink)
+    .map((entry) => entry.name);
   const dotNetProjectContext = parentHasDotNetProject(siblingFileNames);
+  const devProjectContext = parentHasDevProjectContext(siblingFileNames, siblingDirNames);
 
   for (const entry of directoryEntries) {
     if (options.shouldCancel?.()) {
@@ -299,6 +310,7 @@ export async function processDirectorySlice(
         entry.name,
         entryPath,
         currentNode.name,
+        devProjectContext,
         dotNetProjectContext,
       );
       const { node: childNode, created } = ensureDirectoryNode(entryPath, currentNode.id);
