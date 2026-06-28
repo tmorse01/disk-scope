@@ -4,6 +4,7 @@ import { DsContextBar } from './components/DsContextBar';
 import { DsErrorBoundary } from './components/DsErrorBoundary';
 import { DsSidebar } from './components/DsSidebar';
 import { DsTitleBar } from './components/DsTitleBar';
+import { UpdateBanner } from './components/UpdateBanner';
 import { ShellProvider, useShellContext } from './components/ShellContext';
 import { ScanProgressRegion } from './features/scan-progress/ScanProgressRegion';
 import { useScanStore } from './hooks/useScanStore';
@@ -85,6 +86,8 @@ function AppLayout({ activeRoute, onRouteChange }: AppLayoutProps) {
 
         <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <DsContextBar segments={segments} actions={contextActions} />
+
+          <UpdateBanner onOpenSettings={() => onRouteChange('settings')} />
 
           <Box
             component="main"

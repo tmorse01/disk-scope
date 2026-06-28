@@ -60,6 +60,13 @@ describe('App', () => {
     expect(screen.getByLabelText('Scan status')).toHaveTextContent('No scan in progress');
   });
 
+  it('shows app version in the sidebar footer', async () => {
+    renderApp();
+
+    expect(await screen.findByText(/DiskScope v0\.0\.0-preview/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Check for updates/i })).toBeInTheDocument();
+  });
+
   it('keeps main content host and context bar in the shell', () => {
     renderApp();
 

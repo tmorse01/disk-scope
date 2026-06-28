@@ -8,13 +8,13 @@ import Select from '@mui/material/Select';
 import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
-import { useCallback, useEffect, useState } from 'react';
-import type { DeleteMethod, UpdateStatusSnapshot } from '../../../shared/types';
+import LinearProgress from '@mui/material/LinearProgress';
 import { DsCard } from '../../components/DsCard';
 import { DsPageHeader } from '../../components/DsStatusChip';
 import { DsViewLayout } from '../../components/DsViewLayout';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { usePreferencesStore } from '../../hooks/usePreferencesStore';
+import { useUpdateStatus } from '../../hooks/useUpdateStatus';
 import {
   setAutoCheckForUpdatesPreference,
   setConfirmBeforeDeletePreference,
@@ -22,6 +22,7 @@ import {
   setDeveloperCleanupEnabledPreference,
   setThemePreference,
 } from '../../stores/preferences-store';
+import type { DeleteMethod } from '../../../shared/types';
 import { radii } from '../../theme/tokens';
 
 function formatLastChecked(lastCheckedAt?: string): string | null {
@@ -39,39 +40,10 @@ function formatLastChecked(lastCheckedAt?: string): string | null {
 
 function UpdatesCard() {
   const { autoCheckForUpdates } = usePreferencesStore();
-  const [status, setStatus] = useState<UpdateStatusSnapshot | null>(null);
-  const [checking, setChecking] = useState(false);
-
-  useEffect(() => {
-    const updates = window.diskScope?.updates;
-    if (!updates) {
-      return;
-    }
-
-    void updates.getUpdateStatus().then(setStatus);
-    return updates.onUpdateStatus(setStatus);
-  }, []);
-
-  const handleCheckForUpdates = useCallback(async () => {
-    const updates = window.diskScope?.updates;
-    if (!updates) {
-      return;
-    }
-
-    setChecking(true);
-    try {
-      await updates.checkForUpdates();
-    } finally {
-      setChecking(false);
-    }
-  }, []);
-
-  const handleInstallUpdate = useCallback(async () => {
-    await window.diskScope?.updates?.installUpdate();
-  }, []);
+  const { status, isBusy, checkForUpdates, installUpdate } = useUpdateStatus();
 
   const lastCheckedLabel = formatLastChecked(status?.lastCheckedAt);
-  const isBusy = checking || status?.phase === 'checking' || status?.phase === 'downloading';
+  const phase = status?.phase;
 
   return (
     <DsCard>
@@ -95,6 +67,15 @@ function UpdatesCard() {
         </Typography>
       ) : null}
 
+      {phase === 'downloading' && status?.downloadPercent !== undefined ? (
+        <LinearProgress
+          variant="determinate"
+          value={status.downloadPercent}
+          sx={{ mb: 2, borderRadius: 1 }}
+          aria-label="Download progress"
+        />
+      ) : null}
+
       {lastCheckedLabel ? (
         <Typography
           variant="body2"
@@ -114,17 +95,17 @@ function UpdatesCard() {
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 2 }}>
         <Button
           variant="outlined"
-          onClick={() => void handleCheckForUpdates()}
+          onClick={() => void checkForUpdates()}
           disabled={isBusy}
           startIcon={<MaterialIcon name="refresh" />}
         >
           Check for updates
         </Button>
 
-        {status?.phase === 'ready' ? (
+        {phase === 'ready' ? (
           <Button
             variant="contained"
-            onClick={() => void handleInstallUpdate()}
+            onClick={() => void installUpdate()}
             startIcon={<MaterialIcon name="restart_alt" />}
           >
             Restart to update
@@ -163,6 +144,8 @@ export function SettingsView() {
       }
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <UpdatesCard />
+
         <DsCard>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
             <MaterialIcon name="palette" style={{ color: 'var(--mui-palette-primary-main)' }} />
@@ -266,8 +249,6 @@ export function SettingsView() {
             </Typography>
           )}
         </DsCard>
-
-        <UpdatesCard />
 
         <DsCard sx={{ bgcolor: 'surfaceContainerLow.main' }}>
           <Typography variant="body2" color="text.secondary">

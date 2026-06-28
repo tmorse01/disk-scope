@@ -1,3 +1,4 @@
+import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import { MaterialIcon } from './MaterialIcon';
 import { radii } from '../theme/tokens';
@@ -7,10 +8,18 @@ type DsNavItemProps = {
   label: string;
   active?: boolean;
   expanded?: boolean;
+  showBadge?: boolean;
   onClick: () => void;
 };
 
-export function DsNavItem({ icon, label, active = false, expanded = true, onClick }: DsNavItemProps) {
+export function DsNavItem({
+  icon,
+  label,
+  active = false,
+  expanded = true,
+  showBadge = false,
+  onClick,
+}: DsNavItemProps) {
   return (
     <Box
       component="button"
@@ -49,7 +58,18 @@ export function DsNavItem({ icon, label, active = false, expanded = true, onClic
         },
       }}
     >
-      <MaterialIcon name={icon} filled={active} style={{ fontSize: 22, flexShrink: 0 }} />
+      {showBadge ? (
+        <Badge
+          variant="dot"
+          color="primary"
+          overlap="circular"
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <MaterialIcon name={icon} filled={active} style={{ fontSize: 22, flexShrink: 0 }} />
+        </Badge>
+      ) : (
+        <MaterialIcon name={icon} filled={active} style={{ fontSize: 22, flexShrink: 0 }} />
+      )}
       {expanded ? (
         <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {label}

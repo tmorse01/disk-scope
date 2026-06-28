@@ -1,16 +1,18 @@
+import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import { DsNavItem } from './DsNavItem';
 import { MaterialIcon } from './MaterialIcon';
+import { useUpdateStatus } from '../hooks/useUpdateStatus';
 import { APP_ROUTES, isAppRoute, type AppRoute } from '../routes';
 import { NAV_RAIL_WIDTH, SIDEBAR_WIDTH } from '../theme/mui-theme';
 import { radii } from '../theme/tokens';
 import { pickScanTarget } from '../stores/scan-store';
 
 const SIDEBAR_HEADER_HEIGHT = 48;
-const SIDEBAR_FOOTER_MIN_HEIGHT = 72;
 
 type DsSidebarProps = {
   activeRoute: AppRoute;
@@ -19,7 +21,13 @@ type DsSidebarProps = {
 
 export function DsSidebar({ activeRoute, onRouteChange }: DsSidebarProps) {
   const [expanded, setExpanded] = useState(true);
+  const { status, hasUpdateReady } = useUpdateStatus();
   const sidebarWidth = expanded ? SIDEBAR_WIDTH : NAV_RAIL_WIDTH;
+  const versionLabel = status?.currentVersion ? `v${status.currentVersion}` : null;
+
+  const openUpdatesSettings = () => {
+    onRouteChange('settings');
+  };
 
   return (
     <Box
@@ -91,6 +99,7 @@ export function DsSidebar({ activeRoute, onRouteChange }: DsSidebarProps) {
             label={navRoute.label}
             active={activeRoute === navRoute.id}
             expanded={expanded}
+            showBadge={hasUpdateReady && navRoute.id === 'settings'}
             onClick={() => {
               if (isAppRoute(navRoute.id)) {
                 onRouteChange(navRoute.id);
@@ -104,13 +113,65 @@ export function DsSidebar({ activeRoute, onRouteChange }: DsSidebarProps) {
         component="footer"
         sx={{
           flexShrink: 0,
-          minHeight: SIDEBAR_FOOTER_MIN_HEIGHT,
           display: 'flex',
-          alignItems: 'center',
+          flexDirection: 'column',
+          gap: 1.5,
           p: expanded ? 2 : 1,
           bgcolor: 'surfaceContainerLow.main',
         }}
       >
+        {versionLabel ? (
+          expanded ? (
+            <Button
+              variant="text"
+              size="small"
+              onClick={openUpdatesSettings}
+              startIcon={
+                hasUpdateReady ? (
+                  <Badge variant="dot" color="primary">
+                    <MaterialIcon name="system_update" style={{ fontSize: 18 }} />
+                  </Badge>
+                ) : (
+                  <MaterialIcon name="info" style={{ fontSize: 18 }} />
+                )
+              }
+              sx={{
+                justifyContent: 'flex-start',
+                color: 'text.secondary',
+                textTransform: 'none',
+                px: 1,
+                minHeight: 32,
+              }}
+            >
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.3 }}>
+                <Typography variant="caption" component="span" sx={{ fontWeight: 600 }}>
+                  DiskScope {versionLabel}
+                </Typography>
+                <Typography variant="caption" component="span" color={hasUpdateReady ? 'primary.main' : 'text.secondary'}>
+                  {hasUpdateReady ? 'Update ready — open Settings' : 'Check for updates'}
+                </Typography>
+              </Box>
+            </Button>
+          ) : (
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <IconButton
+                size="small"
+                aria-label={
+                  hasUpdateReady
+                    ? `DiskScope ${versionLabel}, update ready`
+                    : `DiskScope ${versionLabel}, check for updates`
+                }
+                onClick={openUpdatesSettings}
+                sx={{ color: 'text.secondary' }}
+              >
+                <Badge variant="dot" color="primary" invisible={!hasUpdateReady}>
+                  <MaterialIcon name="system_update" style={{ fontSize: 20 }} />
+                </Badge>
+              </IconButton>
+            </Box>
+          )
+        ) : null}
+
         <Button
           variant="contained"
           color="primary"
