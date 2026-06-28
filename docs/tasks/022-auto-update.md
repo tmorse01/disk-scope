@@ -109,6 +109,19 @@ Auto-update works without signing for early adopters, but Windows SmartScreen an
 - Release pipeline publishes whatever artifacts the chosen updater requires
 - [`docs/publishing-and-release.md`](../publishing-and-release.md) includes an “Auto-update assets” subsection
 
+## Chosen approach
+
+**B — `electron-updater` with GitHub provider** (Windows Squirrel-installed builds).
+
+Rationale:
+
+- GitHub Releases is already the distribution channel; `electron-updater` queries the latest release via the GitHub API instead of maintaining a static Squirrel feed URL.
+- `@electron-forge/maker-squirrel` already emits `RELEASES` and `*.nupkg` in `out/make/squirrel.windows/x64/` — we extend staging/CI to upload those assets so Squirrel can apply updates on quit + relaunch.
+- Built-in event model maps cleanly to the Settings status UI (`checking` → `available` → `downloading` → `ready`).
+- Portable zip installs remain out of scope (no Squirrel install path).
+
+Feed configuration: `package.json` `repository` + `build.publish` (GitHub owner/repo). Runtime uses `electron-updater` `autoUpdater` only when `app.isPackaged`.
+
 ## Risks / assumptions
 
 - **Windows only** for v1 (matches current packaging)

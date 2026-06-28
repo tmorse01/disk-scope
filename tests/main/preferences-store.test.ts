@@ -34,6 +34,7 @@ describe('preferences-store', () => {
       confirmBeforeDelete: true,
       defaultDeleteMethod: 'recycle-bin',
       developerCleanupEnabled: false,
+      autoCheckForUpdates: true,
     });
   });
 
@@ -93,6 +94,7 @@ describe('preferences-store', () => {
       confirmBeforeDelete: true,
       defaultDeleteMethod: 'recycle-bin',
       developerCleanupEnabled: false,
+      autoCheckForUpdates: true,
     });
   });
 

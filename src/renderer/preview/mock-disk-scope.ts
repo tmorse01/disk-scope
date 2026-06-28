@@ -1,4 +1,10 @@
-import type { AppPreferences, DiskScopeAPI, ScanProgressEvent, WindowControlsAPI } from '../../shared/types';
+import type {
+  AppPreferences,
+  DiskScopeAPI,
+  ScanProgressEvent,
+  UpdateStatusSnapshot,
+  WindowControlsAPI,
+} from '../../shared/types';
 import { ok } from '../../shared/result';
 
 const noopUnsubscribe = () => undefined;
@@ -17,6 +23,13 @@ const mockPreferences: AppPreferences = {
   confirmBeforeDelete: true,
   defaultDeleteMethod: 'recycle-bin',
   developerCleanupEnabled: false,
+  autoCheckForUpdates: true,
+};
+
+const mockUpdateStatus: UpdateStatusSnapshot = {
+  phase: 'idle',
+  currentVersion: '0.0.0-preview',
+  message: 'Updates are checked in installed builds only.',
 };
 
 export function createMockDiskScope(
@@ -71,6 +84,7 @@ export function createMockDiskScope(
       confirmBeforeDelete: mockPreferences.confirmBeforeDelete,
       defaultDeleteMethod: mockPreferences.defaultDeleteMethod,
       developerCleanupEnabled: mockPreferences.developerCleanupEnabled,
+      autoCheckForUpdates: mockPreferences.autoCheckForUpdates,
     }),
     setPreferences: async (preferences) => {
       mockPreferences.theme = preferences.theme;
@@ -78,12 +92,14 @@ export function createMockDiskScope(
       mockPreferences.confirmBeforeDelete = preferences.confirmBeforeDelete;
       mockPreferences.defaultDeleteMethod = preferences.defaultDeleteMethod;
       mockPreferences.developerCleanupEnabled = preferences.developerCleanupEnabled;
+      mockPreferences.autoCheckForUpdates = preferences.autoCheckForUpdates;
       return {
         theme: mockPreferences.theme,
         exclusions: mockPreferences.exclusions.map((entry) => ({ ...entry })),
         confirmBeforeDelete: mockPreferences.confirmBeforeDelete,
         defaultDeleteMethod: mockPreferences.defaultDeleteMethod,
         developerCleanupEnabled: mockPreferences.developerCleanupEnabled,
+        autoCheckForUpdates: mockPreferences.autoCheckForUpdates,
       };
     },
     getScanHistory: async () => ({ entries: [], lastSelectedPaths: [] }),
@@ -94,6 +110,12 @@ export function createMockDiskScope(
     },
     onScanComplete: () => noopUnsubscribe,
     onScanError: () => noopUnsubscribe,
+    updates: {
+      checkForUpdates: async () => undefined,
+      installUpdate: async () => undefined,
+      getUpdateStatus: async () => ({ ...mockUpdateStatus }),
+      onUpdateStatus: () => noopUnsubscribe,
+    },
     windowControls: mockWindowControls,
     ...overrides,
   };

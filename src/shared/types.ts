@@ -116,6 +116,26 @@ export type AppPreferences = {
   confirmBeforeDelete: boolean;
   defaultDeleteMethod: DeleteMethod;
   developerCleanupEnabled: boolean;
+  autoCheckForUpdates: boolean;
+};
+
+export type UpdatePhase =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'downloading'
+  | 'ready'
+  | 'up-to-date'
+  | 'error';
+
+export type UpdateStatusSnapshot = {
+  phase: UpdatePhase;
+  currentVersion: string;
+  availableVersion?: string;
+  lastCheckedAt?: string;
+  downloadPercent?: number;
+  message?: string;
+  errorMessage?: string;
 };
 
 export type StartScanOptions = {
@@ -197,6 +217,13 @@ export type WindowControlsAPI = {
   onMaximizeChanged(callback: (event: WindowMaximizeChangedEvent) => void): Unsubscribe;
 };
 
+export type UpdateAPI = {
+  checkForUpdates(): Promise<void>;
+  installUpdate(): Promise<void>;
+  getUpdateStatus(): Promise<UpdateStatusSnapshot>;
+  onUpdateStatus(callback: (status: UpdateStatusSnapshot) => void): Unsubscribe;
+};
+
 export type DiskScopeAPI = {
   selectDirectory(): Promise<SelectedPath | null>;
   startScan(options: StartScanOptions): Promise<StartScanResponse>;
@@ -214,4 +241,5 @@ export type DiskScopeAPI = {
   onScanComplete(callback: (event: ScanCompleteEvent) => void): Unsubscribe;
   onScanError(callback: (event: ScanErrorEvent) => void): Unsubscribe;
   windowControls?: WindowControlsAPI;
+  updates?: UpdateAPI;
 };

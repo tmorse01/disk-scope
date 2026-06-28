@@ -37,6 +37,19 @@
     "email": "74744091+tmorse01@users.noreply.github.com"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tmorse01/disk-scope.git"
+  },
+  "build": {
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "tmorse01",
+        "repo": "disk-scope"
+      }
+    ]
+  },
   "engines": {
     "node": ">=20"
   },
@@ -53,6 +66,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^9.1.2",
     "electron-squirrel-startup": "^1.0.1",
+    "electron-updater": "^6.6.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

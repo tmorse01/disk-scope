@@ -88,6 +88,26 @@ $setupName = "DiskScope-$Version-Setup.exe"
 $setupTarget = Join-Path $distDir $setupName
 Copy-Item $setupSource.FullName $setupTarget
 
+$releasesSource = Join-Path $squirrelDir "RELEASES"
+if (-not (Test-Path $releasesSource)) {
+    throw "Missing Squirrel RELEASES feed in $squirrelDir`nRun 'pnpm make' first."
+}
+
+$nupkgSources = Get-ChildItem -Path $squirrelDir -Filter "*.nupkg" -ErrorAction SilentlyContinue
+if (-not $nupkgSources -or $nupkgSources.Count -eq 0) {
+    throw "Missing Squirrel *.nupkg packages in $squirrelDir`nRun 'pnpm make' first."
+}
+
+$releasesTarget = Join-Path $distDir "RELEASES"
+Copy-Item $releasesSource $releasesTarget
+
+$nupkgTargets = @()
+foreach ($nupkg in $nupkgSources) {
+    $target = Join-Path $distDir $nupkg.Name
+    Copy-Item $nupkg.FullName $target
+    $nupkgTargets += $target
+}
+
 $portableName = "DiskScope-$Version-win32-x64-portable.zip"
 $portableTarget = Join-Path $distDir $portableName
 Compress-Archive -Path (Join-Path $portableSource "*") -DestinationPath $portableTarget -CompressionLevel Optimal
@@ -98,6 +118,22 @@ $assetManifest = @(
         Purpose = "Windows installer (Squirrel) - recommended download"
         Source  = $setupSource.FullName
     },
+    @{
+        Name    = "RELEASES"
+        Purpose = "Squirrel update feed manifest (auto-update)"
+        Source  = $releasesSource
+    }
+)
+
+foreach ($nupkg in $nupkgSources) {
+    $assetManifest += @{
+        Name    = $nupkg.Name
+        Purpose = "Squirrel update package (auto-update)"
+        Source  = $nupkg.FullName
+    }
+}
+
+$assetManifest += @(
     @{
         Name    = $portableName
         Purpose = "Portable build - unzip and run DiskScope.exe"
@@ -135,9 +171,11 @@ Get-ChildItem $distDir -File | ForEach-Object {
     Write-Host ("  {0,-45} {1}" -f $_.Name, (Format-ByteSize $_.Length))
 }
 
-# Upload only user-facing binaries + checksums (exclude ASSETS.txt from release upload).
+# Upload user-facing binaries, Squirrel feed assets, and checksums (exclude ASSETS.txt).
 $uploadFiles = @(
     $setupTarget,
+    $releasesTarget
+) + $nupkgTargets + @(
     $portableTarget,
     $checksumPath
 )

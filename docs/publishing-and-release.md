@@ -40,6 +40,7 @@ Run from repo root on `master` with a clean working tree.
 5. **Verify** — open **Actions → Release**, wait for green, then check your repo's **Releases** page for:
 
    - `DiskScope-<version>-Setup.exe`
+   - `RELEASES` and `*.nupkg` (auto-update feed)
    - `DiskScope-<version>-win32-x64-portable.zip`
    - `SHA256SUMS.txt`
 
@@ -83,10 +84,33 @@ GitHub automatically attaches **Source code (zip)** and **Source code (tar.gz)**
 | Build output (`out/`) | Published asset | Purpose |
 | --- | --- | --- |
 | `out/make/squirrel.windows/x64/*Setup.exe` | `DiskScope-<version>-Setup.exe` | Windows installer (recommended) |
+| `out/make/squirrel.windows/x64/RELEASES` | `RELEASES` | Squirrel update feed manifest (auto-update) |
+| `out/make/squirrel.windows/x64/*.nupkg` | `DiskScope-<version>-full.nupkg` (etc.) | Squirrel update packages (auto-update) |
 | `out/DiskScope-win32-x64/` | `DiskScope-<version>-win32-x64-portable.zip` | Portable build — unzip and run `DiskScope.exe` |
 | (generated) | `SHA256SUMS.txt` | SHA256 checksums for the files above |
 
-Squirrel internals (`*.nupkg`, `RELEASES`) stay in `out/` and are not uploaded.
+Portable zip installs do not receive in-app auto-updates. Squirrel-installed builds check GitHub Releases via `electron-updater` and apply updates on restart.
+
+## Auto-update assets
+
+Packaged Squirrel installs use **`electron-updater`** with the GitHub provider (`package.json` → `repository` + `build.publish`). Each release must include:
+
+| Asset | Purpose |
+| --- | --- |
+| `RELEASES` | Squirrel feed manifest listing available `.nupkg` versions |
+| `*.nupkg` | Full (and optional delta) update packages consumed by Squirrel on restart |
+
+These are staged automatically by [`scripts/stage-release-assets.ps1`](../scripts/stage-release-assets.ps1) from `out/make/squirrel.windows/x64/` and uploaded by CI alongside the Setup exe.
+
+### Verify auto-update feed
+
+After publishing a release:
+
+1. Confirm `RELEASES` and at least one `*.nupkg` appear on the GitHub Release page for the tag.
+2. Install an older Squirrel build, open **Settings → Updates**, and run **Check for updates** (or relaunch with auto-check enabled).
+3. When a newer release exists, status should progress to **Restart to update**; restarting applies the update.
+
+Dev builds (`pnpm dev`) never call the updater — only `app.isPackaged` Squirrel installs do.
 
 Release notes include a download guide that warns users not to use the source-code links.
 
@@ -257,9 +281,11 @@ pnpm stage:release
 
 ## Verify a release succeeded
 
-On the GitHub **Releases** page for tag `v<version>`, confirm these **3 app assets** are present (plus GitHub's 2 source archives):
+On the GitHub **Releases** page for tag `v<version>`, confirm these **app assets** are present (plus GitHub's 2 source archives):
 
 - `DiskScope-<version>-Setup.exe`
+- `RELEASES`
+- `DiskScope-<version>-full.nupkg` (or similarly named `*.nupkg`)
 - `DiskScope-<version>-win32-x64-portable.zip`
 - `SHA256SUMS.txt`
 
@@ -366,6 +392,4 @@ Related files:
 - [`.github/workflows/release.yml`](../.github/workflows/release.yml) — CI release pipeline
 - [`README.md`](../README.md) — packaging summary
 
-## Future: auto-update
-
-Task [**022 — Auto-update**](tasks/022-auto-update.md) will extend releases with update-feed assets (likely Squirrel `RELEASES` + `*.nupkg`, or a GitHub-oriented updater) and add in-app check / apply from Settings. Until that ships, users update by downloading a new installer from GitHub Releases.
+Task [**022 — Auto-update**](tasks/022-auto-update.md) adds in-app check / apply from Settings for Squirrel-installed builds. Portable zip installs must still download a new release manually.

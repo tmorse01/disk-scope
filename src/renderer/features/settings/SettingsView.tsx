@@ -1,4 +1,5 @@
 ﻿import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import InputLabel from '@mui/material/InputLabel';
@@ -7,19 +8,146 @@ import Select from '@mui/material/Select';
 import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
-import type { DeleteMethod } from '../../../shared/types';
+import { useCallback, useEffect, useState } from 'react';
+import type { DeleteMethod, UpdateStatusSnapshot } from '../../../shared/types';
 import { DsCard } from '../../components/DsCard';
 import { DsPageHeader } from '../../components/DsStatusChip';
 import { DsViewLayout } from '../../components/DsViewLayout';
 import { MaterialIcon } from '../../components/MaterialIcon';
 import { usePreferencesStore } from '../../hooks/usePreferencesStore';
 import {
+  setAutoCheckForUpdatesPreference,
   setConfirmBeforeDeletePreference,
   setDefaultDeleteMethodPreference,
   setDeveloperCleanupEnabledPreference,
   setThemePreference,
 } from '../../stores/preferences-store';
 import { radii } from '../../theme/tokens';
+
+function formatLastChecked(lastCheckedAt?: string): string | null {
+  if (!lastCheckedAt) {
+    return null;
+  }
+
+  const date = new Date(lastCheckedAt);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toLocaleString();
+}
+
+function UpdatesCard() {
+  const { autoCheckForUpdates } = usePreferencesStore();
+  const [status, setStatus] = useState<UpdateStatusSnapshot | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    const updates = window.diskScope?.updates;
+    if (!updates) {
+      return;
+    }
+
+    void updates.getUpdateStatus().then(setStatus);
+    return updates.onUpdateStatus(setStatus);
+  }, []);
+
+  const handleCheckForUpdates = useCallback(async () => {
+    const updates = window.diskScope?.updates;
+    if (!updates) {
+      return;
+    }
+
+    setChecking(true);
+    try {
+      await updates.checkForUpdates();
+    } finally {
+      setChecking(false);
+    }
+  }, []);
+
+  const handleInstallUpdate = useCallback(async () => {
+    await window.diskScope?.updates?.installUpdate();
+  }, []);
+
+  const lastCheckedLabel = formatLastChecked(status?.lastCheckedAt);
+  const isBusy = checking || status?.phase === 'checking' || status?.phase === 'downloading';
+
+  return (
+    <DsCard>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+        <MaterialIcon name="system_update" style={{ color: 'var(--mui-palette-primary-main)' }} />
+        <Typography variant="h3" component="h3" sx={{ fontSize: '18px', fontWeight: 600 }}>
+          Updates
+        </Typography>
+      </Box>
+
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Current version: {status?.currentVersion ?? '…'}
+      </Typography>
+
+      {status?.message ? (
+        <Typography
+          variant="body2"
+          sx={{ mb: lastCheckedLabel || status?.errorMessage ? 1 : 2 }}
+        >
+          {status.message}
+        </Typography>
+      ) : null}
+
+      {lastCheckedLabel ? (
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ mb: status?.errorMessage ? 1 : 2 }}
+        >
+          Last checked: {lastCheckedLabel}
+        </Typography>
+      ) : null}
+
+      {status?.errorMessage ? (
+        <Alert severity="error" variant="outlined" sx={{ mb: 2 }}>
+          {status.errorMessage}
+        </Alert>
+      ) : null}
+
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 2 }}>
+        <Button
+          variant="outlined"
+          onClick={() => void handleCheckForUpdates()}
+          disabled={isBusy}
+          startIcon={<MaterialIcon name="refresh" />}
+        >
+          Check for updates
+        </Button>
+
+        {status?.phase === 'ready' ? (
+          <Button
+            variant="contained"
+            onClick={() => void handleInstallUpdate()}
+            startIcon={<MaterialIcon name="restart_alt" />}
+          >
+            Restart to update
+          </Button>
+        ) : null}
+      </Box>
+
+      <FormControlLabel
+        control={
+          <Switch
+            checked={autoCheckForUpdates}
+            onChange={(_, checked) => setAutoCheckForUpdatesPreference(checked)}
+          />
+        }
+        label="Automatically check for updates"
+      />
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+        When enabled, DiskScope checks for updates when the app starts. Portable builds do not
+        receive automatic updates — reinstall from GitHub Releases instead.
+      </Typography>
+    </DsCard>
+  );
+}
 
 export function SettingsView() {
   const { theme, confirmBeforeDelete, defaultDeleteMethod, developerCleanupEnabled } =
@@ -138,6 +266,8 @@ export function SettingsView() {
             </Typography>
           )}
         </DsCard>
+
+        <UpdatesCard />
 
         <DsCard sx={{ bgcolor: 'surfaceContainerLow.main' }}>
           <Typography variant="body2" color="text.secondary">

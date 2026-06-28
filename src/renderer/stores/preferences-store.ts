@@ -8,6 +8,7 @@ export const preferencesStore: PreferencesStoreState = {
   confirmBeforeDelete: true,
   defaultDeleteMethod: 'recycle-bin',
   developerCleanupEnabled: false,
+  autoCheckForUpdates: true,
 };
 
 type PreferencesStoreListener = (state: PreferencesStoreState) => void;
@@ -43,6 +44,7 @@ function applyPreferences(preferences: AppPreferences): void {
   preferencesStore.confirmBeforeDelete = preferences.confirmBeforeDelete;
   preferencesStore.defaultDeleteMethod = preferences.defaultDeleteMethod;
   preferencesStore.developerCleanupEnabled = preferences.developerCleanupEnabled;
+  preferencesStore.autoCheckForUpdates = preferences.autoCheckForUpdates;
 }
 
 function persistPreferences(): void {
@@ -56,6 +58,7 @@ function persistPreferences(): void {
     confirmBeforeDelete: preferencesStore.confirmBeforeDelete,
     defaultDeleteMethod: preferencesStore.defaultDeleteMethod,
     developerCleanupEnabled: preferencesStore.developerCleanupEnabled,
+    autoCheckForUpdates: preferencesStore.autoCheckForUpdates,
   };
 
   saveQueue = saveQueue
@@ -131,6 +134,12 @@ export function setDeveloperCleanupEnabledPreference(developerCleanupEnabled: bo
   persistPreferences();
 }
 
+export function setAutoCheckForUpdatesPreference(autoCheckForUpdates: boolean): void {
+  preferencesStore.autoCheckForUpdates = autoCheckForUpdates;
+  notifyPreferencesStore();
+  persistPreferences();
+}
+
 export function setPreferencesForTest(preferences: AppPreferences): void {
   applyPreferences(preferences);
   notifyPreferencesStore();
@@ -142,6 +151,7 @@ export function resetPreferencesStoreForTest(): void {
   preferencesStore.confirmBeforeDelete = true;
   preferencesStore.defaultDeleteMethod = 'recycle-bin';
   preferencesStore.developerCleanupEnabled = false;
+  preferencesStore.autoCheckForUpdates = true;
   notifyPreferencesStore();
 }
 

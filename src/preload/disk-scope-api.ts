@@ -13,6 +13,8 @@ import type {
   StartScanOptions,
   StartScanResponse,
   Unsubscribe,
+  UpdateAPI,
+  UpdateStatusSnapshot,
   WindowControlsAPI,
   WindowMaximizeChangedEvent,
 } from '../shared/types';
@@ -58,6 +60,24 @@ const windowControlsAPI: WindowControlsAPI | undefined =
         },
       }
     : undefined;
+
+const updatesAPI: UpdateAPI = {
+  checkForUpdates: (): Promise<void> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.CHECK_FOR_UPDATES);
+  },
+
+  installUpdate: (): Promise<void> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.INSTALL_UPDATE);
+  },
+
+  getUpdateStatus: (): Promise<UpdateStatusSnapshot> => {
+    return ipcRenderer.invoke(IPC_CHANNELS.GET_UPDATE_STATUS);
+  },
+
+  onUpdateStatus: (callback: (status: UpdateStatusSnapshot) => void): Unsubscribe => {
+    return createEventSubscription(IPC_CHANNELS.UPDATE_STATUS, callback);
+  },
+};
 
 const diskScopeAPI: DiskScopeAPI = {
   selectDirectory: (): Promise<SelectedPath | null> => {
@@ -119,6 +139,8 @@ const diskScopeAPI: DiskScopeAPI = {
   onScanError: (callback: (event: ScanErrorEvent) => void): Unsubscribe => {
     return createEventSubscription(IPC_CHANNELS.SCAN_ERROR, callback);
   },
+
+  updates: updatesAPI,
 
   windowControls: windowControlsAPI,
 };
