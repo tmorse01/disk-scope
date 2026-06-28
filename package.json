@@ -24,7 +24,7 @@
     "dev:website": "pnpm --dir website dev",
     "build:website": "pnpm --dir website build",
     "preview:website": "pnpm --dir website preview",
-    "build:native": "pnpm --dir native/scanner-win install && pnpm --dir native/scanner-win run build && node scripts/sync-native-binding.mjs",
+    "build:native": "pnpm --dir native/scanner-win install --ignore-workspace && pnpm --dir native/scanner-win run build && node scripts/sync-native-binding.mjs",
     "benchmark:scan": "tsx scripts/scan-benchmark.ts",
     "benchmark:scan:native": "tsx scripts/scan-benchmark.ts --profile=native-compare"
   },
