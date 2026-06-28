@@ -27,6 +27,7 @@ import { useScanStore } from '../../hooks/useScanStore';
 import { radii } from '../../theme/tokens';
 import type { DeleteTarget } from '../file-actions/delete-target';
 import { useSelectableFileActions } from '../file-actions/useSelectableFileActions';
+import { CleanupReclaimHero } from './CleanupReclaimHero';
 
 const RISK_LABELS: Record<RiskLevel, string> = {
   low: 'Minimal',
@@ -73,7 +74,6 @@ export function CleanupCandidatesView() {
   const { navigateTo } = useShellContext();
   const candidates = result?.cleanupCandidates ?? [];
   const hasScanResult = status === 'completed' || status === 'cancelled';
-  const totalReclaimable = candidates.reduce((sum, candidate) => sum + candidate.sizeBytes, 0);
   const needsRescan =
     hasScanResult &&
     developerCleanupEnabledAtScan !== null &&
@@ -131,36 +131,7 @@ export function CleanupCandidatesView() {
 
       {hasTable && (
         <>
-          <DsCard
-            sx={{
-              flexShrink: 0,
-              bgcolor: 'primary.light',
-              color: 'primary.contrastText',
-              border: 'none',
-              position: 'relative',
-              overflow: 'hidden',
-              minHeight: 200,
-            }}
-          >
-            <Box sx={{ position: 'absolute', top: 16, right: 16, opacity: 0.1 }}>
-              <MaterialIcon name="delete_sweep" style={{ fontSize: 160 }} />
-            </Box>
-            <Typography variant="h3" sx={{ opacity: 0.85, mb: 1 }}>
-              Cleanup readiness
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
-              <Typography variant="h1" sx={{ fontWeight: 800, lineHeight: 1 }}>
-                {formatBytes(totalReclaimable)}
-              </Typography>
-              <Typography variant="h3" sx={{ opacity: 0.85 }}>
-                potential reclaimable space
-              </Typography>
-            </Box>
-            <Typography variant="body1" sx={{ mt: 2, maxWidth: 520, opacity: 0.9 }}>
-              {candidates.length} folder{candidates.length === 1 ? '' : 's'} matched cleanup rules.
-              Review each item before removing — use Reveal or Copy path to inspect safely.
-            </Typography>
-          </DsCard>
+          <CleanupReclaimHero candidates={candidates} mode="detail" />
 
           <DsCard
             noPadding

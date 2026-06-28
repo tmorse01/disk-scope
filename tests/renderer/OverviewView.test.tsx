@@ -95,6 +95,48 @@ describe('OverviewView', () => {
     expect(navigateTo).toHaveBeenCalledWith('largest-folders');
   });
 
+  it('shows reclaim hero with formatted total and navigates to cleanup on click', async () => {
+    const navigateTo = vi.fn();
+    scanStore.result = buildResult();
+    scanStore.status = 'completed';
+    scanStore.overviewMode = 'summary';
+    scanStore.scanId = 'scan-1';
+
+    renderView(navigateTo);
+
+    expect(screen.getByRole('heading', { name: 'You could reclaim' })).toBeInTheDocument();
+    expect(screen.getAllByText('4.0 KB').length).toBeGreaterThan(0);
+    expect(screen.getByText('Temp')).toBeInTheDocument();
+    expect(screen.getByText(/User temp files/)).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole('button', {
+        name: /You could reclaim 4\.0 KB\. View cleanup suggestions\./i,
+      }),
+    );
+
+    expect(navigateTo).toHaveBeenCalledWith('cleanup-candidates');
+  });
+
+  it('shows empty cleanup hint when no candidates were found', async () => {
+    const navigateTo = vi.fn();
+    scanStore.result = buildResult({ cleanupCandidates: [] });
+    scanStore.status = 'completed';
+    scanStore.overviewMode = 'summary';
+    scanStore.scanId = 'scan-1';
+
+    renderView(navigateTo);
+
+    expect(screen.getByRole('heading', { name: 'No known temp or cache folders' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /View cleanup suggestions\./i })).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Largest Files' }));
+
+    expect(navigateTo).toHaveBeenCalledWith('largest-files');
+  });
+
   it('returns to the folder picker when New scan is clicked', async () => {
     scanStore.result = buildResult();
     scanStore.status = 'completed';
