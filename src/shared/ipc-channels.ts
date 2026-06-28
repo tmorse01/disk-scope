@@ -9,6 +9,8 @@ export const IPC_CHANNELS = {
   EXPORT_REPORT: 'disk-scope:export-report',
   GET_PREFERENCES: 'disk-scope:get-preferences',
   SET_PREFERENCES: 'disk-scope:set-preferences',
+  GET_SCAN_HISTORY: 'disk-scope:get-scan-history',
+  SAVE_LAST_SELECTED_PATHS: 'disk-scope:save-last-selected-paths',
   SCAN_PROGRESS: 'disk-scope:scan-progress',
   SCAN_COMPLETE: 'disk-scope:scan-complete',
   SCAN_ERROR: 'disk-scope:scan-error',

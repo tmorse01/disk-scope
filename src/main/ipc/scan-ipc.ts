@@ -16,12 +16,17 @@ import {
 } from '../services/file-actions';
 import { getPreferencesSync, loadPreferences, savePreferences } from '../services/preferences-store';
 import {
+  buildScanHistoryHydrationPayload,
+  saveLastSelectedPaths as persistLastSelectedPaths,
+} from '../services/scan-history-store';
+import {
   validateAppPreferences,
   validateDeletePathOptions,
   validateExportOptions,
   validatePath,
   validateScanSessionId,
   validateStartScanOptions,
+  validateStringArray,
 } from './validators';
 
 export function registerScanIpc(): void {
@@ -83,6 +88,15 @@ export function registerScanIpc(): void {
     const validated = validateAppPreferences(preferences);
     return savePreferences(validated);
   });
+
+  ipcMain.handle(IPC_CHANNELS.GET_SCAN_HISTORY, async () => {
+    return buildScanHistoryHydrationPayload();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SAVE_LAST_SELECTED_PATHS, async (_event, paths: unknown) => {
+    const validated = validateStringArray(paths);
+    await persistLastSelectedPaths(validated);
+  });
 }
 
 export function unregisterScanIpc(): void {
@@ -97,6 +111,8 @@ export function unregisterScanIpc(): void {
     IPC_CHANNELS.EXPORT_REPORT,
     IPC_CHANNELS.GET_PREFERENCES,
     IPC_CHANNELS.SET_PREFERENCES,
+    IPC_CHANNELS.GET_SCAN_HISTORY,
+    IPC_CHANNELS.SAVE_LAST_SELECTED_PATHS,
   ];
 
   for (const channel of channels) {

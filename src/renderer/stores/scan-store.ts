@@ -28,6 +28,7 @@ export type ScanHistoryEntry = {
   result: ScanResult;
   status: 'completed' | 'cancelled';
   developerCleanupEnabledAtScan: boolean;
+  rootPathMissing?: boolean;
 };
 
 const MAX_SCAN_HISTORY = 10;
@@ -51,6 +52,10 @@ export type ScanStoreState = {
   overviewMode: OverviewMode;
   /** Session scan history, newest first. */
   scanHistory: ScanHistoryEntry[];
+  /** True when the active scan target path no longer exists on disk. */
+  scanTargetMissing: boolean;
+  /** Last selected paths restored from disk (for picker pre-fill). */
+  lastSelectedPaths: string[];
 };
 
 export const scanStore: ScanStoreState = {
@@ -66,6 +71,8 @@ export const scanStore: ScanStoreState = {
   developerCleanupEnabledAtScan: null,
   overviewMode: 'picker',
   scanHistory: [],
+  scanTargetMissing: false,
+  lastSelectedPaths: [],
 };
 
 export function getPrimarySelectedPath(): string | null {
@@ -78,6 +85,7 @@ const listeners = new Set<ScanStoreListener>();
 
 let storeVersion = 0;
 let listenersInitialized = false;
+let historyHydrated = false;
 let cancelRequestedByUser = false;
 
 const PROGRESS_NOTIFY_MS = 150;
@@ -161,6 +169,61 @@ function upsertScanHistory(entry: ScanHistoryEntry): void {
   ].slice(0, MAX_SCAN_HISTORY);
 }
 
+function persistLastSelectedPaths(): void {
+  if (typeof window.diskScope === 'undefined') {
+    return;
+  }
+
+  void window.diskScope.saveLastSelectedPaths(scanStore.selectedPaths);
+}
+
+function applyMostRecentCompletedScan(): void {
+  const mostRecentCompleted = scanStore.scanHistory.find((entry) => entry.status === 'completed');
+  if (!mostRecentCompleted) {
+    return;
+  }
+
+  scanStore.scanId = mostRecentCompleted.scanId;
+  scanStore.result = mostRecentCompleted.result;
+  scanStore.status = mostRecentCompleted.status;
+  scanStore.developerCleanupEnabledAtScan = mostRecentCompleted.developerCleanupEnabledAtScan;
+  scanStore.progress = progressSnapshotFromResult(mostRecentCompleted.result);
+  scanStore.scanTargetMissing = mostRecentCompleted.rootPathMissing ?? false;
+  scanStore.overviewMode = 'summary';
+}
+
+export async function hydrateScanHistoryFromMain(): Promise<void> {
+  if (historyHydrated || typeof window.diskScope === 'undefined') {
+    return;
+  }
+
+  historyHydrated = true;
+
+  try {
+    const payload = await window.diskScope.getScanHistory();
+    scanStore.scanHistory = payload.entries.map((entry) => ({
+      scanId: entry.scanId,
+      result: entry.result,
+      status: entry.status,
+      developerCleanupEnabledAtScan: entry.developerCleanupEnabledAtScan,
+      rootPathMissing: entry.rootPathMissing,
+    }));
+    scanStore.lastSelectedPaths = payload.lastSelectedPaths;
+
+    if (scanStore.status === 'idle' && scanStore.selectedPaths.length === 0 && payload.lastSelectedPaths.length > 0) {
+      scanStore.selectedPaths = [...payload.lastSelectedPaths];
+    }
+
+    if (!scanStore.result && scanStore.scanHistory.length > 0) {
+      applyMostRecentCompletedScan();
+    }
+
+    notifyScanStore();
+  } catch (error) {
+    console.warn('[scan-store] Failed to hydrate scan history:', error);
+  }
+}
+
 function handleScanProgress(event: ScanProgressEvent): void {
   if (scanStore.scanId !== event.scanId || scanStore.status !== 'scanning') {
     return;
@@ -180,6 +243,7 @@ function handleScanComplete(event: { scanId: ScanSessionId; result: ScanResult }
   scanStore.result = event.result;
   scanStore.progress = progressSnapshotFromResult(event.result);
   scanStore.status = finalStatus;
+  scanStore.scanTargetMissing = false;
   upsertScanHistory({
     scanId: event.scanId,
     result: event.result,
@@ -214,10 +278,19 @@ export function initScanStoreListeners(): void {
   window.diskScope.onScanProgress(handleScanProgress);
   window.diskScope.onScanComplete(handleScanComplete);
   window.diskScope.onScanError(handleScanError);
+
+  void hydrateScanHistoryFromMain();
 }
 
 export function showOverviewPicker(): void {
   scanStore.overviewMode = 'picker';
+  if (
+    scanStore.status === 'idle' &&
+    scanStore.selectedPaths.length === 0 &&
+    scanStore.lastSelectedPaths.length > 0
+  ) {
+    scanStore.selectedPaths = [...scanStore.lastSelectedPaths];
+  }
   notifyScanStore();
 }
 
@@ -242,6 +315,7 @@ export function activateScanFromHistory(scanId: ScanSessionId): void {
   scanStore.progress = progressSnapshotFromResult(entry.result);
   scanStore.overviewMode = 'summary';
   scanStore.scanError = null;
+  scanStore.scanTargetMissing = entry.rootPathMissing ?? false;
   notifyScanStore();
 }
 
@@ -340,6 +414,8 @@ export async function startScanFromStore(): Promise<void> {
   pendingProgress = null;
   scanStore.status = 'scanning';
   notifyScanStore();
+
+  persistLastSelectedPaths();
 
   try {
     const response = await window.diskScope.startScan({
@@ -574,6 +650,9 @@ export function resetScanSessionForTest(): void {
   scanStore.developerCleanupEnabledAtScan = null;
   scanStore.overviewMode = 'picker';
   scanStore.scanHistory = [];
+  scanStore.scanTargetMissing = false;
+  scanStore.lastSelectedPaths = [];
   scanStore.status = 'idle';
+  historyHydrated = false;
   notifyScanStore();
 }

@@ -85,3 +85,11 @@ export function validateDeletePathOptions(value: unknown): { path: string; metho
 export function validateAppPreferences(value: unknown): ReturnType<typeof normalizePreferences> {
   return normalizePreferences(value);
 }
+
+export function validateStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    throw new ValidationError('paths', 'paths must be an array');
+  }
+
+  return value.map((entry, index) => assertNonEmptyString(entry, `paths[${index}]`));
+}
